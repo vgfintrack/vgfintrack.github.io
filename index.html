@@ -147,6 +147,21 @@
     .flow .x { color: var(--bad); font-weight: 700; }
     .flow .y { color: var(--ok); font-weight: 700; }
 
+    /* tour */
+    .tour { display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+    .shot { margin: 0; }
+    .shot .frame { background: #13201d; border-radius: 30px; padding: 7px; box-shadow: 0 14px 40px rgb(0 0 0 / .18); }
+    .shot img { display: block; width: 100%; height: auto; border-radius: 24px; background: var(--surface-2); aspect-ratio: 390 / 780; object-fit: cover; object-position: top; }
+    .shot figcaption { margin-top: 12px; }
+    .shot figcaption b, .doc figcaption b { display: block; font-size: 16px; }
+    .shot figcaption span, .doc figcaption span { color: var(--muted); font-size: 14px; }
+    .doc { margin: 34px 0 0; display: grid; gap: 18px; align-items: center; }
+    @media (min-width: 820px) { .doc { grid-template-columns: 1.1fr 0.9fr; } }
+    .doc img { width: 100%; height: auto; max-height: 520px; object-fit: cover; object-position: top; border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--shadow); background: #fff; }
+    @media (max-width: 700px) {
+      .tour { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; padding-bottom: 10px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+      .shot { flex: 0 0 70%; scroll-snap-align: center; }
+    }
     details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; }
     details + details { margin-top: 10px; }
     summary { cursor: pointer; font-weight: 600; }
@@ -185,7 +200,7 @@
         বন্ধুদের সাথে ধার-দেনা, সার্ভিস চার্জ — সব। আপনার হিসাব থাকে আপনার নিজের Google Drive-এ।</p>
       <div class="cta">
         <a class="btn primary" href="AmrPotli/"><span lang="en">Start for free</span><span lang="bn">ফ্রি-তে শুরু করুন</span></a>
-        <a class="btn" href="#problem"><span lang="en">Why AmrPotli?</span><span lang="bn">কেন AmrPotli?</span></a>
+        <a class="btn" href="#tour"><span lang="en">Take a tour</span><span lang="bn">ঘুরে দেখুন</span></a>
       </div>
       <div class="trust" lang="en"><span>No fees</span><span>No ads</span><span>Works on any phone</span><span>English &amp; বাংলা</span></div>
       <div class="trust" lang="bn"><span>কোনো ফি নেই</span><span>বিজ্ঞাপন নেই</span><span>যেকোনো ফোনে চলে</span><span>বাংলা ও English</span></div>
@@ -286,6 +301,52 @@
         <div class="cta"><a class="btn primary" href="AmrPotli/"><span lang="en">Open AmrPotli</span><span lang="bn">AmrPotli খুলুন</span></a></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ============================================================ TOUR -->
+<section class="block" id="tour">
+  <div class="wrap">
+    <div class="kicker"><span lang="en">Take a quick tour</span><span lang="bn">এক নজরে ঘুরে দেখুন</span></div>
+    <h2><span lang="en">See what AmrPotli looks like</span><span lang="bn">দেখুন AmrPotli দেখতে কেমন</span></h2>
+    <p class="sub" lang="en">Real screens from the app, filled with a made-up example person. Swipe to see more on a phone.</p>
+    <p class="sub" lang="bn">অ্যাপের আসল স্ক্রিন, একজন কাল্পনিক ব্যবহারকারীর উদাহরণ দিয়ে। ফোনে সরিয়ে আরও দেখুন।</p>
+    <div class="tour">
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-dashboard.jpg" alt="Everything at a glance" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-dashboard.jpg" alt="এক নজরে সব" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Everything at a glance</b><b lang="bn">এক নজরে সব</b><span lang="en">Income, expenses, savings rate, your goal and net worth for the month.</span><span lang="bn">মাসের আয়, খরচ, সঞ্চয়ের হার, লক্ষ্য আর মোট সম্পদ।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-add.jpg" alt="Add in seconds" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-add.jpg" alt="কয়েক সেকেন্ডে যোগ" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Add in seconds</b><b lang="bn">কয়েক সেকেন্ডে যোগ</b><span lang="en">Expense, income, transfer or loan. Service charges are suggested at your last rate.</span><span lang="bn">খরচ, আয়, ট্রান্সফার বা লোন। সার্ভিস চার্জ আগের হারে নিজেই বসে যায়।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-budgets.jpg" alt="Budgets that warn you" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-budgets.jpg" alt="বাজেট যা সতর্ক করে" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Budgets that warn you</b><b lang="bn">বাজেট যা সতর্ক করে</b><span lang="en">Each category turns amber near its limit and red when it goes over.</span><span lang="bn">সীমার কাছে গেলে হলুদ, পেরোলে লাল।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-loans.jpg" alt="Loans and installments" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-loans.jpg" alt="লোন আর কিস্তি" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Loans and installments</b><b lang="bn">লোন আর কিস্তি</b><span lang="en">Who owes whom, due dates and one-tap Repay or Got back.</span><span lang="bn">কে কার কাছে কত, শেষ তারিখ, আর এক চাপে শোধ বা ফেরত।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-transactions.jpg" alt="Every taka, searchable" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-transactions.jpg" alt="প্রতিটি টাকা খুঁজে পান" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Every taka, searchable</b><b lang="bn">প্রতিটি টাকা খুঁজে পান</b><span lang="en">Filter by month, type or account, and search your notes.</span><span lang="bn">মাস, ধরন বা অ্যাকাউন্ট দিয়ে ফিল্টার করুন, নোটে খুঁজুন।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-reports.jpg" alt="Statements on demand" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-reports.jpg" alt="দরকারমতো স্টেটমেন্ট" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Statements on demand</b><b lang="bn">দরকারমতো স্টেটমেন্ট</b><span lang="en">Five ready-made documents for forms, tax and loans.</span><span lang="bn">ফর্ম, ট্যাক্স আর লোনের জন্য পাঁচটি তৈরি ডকুমেন্ট।</span></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="frame"><img lang="en" src="assets/tour/en-night.jpg" alt="Night mode and বাংলা" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-night.jpg" alt="রাতের মোড আর English" loading="lazy" width="390" height="780"></div>
+        <figcaption><b lang="en">Night mode and বাংলা</b><b lang="bn">রাতের মোড আর English</b><span lang="en">Easy on the eyes at night, in the language you prefer.</span><span lang="bn">রাতে চোখের আরাম, আপনার পছন্দের ভাষায়।</span></figcaption>
+      </figure>
+    </div>
+    <figure class="doc">
+      <img src="assets/tour/en-statement.jpg" alt="Sample account statement printed from AmrPotli" loading="lazy" width="860" height="1100">
+      <figcaption><b lang="en">A real statement, ready to print or save as PDF</b><b lang="bn">প্রিন্ট বা PDF করার মতো আসল স্টেটমেন্ট</b>
+        <span lang="en">Opening and closing balance, every transaction with a running balance, your name and an optional signature line. Documents are in English.</span>
+        <span lang="bn">শুরু ও শেষের ব্যালেন্স, প্রতিটি লেনদেনের পর ব্যালেন্স, আপনার নাম আর চাইলে স্বাক্ষরের জায়গা। ডকুমেন্টগুলো ইংরেজিতে থাকে।</span></figcaption>
+    </figure>
   </div>
 </section>
 
