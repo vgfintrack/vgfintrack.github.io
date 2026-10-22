@@ -308,6 +308,7 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
 .choice:hover, .choice.recommended { border-color: var(--brand); }
 .choice.recommended { background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
 .choice span { font-size: 13px; color: var(--muted); }
+.choice.recommended.selected strong::after { content: none; }
 .choice.recommended strong::after { content: ' · Recommended'; color: var(--brand-text); font-weight: 600; font-size: 12px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;

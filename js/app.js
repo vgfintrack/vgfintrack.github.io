@@ -1,4 +1,5 @@
 import * as C from './calc.js';
+import * as R from './reports.js';
 import { createStore, DEFAULT_SETTINGS, DEFAULT_ACCOUNTS, newId } from './store.js';
 
 // ---------------------------------------------------------------- helpers
@@ -199,11 +200,12 @@ function switchView(v) {
 
 function render() {
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
-  showAddButton(!empty && state.view !== 'setup');
+  showAddButton(!empty && (state.view === 'dashboard' || state.view === 'transactions'));
   if (empty) return renderWelcome();
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
   if (state.view === 'dashboard') renderDashboard();
   if (state.view === 'transactions') renderTransactions();
+  if (state.view === 'reports') renderReports();
   if (state.view === 'setup') renderSetup();
 }
 
@@ -534,7 +536,8 @@ function loanActionOf(t) {
   return null;
 }
 
-function txnRow(t) {
+// Plain-language title and detail line for a transaction (list and reports).
+function describeTxn(t) {
   const isT = t.type === 'Transfer';
   const loan = loanActionOf(t);
   const loanTitle = {
@@ -553,6 +556,11 @@ function txnRow(t) {
   ]
     .filter(Boolean)
     .join(' · ');
+  return { title, sub };
+}
+
+function txnRow(t) {
+  const { title, sub } = describeTxn(t);
   const cls = t.type === 'Income' ? 'income' : t.type === 'Expense' ? 'expense' : 'transfer';
   const sign = t.type === 'Income' ? '+' : t.type === 'Expense' ? '−' : '';
   const icon = t.type === 'Income' ? '↓' : t.type === 'Expense' ? '↑' : '⇄';
@@ -1014,6 +1022,149 @@ function afterSave(another) {
     $('#txn-error').hidden = true;
     $('#txn-amount').focus();
   } else $('#txn-dialog').close();
+}
+
+// ---------------------------------------------------------------- reports
+
+const report = { type: 'statement', preset: 'this-month', start: '', end: '', asOf: '', account: '__liquid', person: '', declaration: false };
+
+function reportRange() {
+  if (report.preset === 'custom' && report.start && report.end) return { start: report.start, end: report.end };
+  return R.presetRange(report.preset);
+}
+
+function reportContext() {
+  const s = settings();
+  return {
+    accounts: accounts(),
+    txns: state.data.transactions,
+    holder: s.holderName || state.user?.displayName || '',
+    email: state.user?.email && state.store.mode === 'drive' ? state.user.email : '',
+    describe: describeTxn,
+    personName,
+    declaration: report.declaration,
+  };
+}
+
+function renderReports() {
+  const accs = accounts();
+  const people = accs.filter((a) => a.type === 'Debt' || a.type === 'Lend');
+  if (!report.person && people[0]) report.person = people[0].id;
+  if (!report.asOf) report.asOf = C.today();
+  const s = settings();
+  const presets = [
+    ['this-month', 'This month'],
+    ['last-month', 'Last month'],
+    ['last-3', 'Last 3 months'],
+    ['last-6', 'Last 6 months'],
+    ['this-iy', `This income year (${R.incomeYear(C.today()).label})`],
+    ['last-iy', `Last income year (${R.incomeYear(C.today(), -1).label})`],
+    ['this-year', `Calendar year ${C.today().slice(0, 4)}`],
+    ['custom', 'Custom dates…'],
+  ];
+  const t = report.type;
+  if (t === 'tax' && !report.preset.endsWith('-iy')) report.preset = 'last-iy';
+  const r = reportRange();
+  $('#view-reports').innerHTML = `
+    <div class="card" style="display:grid;gap:10px">
+      <h3 style="margin:0">Documents</h3>
+      <p class="muted" style="margin:0;font-size:13px">Make a printable statement from your records. It opens as a page you can print or save as PDF.</p>
+      ${Object.entries(R.REPORTS)
+        .map(
+          ([k, v]) => `<button class="choice ${t === k ? 'recommended selected' : ''}" data-report="${k}">
+            <strong>${esc(v.title)}</strong><span>${esc(v.uses)}</span></button>`,
+        )
+        .join('')}
+    </div>
+
+    <div class="card" style="display:grid;gap:12px">
+      <h3 style="margin:0">${esc(R.REPORTS[t].title)}</h3>
+      ${
+        t === 'networth'
+          ? `<div class="field"><label for="r-asof">As of date</label><input type="date" id="r-asof" value="${esc(report.asOf)}"></div>`
+          : `<div class="field"><label for="r-preset">Period</label>
+              <select id="r-preset">${presets
+                .filter(([k]) => t !== 'tax' || k.endsWith('-iy') || k === 'custom')
+                .map(([k, l]) => `<option value="${k}" ${report.preset === k ? 'selected' : ''}>${esc(l)}</option>`)
+                .join('')}</select></div>
+             ${
+               report.preset === 'custom'
+                 ? `<div class="row2"><div class="field"><label for="r-start">From</label><input type="date" id="r-start" value="${esc(report.start || r.start)}"></div>
+                    <div class="field"><label for="r-end">To</label><input type="date" id="r-end" value="${esc(report.end || r.end)}"></div></div>`
+                 : `<p class="muted" style="margin:-4px 0 0;font-size:12px">${niceDate(r.start, { day: 'numeric', month: 'short', year: 'numeric' })} to ${niceDate(r.end, { day: 'numeric', month: 'short', year: 'numeric' })}</p>`
+             }`
+      }
+      ${
+        t === 'statement'
+          ? `<div class="field"><label for="r-account">Account</label><select id="r-account">
+              <option value="__liquid">All spendable accounts (bank, cash, wallets)</option>
+              ${accs.filter((a) => a.type !== 'Debt').map((a) => `<option value="${esc(a.id)}" ${report.account === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
+            </select></div>`
+          : ''
+      }
+      ${
+        t === 'loan'
+          ? people.length
+            ? `<div class="field"><label for="r-person">Person or lender</label><select id="r-person">
+                ${people.map((a) => `<option value="${esc(a.id)}" ${report.person === a.id ? 'selected' : ''}>${esc(a.name)} (${a.type === 'Debt' ? 'I owe' : 'owes me'})</option>`).join('')}
+              </select></div>`
+            : '<p class="muted" style="margin:0">No loans recorded yet. Add one with + → Loan.</p>'
+          : ''
+      }
+      <div class="field"><label for="r-name">Name printed on the document</label>
+        <input id="r-name" value="${esc(s.holderName || state.user?.displayName || '')}" placeholder="Your full name"></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="r-decl" style="width:auto" ${report.declaration ? 'checked' : ''}>
+        Add a declaration and signature line</label>
+      <div class="sheet-actions" style="justify-content:flex-start">
+        <button class="btn primary" id="r-open">Open document</button>
+        ${t === 'statement' ? '<button class="btn" id="r-csv">Download CSV</button>' : ''}
+      </div>
+      <p class="muted" style="margin:0;font-size:12px">These documents come from your own records. Banks and embassies usually also need an official,
+        bank-stamped statement, so use these as a summary or supporting document.</p>
+    </div>`;
+
+  const v = $('#view-reports');
+  $$('[data-report]', v).forEach((b) => (b.onclick = () => ((report.type = b.dataset.report), renderReports())));
+  const on = (sel, fn) => $(sel, v) && ($(sel, v).onchange = fn);
+  on('#r-preset', (e) => ((report.preset = e.target.value), renderReports()));
+  on('#r-start', (e) => (report.start = e.target.value));
+  on('#r-end', (e) => (report.end = e.target.value));
+  on('#r-asof', (e) => (report.asOf = e.target.value));
+  on('#r-account', (e) => (report.account = e.target.value));
+  on('#r-person', (e) => (report.person = e.target.value));
+  on('#r-decl', (e) => (report.declaration = e.target.checked));
+  on('#r-name', (e) => state.store.saveSettings({ ...settings(), holderName: e.target.value.trim() }));
+  $('#r-open', v).onclick = openReport;
+  if ($('#r-csv', v))
+    $('#r-csv', v).onclick = () => {
+      const range = reportRange();
+      download(`statement-${range.start}-to-${range.end}.csv`, R.statementCsv(reportContext(), { range, accountId: report.account }), 'text/csv');
+    };
+}
+
+function openReport() {
+  const name = $('#r-name')?.value.trim();
+  if (name && name !== settings().holderName) state.store.saveSettings({ ...settings(), holderName: name });
+  const ctx = { ...reportContext(), holder: name || reportContext().holder };
+  const range = reportRange();
+  if (report.preset === 'custom' && range.start > range.end) return toast('The start date is after the end date');
+  const html = {
+    statement: () => R.statementReport(ctx, { range, accountId: report.account }),
+    income: () => R.incomeReport(ctx, { range }),
+    networth: () => R.networthReport(ctx, { date: report.asOf || C.today() }),
+    tax: () => R.taxReport(ctx, { range }),
+    loan: () => R.loanReport(ctx, { range, personId: report.person }),
+  }[report.type]();
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  } else {
+    // Pop-ups blocked: save the page instead; it opens in any browser.
+    download(`${report.type}-${C.today()}.html`, html, 'text/html');
+    toast('Saved the document as a file. Open it to print or save as PDF.');
+  }
 }
 
 // ---------------------------------------------------------------- setup
