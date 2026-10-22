@@ -2,230 +2,80 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AmrPotli · আমার পোটলি</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>vgfintrack · personal finance tools</title>
+  <meta name="description" content="Simple, private tools for tracking money and resources. Home of AmrPotli." />
   <meta name="theme-color" content="#0f766e" />
+  <link rel="icon" href="AmrPotli/icons/icon.svg" type="image/svg+xml" />
   <script>
-    // Apply a saved Day/Night choice before the page paints, so there is no flash.
-    try {
-      const t = localStorage.getItem('mt:theme');
-      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-    } catch {}
+    // Someone who added the app to their home screen before it moved to
+    // /AmrPotli/ opens this page in app mode: send them straight to the app.
+    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) location.replace('AmrPotli/');
   </script>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="css/style.css" />
-  <script src="vendor/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6f5; --surface: #fff; --text: #13201d; --muted: #5d6b67; --line: #dde4e2;
+      --brand: #0f766e; --brand-text: #0f766e; --accent: #f59e0b;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0d1412; --surface: #151f1c; --text: #e6eeeb; --muted: #93a39e; --line: #2a3833; --brand-text: #5eead4; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px;
+      background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", "Nirmala UI", sans-serif;
+    }
+    main { width: 100%; max-width: 640px; display: grid; gap: 20px; }
+    header h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
+    header p { margin: 4px 0 0; color: var(--muted); }
+    .app {
+      display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px;
+      box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 16px rgb(0 0 0 / .04);
+    }
+    .app img { width: 72px; height: 72px; border-radius: 18px; display: block; }
+    .app h2 { margin: 0; font-size: 22px; }
+    .app .bn { margin: 2px 0 6px; color: var(--brand-text); font-weight: 600; }
+    .app p { margin: 0; color: var(--muted); font-size: 15px; }
+    .app .actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { display: inline-block; text-decoration: none; font-weight: 600; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--line); color: var(--text); }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+    footer { color: var(--muted); font-size: 13px; }
+    footer a { color: var(--brand-text); }
+    @media (max-width: 480px) { .app { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-  <div id="login" class="screen" hidden>
-    <div class="login-card">
-      <div class="segmented lang-switch">
-        <button type="button" data-lang="en">English</button>
-        <button type="button" data-lang="bn">বাংলা</button>
-      </div>
-      <img class="logo-img" src="icons/icon.svg" alt="" width="72" height="72">
-      <h1>AmrPotli</h1>
-      <p class="bn">আমার পোটলি · আমার হিসাব, আমার হাতে</p>
-      <p class="muted" data-i18n="Your income, spending, savings and investments in one place.">Your income, spending, savings and investments in one place.</p>
-      <button id="btn-signin" class="btn primary wide" data-i18n="Sign in with Google">Sign in with Google</button>
-      <p class="muted" style="font-size:13px" data-i18n-html="🔒 Your data is saved in your own Google Drive, in a private folder only this app can open. Nobody else can see it, not even the people who run this website. &lt;a href=&quot;privacy.html&quot;&gt;Privacy&lt;/a&gt;">🔒 Your data is saved in your own Google Drive, in a private folder only this app can open.
-        Nobody else can see it, not even the people who run this website. <a href="privacy.html">Privacy</a></p>
-      <p id="login-error" class="error" hidden></p>
-    </div>
-  </div>
-
-  <div id="loading" class="screen"><div class="spinner"></div></div>
-
-  <div id="app" hidden>
-    <header class="topbar">
-      <div class="brand"><img class="logo-img sm" src="icons/icon.svg" alt="" width="28" height="28"> AmrPotli</div>
-      <div class="top-right">
-        <button id="add-top" class="btn primary sm add-top" hidden data-i18n="+ Add transaction">+ Add transaction</button>
-        <button id="sync" class="sync" hidden></button>
-        <button id="theme-btn" class="theme-btn" aria-label="Switch day / night" data-i18n-label="Switch day / night"></button>
-        <button id="btn-user" class="avatar" title="Account" data-i18n-label="Account"></button>
-      </div>
+  <main>
+    <header>
+      <h1>vgfintrack</h1>
+      <p>Simple, private tools for tracking money and resources.</p>
     </header>
-    <div id="demo-banner" class="banner" hidden data-i18n="Demo mode: data is saved in this browser only. Add a Google client ID in js/config.js to sync with Google Drive.">
-      Demo mode: data is saved in this browser only. Add a Google client ID in js/config.js to sync with Google Drive.
-    </div>
 
-    <main>
-      <section id="view-dashboard" class="view"></section>
-      <section id="view-transactions" class="view" hidden></section>
-      <section id="view-reports" class="view" hidden></section>
-      <section id="view-setup" class="view" hidden></section>
-    </main>
+    <section class="app">
+      <img src="AmrPotli/icons/icon.svg" alt="" width="72" height="72" />
+      <div>
+        <h2>AmrPotli</h2>
+        <div class="bn">আমার পোটলি · আমার হিসাব, আমার হাতে</div>
+        <p>Track income, spending, loans, savings and investments. Your data stays in your own Google Drive.</p>
+      </div>
+      <ul style="grid-column: 1 / -1">
+        <li>Dashboard, budgets, savings goal and net worth</li>
+        <li>Loans with monthly installments, service charges</li>
+        <li>Printable statements and an annual tax summary</li>
+        <li>English and বাংলা, day and night mode, works on any phone</li>
+      </ul>
+      <div class="actions">
+        <a class="btn primary" href="AmrPotli/">Open AmrPotli</a>
+        <a class="btn" href="AmrPotli/privacy.html">Privacy</a>
+      </div>
+    </section>
 
-    <button id="fab" class="fab" aria-label="Add transaction" data-i18n-label="Add transaction">+</button>
-
-    <nav class="tabbar">
-      <button data-view="dashboard" class="active"><svg class="ti" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span data-i18n="Dashboard">Dashboard</span></button>
-      <button data-view="transactions"><svg class="ti" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span data-i18n="Transactions">Transactions</span></button>
-      <button data-view="reports"><svg class="ti" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span data-i18n="Reports">Reports</span></button>
-      <button data-view="setup"><svg class="ti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span data-i18n="Setup">Setup</span></button>
-    </nav>
-  </div>
-
-  <dialog id="txn-dialog" class="sheet">
-    <form id="txn-form" method="dialog" novalidate>
-      <div class="sheet-head">
-        <h2 id="txn-title" data-i18n="Add transaction">Add transaction</h2>
-        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
-      </div>
-      <div class="segmented" id="txn-type">
-        <button type="button" data-type="Expense" data-i18n="Expense">Expense</button>
-        <button type="button" data-type="Income" data-i18n="Income">Income</button>
-        <button type="button" data-type="Transfer" data-i18n="Transfer">Transfer</button>
-        <button type="button" data-type="Loan" data-i18n="Loan">Loan</button>
-      </div>
-      <div class="field" id="txn-loan-field" hidden>
-        <label for="txn-loan" data-i18n="What happened?">What happened?</label>
-        <select id="txn-loan">
-          <option value="borrow" data-i18n="I borrowed money">I borrowed money</option>
-          <option value="repay" data-i18n="I repaid a loan">I repaid a loan</option>
-          <option value="lend" data-i18n="I lent money to someone">I lent money to someone</option>
-          <option value="collect" data-i18n="Someone paid me back">Someone paid me back</option>
-        </select>
-      </div>
-      <label class="amount-field">
-        <span>৳</span>
-        <input id="txn-amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" required />
-      </label>
-      <div class="field" id="txn-category-field">
-        <label for="txn-category" data-i18n="Category">Category</label>
-        <select id="txn-category"></select>
-      </div>
-      <div class="field" id="txn-person-field" hidden>
-        <label for="txn-person" id="txn-person-label" data-i18n="Lender">Lender</label>
-        <select id="txn-person"></select>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label for="txn-account" id="txn-account-label" data-i18n="Paid from">Paid from</label>
-          <select id="txn-account"></select>
-        </div>
-        <div class="field" id="txn-to-field">
-          <label for="txn-to" data-i18n="To">To</label>
-          <select id="txn-to"></select>
-        </div>
-      </div>
-      <div class="field" id="txn-fee-field">
-        <label for="txn-fee" id="txn-fee-label" data-i18n-html="Service charge &lt;span class=&quot;muted&quot;&gt;(optional: bKash cash-out, bank transfer fee)&lt;/span&gt;">Service charge <span class="muted">(optional: bKash cash-out, bank transfer fee)</span></label>
-        <div class="fee-row">
-          <input id="txn-fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
-          <button type="button" id="txn-fee-suggest" class="suggest" hidden></button>
-        </div>
-      </div>
-      <div class="row2" id="txn-plan-field" hidden>
-        <div class="field">
-          <label for="txn-plan-count" data-i18n-html="Monthly installments &lt;span class=&quot;muted&quot;&gt;(optional)&lt;/span&gt;">Monthly installments <span class="muted">(optional)</span></label>
-          <input id="txn-plan-count" type="number" inputmode="numeric" min="1" step="1" placeholder="e.g. 3" data-i18n-ph="e.g. 3" />
-        </div>
-        <div class="field">
-          <label for="txn-plan-interest" data-i18n-html="Total interest &lt;span class=&quot;muted&quot;&gt;(optional)&lt;/span&gt;">Total interest <span class="muted">(optional)</span></label>
-          <input id="txn-plan-interest" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 162" data-i18n-ph="e.g. 162" />
-        </div>
-      </div>
-      <div class="field" id="txn-due-field" hidden>
-        <label for="txn-due" id="txn-due-label" data-i18n-html="Due date &lt;span class=&quot;muted&quot;&gt;(optional: when it should be paid back)&lt;/span&gt;">Due date <span class="muted">(optional: when it should be paid back)</span></label>
-        <input id="txn-due" type="date" />
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label for="txn-date" data-i18n="Date">Date</label>
-          <input id="txn-date" type="date" required />
-        </div>
-        <div class="field">
-          <label for="txn-note" data-i18n="Note">Note</label>
-          <input id="txn-note" type="text" placeholder="Optional" data-i18n-ph="Optional" />
-        </div>
-      </div>
-      <p id="txn-hint" class="hint"></p>
-      <p id="txn-error" class="error" hidden></p>
-      <div class="sheet-actions">
-        <button type="button" id="txn-delete" class="btn danger" hidden data-i18n="Delete">Delete</button>
-        <button type="button" id="txn-save-another" class="btn" data-i18n="Save &amp; add another">Save &amp; add another</button>
-        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="acc-dialog" class="sheet">
-    <form id="acc-form" method="dialog" novalidate>
-      <div class="sheet-head">
-        <h2 id="acc-title" data-i18n="Account">Account</h2>
-        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
-      </div>
-      <div class="field">
-        <label for="acc-name" data-i18n="Name">Name</label>
-        <input id="acc-name" type="text" required placeholder="e.g. Mother's Account" data-i18n-ph="e.g. Mother's Account" />
-      </div>
-      <div class="field">
-        <label for="acc-type" data-i18n="Type">Type</label>
-        <select id="acc-type">
-          <option value="Liquid" data-i18n="Liquid: money I can spend (bank, cash, bKash)">Liquid: money I can spend (bank, cash, bKash)</option>
-          <option value="Lend" data-i18n="Lend: money someone owes me">Lend: money someone owes me</option>
-          <option value="Investment" data-i18n="Investment: fund, cow, savings">Investment: fund, cow, savings</option>
-          <option value="Debt" data-i18n="Debt: money I owe (loan from a person, bank, bKash…)">Debt: money I owe (loan from a person, bank, bKash…)</option>
-        </select>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label for="acc-opening" id="acc-opening-label" data-i18n="Opening balance">Opening balance</label>
-          <input id="acc-opening" type="number" inputmode="decimal" step="any" value="0" />
-        </div>
-        <div class="field inv-only">
-          <label for="acc-value" data-i18n="Current value">Current value</label>
-          <input id="acc-value" type="number" inputmode="decimal" step="any" placeholder="Same as book" data-i18n-ph="Same as book" />
-        </div>
-      </div>
-      <div class="field loan-only">
-        <label for="acc-due" data-i18n-html="Due date &lt;span class=&quot;muted&quot;&gt;(optional)&lt;/span&gt;">Due date <span class="muted">(optional)</span></label>
-        <input id="acc-due" type="date" />
-      </div>
-      <div class="field inv-only">
-        <label for="acc-target" data-i18n="Monthly target">Monthly target</label>
-        <input id="acc-target" type="number" inputmode="decimal" step="any" placeholder="Optional" data-i18n-ph="Optional" />
-      </div>
-      <div class="field">
-        <label for="acc-notes" data-i18n="Notes">Notes</label>
-        <input id="acc-notes" type="text" placeholder="Optional" data-i18n-ph="Optional" />
-      </div>
-      <p id="acc-error" class="error" hidden></p>
-      <div class="sheet-actions">
-        <button type="button" id="acc-delete" class="btn danger" hidden data-i18n="Delete">Delete</button>
-        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="import-dialog" class="sheet">
-    <form method="dialog">
-      <div class="sheet-head">
-        <h2 data-i18n="Import file">Import file</h2>
-        <button value="cancel" class="icon-btn" aria-label="Close" data-i18n-label="Close">✕</button>
-      </div>
-      <p id="import-summary" style="margin:0"></p>
-      <button value="replace" id="import-replace" class="choice">
-        <strong data-i18n="Replace everything">Replace everything</strong>
-        <span data-i18n="Your current data is replaced by the file. Best if you just started fresh or are restoring a backup.">Your current data is replaced by the file. Best if you just started fresh or are restoring a backup.</span>
-      </button>
-      <button value="merge" id="import-merge" class="choice">
-        <strong data-i18n="Add to my current data">Add to my current data</strong>
-        <span data-i18n="Keeps what you have and adds the file&#x27;s accounts and transactions. Items you already have are not duplicated.">Keeps what you have and adds the file's accounts and transactions. Items you already have are not duplicated.</span>
-      </button>
-      <div class="sheet-actions"><button value="cancel" class="btn" data-i18n="Cancel">Cancel</button></div>
-    </form>
-  </dialog>
-
-  <div id="toast" class="toast" hidden></div>
-
-  <script type="module" src="js/app.js"></script>
+    <footer>Contact: <a href="mailto:vgfintrack@gmail.com">vgfintrack@gmail.com</a> ·
+      <a href="https://github.com/vgfintrack/vgfintrack.github.io">Source code</a></footer>
+  </main>
 </body>
 </html>

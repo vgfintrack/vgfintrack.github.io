@@ -7,10 +7,11 @@ dashboards, budgets, savings goal, investments and net worth. Amounts are in BDT
 run Saturday to Friday.
 
 - **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `vendor/`
-- **Hosting:** GitHub Pages at <https://vgfintrack.github.io>. Every push to `main` goes live in about a minute.
+- **Hosting:** GitHub Pages. The app is in `AmrPotli/` and lives at <https://vgfintrack.github.io/AmrPotli/>;
+  the repo root (`index.html`) is the vgfintrack home page. Every push to `main` goes live in about a minute.
 - **Sign-in:** anyone can sign in with their own Google account
 - **Languages:** English and বাংলা (Setup → Language, or the switch on the sign-in screen). Bangla text lives in
-  `js/i18n-bn.js`, keyed by the English phrase; documents in Reports stay in English.
+  `AmrPotli/js/i18n-bn.js`, keyed by the English phrase; documents in Reports stay in English.
 - **Storage:** each user's data is one file in **their own Google Drive app data folder**
   (`drive.appdata` scope), plus a local copy in their browser for speed and offline use
 
@@ -21,21 +22,21 @@ run Saturday to Friday.
 - Edits from several devices are merged per item (newest `updatedAt` wins; deletes are kept as tombstones).
 - See `privacy.html`.
 
-Until `js/config.js` has a real client ID, the app runs in **demo mode** and keeps data in the browser only.
+Until `AmrPotli/js/config.js` has a real client ID, the app runs in **demo mode** and keeps data in the browser only.
 
 ## One-time setup (Google Cloud project `vgfintrack-11a9c`)
 
 1. **Enable the Drive API:** <https://console.cloud.google.com/apis/library/drive.googleapis.com?project=vgfintrack-11a9c> → **Enable**.
 2. **Google Auth Platform → Branding:** app name `AmrPotli`, support email, home page
-   `https://vgfintrack.github.io`, privacy policy `https://vgfintrack.github.io/privacy.html`,
+   `https://vgfintrack.github.io/AmrPotli/`, privacy policy `https://vgfintrack.github.io/AmrPotli/privacy.html`,
    authorised domain `vgfintrack.github.io`.
 3. **Audience:** user type **External** → **Publish app** (so anyone can sign in, not just test users).
 4. **Data access → Add or remove scopes:** `.../auth/drive.appdata`, plus `openid`, `email`, `profile`.
 5. **Clients → Create client → Web application:** authorised JavaScript origin `https://vgfintrack.github.io`
-   (add `http://localhost:8080` for local testing). Put the client ID in `js/config.js`.
+   (add `http://localhost:8080` for local testing). Put the client ID in `AmrPotli/js/config.js`.
 
 ## First use
-Open <https://vgfintrack.github.io>, sign in, then **Import backup file** or **Start fresh**.
+Open <https://vgfintrack.github.io/AmrPotli/>, sign in, then **Import backup file** or **Start fresh**.
 On a phone: Chrome → ⋮ → **Add to Home screen**.
 
 ## Using it
@@ -64,5 +65,5 @@ Account types:
 
 ## Run locally
 ```sh
-npx http-server . -p 8080
+npx http-server . -p 8080   # then open http://localhost:8080/AmrPotli/
 ```

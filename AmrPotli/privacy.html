@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy · AmrPotli</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <script>
+    try {
+      const t = localStorage.getItem('mt:theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main style="max-width:720px;padding-top:24px">
+    <div class="card" style="display:grid;gap:12px">
+      <h1 style="font-size:24px">Privacy</h1>
+      <p>AmrPotli (আমার পোটলি, "my money pouch") is a personal finance app that runs entirely in your browser.</p>
+
+      <h3>Where your data is stored</h3>
+      <p>Your accounts, transactions, budgets and settings are saved in two places only:</p>
+      <ul>
+        <li><strong>Your own Google Drive</strong>, in a hidden "app data" folder that only this app can open.
+          It does not appear in your Drive file list and other apps cannot read it.</li>
+        <li><strong>Your browser</strong> on the device you use, so the app opens quickly and works offline.
+          Signing out removes this copy.</li>
+      </ul>
+      <p>There is no server or database of ours. Your data is never sent to the people who run this website,
+        and we cannot see it.</p>
+
+      <h3>What the app asks Google for</h3>
+      <ul>
+        <li><strong>Your name, email address and profile picture</strong>, to show who is signed in.</li>
+        <li><strong>Access to its own app data folder in your Google Drive</strong>, to save and load your data.
+          The app cannot see any of your other Drive files.</li>
+      </ul>
+
+      <h3>Deleting your data</h3>
+      <p>Open <a href="https://drive.google.com/drive/settings" target="_blank" rel="noopener">Google Drive → Settings → Manage apps</a>,
+        find AmrPotli, and choose <em>Delete hidden app data</em>. You can also remove the app's access at
+        <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">myaccount.google.com/connections</a>.</p>
+
+      <h3>Source code</h3>
+      <p>The app is open source: <a href="https://github.com/vgfintrack/vgfintrack.github.io">github.com/vgfintrack/vgfintrack.github.io</a>.</p>
+
+      <p class="muted">Contact: vgfintrack@gmail.com</p>
+      <p><a href="./">← Back to the app</a></p>
+    </div>
+  </main>
+</body>
+</html>
