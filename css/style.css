@@ -1,12 +1,18 @@
+/* AmrPotli brand palette, the same in Day and Night:
+     Potli Teal #0f766e  (buttons, +, progress, logo tile)
+     Potli Gold #f59e0b  (accent from the pouch icon)
+   Night only lightens --brand-text, for small teal text on dark backgrounds. */
 :root {
+  --brand: #0f766e;
+  --brand-ink: #ffffff;
+  --brand-text: #0f766e;
+  --accent: #f59e0b;
   --bg: #f4f6f5;
   --surface: #ffffff;
   --surface-2: #eef2f1;
   --text: #13201d;
   --muted: #5d6b67;
   --line: #dde4e2;
-  --brand: #0f766e;
-  --brand-ink: #ffffff;
   --income: #15803d;
   --expense: #c2410c;
   --transfer: #2563eb;
@@ -27,8 +33,7 @@
     --text: #e6eeeb;
     --muted: #93a39e;
     --line: #2a3833;
-    --brand: #2dd4bf;
-    --brand-ink: #062b27;
+    --brand-text: #5eead4;
     --income: #4ade80;
     --expense: #fb923c;
     --transfer: #60a5fa;
@@ -46,8 +51,7 @@
   --text: #e6eeeb;
   --muted: #93a39e;
   --line: #2a3833;
-  --brand: #2dd4bf;
-  --brand-ink: #062b27;
+  --brand-text: #5eead4;
   --income: #4ade80;
   --expense: #fb923c;
   --transfer: #60a5fa;
@@ -85,7 +89,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .logo.sm { width: 28px; height: 28px; border-radius: 8px; font-size: 16px; }
 .logo-img { width: 72px; height: 72px; border-radius: 18px; display: block; }
 .logo-img.sm { width: 28px; height: 28px; border-radius: 7px; }
-.bn { margin: -6px 0 0; font-size: 15px; color: var(--brand); font-weight: 600; }
+.bn { margin: -6px 0 0; font-size: 15px; color: var(--brand-text); font-weight: 600; }
 .spinner {
   width: 32px; height: 32px; border-radius: 50%;
   border: 3px solid var(--line); border-top-color: var(--brand); animation: spin 0.8s linear infinite;
@@ -232,7 +236,7 @@ input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--brand) 5
 .fee-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .fee-row input { flex: 0 1 140px; }
 .suggest {
-  border: 1px dashed var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); color: var(--brand);
+  border: 1px dashed var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); color: var(--brand-text);
   border-radius: 99px; padding: 6px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .hint { font-size: 12px; color: var(--muted); margin: 0; min-height: 1em; }
@@ -248,7 +252,7 @@ input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--brand) 5
 .btn.wide { width: 100%; }
 .icon-btn { border: 0; background: transparent; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 16px; color: var(--muted); }
 .icon-btn:hover { background: var(--surface-2); }
-.linkish { border: 0; background: none; color: var(--brand); cursor: pointer; padding: 0; font-weight: 600; font-size: 13px; }
+.linkish { border: 0; background: none; color: var(--brand-text); cursor: pointer; padding: 0; font-weight: 600; font-size: 13px; }
 
 /* ---------- dialogs ---------- */
 dialog.sheet {
@@ -283,7 +287,7 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
   font-size: 12px; color: var(--muted); cursor: pointer;
 }
 .tabbar button .ti { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.tabbar button.active { color: var(--brand); font-weight: 600; }
+.tabbar button.active { color: var(--brand-text); font-weight: 600; }
 .fab {
   position: fixed; right: 18px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 7;
   width: 58px; height: 58px; border-radius: 18px; border: 0; background: var(--brand); color: var(--brand-ink);
@@ -304,7 +308,7 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
 .choice:hover, .choice.recommended { border-color: var(--brand); }
 .choice.recommended { background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
 .choice span { font-size: 13px; color: var(--muted); }
-.choice.recommended strong::after { content: ' · Recommended'; color: var(--brand); font-weight: 600; font-size: 12px; }
+.choice.recommended strong::after { content: ' · Recommended'; color: var(--brand-text); font-weight: 600; font-size: 12px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);

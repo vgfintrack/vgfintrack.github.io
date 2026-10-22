@@ -57,7 +57,6 @@ function applyTheme(pref = themePref()) {
   if (pref === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = pref;
   const dark = isDark();
-  $('meta[name=theme-color]').content = dark ? '#0d1412' : '#0f766e';
   const btn = $('#theme-btn');
   btn.innerHTML = dark ? SUN : MOON;
   btn.title = dark ? 'Switch to day mode' : 'Switch to night mode';
