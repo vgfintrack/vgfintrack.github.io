@@ -258,7 +258,13 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
   width: 58px; height: 58px; border-radius: 18px; border: 0; background: var(--brand); color: var(--brand-ink);
   font-size: 32px; line-height: 1; cursor: pointer; box-shadow: 0 8px 24px rgb(15 118 110 / 0.35);
 }
-@media (min-width: 1100px) { .fab { right: calc(50% - 520px); } }
+/* Phones get the floating + under the thumb; wider screens get a normal
+   "Add transaction" button in the top bar instead. */
+.add-top { display: none; }
+@media (min-width: 820px) {
+  .fab { display: none; }
+  .add-top { display: inline-block; }
+}
 
 .choice {
   display: grid; gap: 4px; text-align: left; width: 100%; padding: 14px; border-radius: 12px; cursor: pointer;

@@ -100,6 +100,7 @@ async function boot() {
 
   $$('.tabbar button').forEach((b) => (b.onclick = () => switchView(b.dataset.view)));
   $('#fab').onclick = () => openTxn();
+  $('#add-top').onclick = () => openTxn();
   $('#btn-user').onclick = () => switchView('setup');
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
   setupTxnDialog();
@@ -133,8 +134,14 @@ function renderSync(status) {
   btn.disabled = status === 'syncing';
 }
 
+// The add button belongs to Dashboard and Transactions, not Setup.
+function showAddButton(show) {
+  $('#fab').hidden = !show;
+  $('#add-top').hidden = !show;
+}
+
 function renderLoading() {
-  $('#fab').hidden = true;
+  showAddButton(false);
   $$('.view').forEach((s) => (s.hidden = s.id !== 'view-dashboard'));
   $('#view-dashboard').innerHTML = `
     <div class="card" style="max-width:520px;margin:24px auto;display:grid;gap:12px;justify-items:center;text-align:center">
@@ -154,7 +161,7 @@ function switchView(v) {
 
 function render() {
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
-  $('#fab').hidden = empty;
+  showAddButton(!empty && state.view !== 'setup');
   if (empty) return renderWelcome();
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
   if (state.view === 'dashboard') renderDashboard();
