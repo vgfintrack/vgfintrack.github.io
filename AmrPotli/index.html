@@ -158,6 +158,15 @@
           <input id="txn-note" type="text" placeholder="Optional" data-i18n-ph="Optional" />
         </div>
       </div>
+      <div class="field" id="txn-repeat-field">
+        <label for="txn-repeat" data-i18n="Repeat">Repeat</label>
+        <select id="txn-repeat">
+          <option value="" data-i18n="Doesn't repeat">Doesn't repeat</option>
+          <option value="month" data-i18n="Every month">Every month</option>
+          <option value="week" data-i18n="Every week">Every week</option>
+        </select>
+        <p id="txn-repeat-hint" class="hint" hidden></p>
+      </div>
       <p id="txn-hint" class="hint"></p>
       <p id="txn-error" class="error" hidden></p>
       <div class="sheet-actions">

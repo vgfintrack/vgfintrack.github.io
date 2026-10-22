@@ -2,6 +2,7 @@ import * as C from './calc.js';
 import * as R from './reports.js';
 import { parseSms } from './sms.js';
 import * as G from './guide.js';
+import * as Rc from './recurring.js';
 import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
@@ -444,6 +445,7 @@ function renderDashboard() {
 
   $('#view-dashboard').innerHTML = `
     ${G.streakPill(txns, C.today())}
+    ${dueCard()}
     ${guide}
     ${guide ? '' : installTip()}
     ${importCard}
@@ -516,6 +518,7 @@ function renderDashboard() {
       </div>
 
       ${loansCard(accs, w)}
+      ${comingUpCard()}
 
       <div class="card">
         <h3>${isWeek ? t('Day by day') : t('Daily spending')}</h3>
@@ -554,6 +557,7 @@ function renderDashboard() {
   $('#next').onclick = () => shiftPeriod(1);
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
+  bindRecurring($('#view-dashboard'));
   $$('[data-guide]').forEach((b) => (b.onclick = () => guideAction(b.dataset.guide)));
   $$('[data-guide-hide]').forEach(
     (b) =>
@@ -710,6 +714,7 @@ function describeTxn(x, L = t) {
   const sub = [
     loan ? `${L('Loan')} · ${accName(moneyAcc)}` : isT ? L('Transfer') : accName(x.account),
     Number(x.fee) && x.type !== 'Income' ? feeWord : '',
+    x.recurring ? `↻ ${L('regular')}` : '',
     x.note,
   ]
     .filter(Boolean)
@@ -814,6 +819,7 @@ function renderTransactions() {
 let editing = null;
 let txnType = 'Expense';
 let smsRef = ''; // transaction ID from a pasted SMS, saved with the entry
+let occ = null; // { rule, date } when adding a due regular payment with changes
 
 function setupTxnDialog() {
   $$('#txn-type button').forEach((b) => (b.onclick = () => setTxnType(b.dataset.type)));
@@ -822,6 +828,9 @@ function setupTxnDialog() {
     saveTxn(false);
   };
   $('#txn-save-another').onclick = () => saveTxn(true);
+  $('#txn-repeat').onchange = updateRepeatHint;
+  $('#txn-dialog').addEventListener('close', () => (occ = null));
+  $('#txn-date').addEventListener('change', updateRepeatHint);
   $('#txn-delete').onclick = async () => {
     if (!editing || !confirm(t('Delete this transaction?'))) return;
     await state.store.deleteTxn(editing.id);
@@ -1027,6 +1036,7 @@ function setTxnType(type, x = null, preset = null) {
   const isLoan = type === 'Loan';
   $('#txn-loan-field').hidden = !isLoan;
   $('#txn-person-field').hidden = !isLoan;
+  $('#txn-repeat-field').hidden = isLoan || !!editing || !!occ;
   $('#txn-due-field').hidden = true;
   $('#txn-fee-label').innerHTML = t(FEE_LABEL);
   if (isLoan) {
@@ -1159,6 +1169,8 @@ function openTxn(x = null, preset = null) {
   $('#txn-due').value = '';
   $('#txn-plan-count').value = '';
   $('#txn-plan-interest').value = '';
+  $('#txn-repeat').value = '';
+  $('#txn-repeat-hint').hidden = true;
   delete $('#txn-amount').dataset.auto;
   const type = x ? (loanActionOf(x) ? 'Loan' : x.type) : preset?.loan ? 'Loan' : txnType;
   setTxnType(type, x, preset);
@@ -1193,12 +1205,22 @@ async function saveTxn(another) {
     loan: undefined,
     ref: smsRef || editing?.ref || undefined,
   };
+  const every = !editing && !occ ? $('#txn-repeat').value : '';
+  const ruleId = every ? newId() : occ?.rule.id;
+  if (ruleId) x.recurring = ruleId;
   try {
     await state.store.saveTxn(x);
     await ensureFeeCategory(x);
+    if (every)
+      await saveRules([
+        ...rules(),
+        { id: ruleId, type: x.type, amount, category: x.category, account: x.account, toAccount: x.toAccount, fee: x.fee, note: x.note, every, start: x.date, lastDone: x.date },
+      ]);
+    if (occ) await markRule(occ.rule.id, occ.date);
   } catch (e) {
     return err(e.message);
   }
+  if (every) setTimeout(() => toast(t('Saved as a regular payment. AmrPotli will remind you when it is due.')), 2700);
   const saved = t({ Expense: 'Saved expense of {amount}', Income: 'Saved income of {amount}', Transfer: 'Saved transfer of {amount}' }[txnType], {
     amount: money(amount),
   });
@@ -1265,6 +1287,9 @@ async function saveLoan(amount, another, err) {
 
 function afterSave(another) {
   smsRef = '';
+  occ = null;
+  $('#txn-repeat').value = '';
+  $('#txn-repeat-hint').hidden = true;
   $('#sms-info').hidden = true;
   if (another) {
     $('#txn-amount').value = '';
@@ -1274,6 +1299,177 @@ function afterSave(another) {
     $('#txn-error').hidden = true;
     $('#txn-amount').focus();
   } else $('#txn-dialog').close();
+}
+
+// ---------------------------------------------------------------- regular payments
+// Rules live in settings (recurring.js has the date logic). Due items wait on
+// the Dashboard for one tap: Add, Change (opens the form) or Skip.
+
+const rules = () => settings().recurring || [];
+const saveRules = (list) => state.store.saveSettings({ ...settings(), recurring: list });
+const ruleName = (r) =>
+  r.note || (r.type === 'Transfer' ? `${accName(r.account)} → ${accName(r.toAccount)}` : r.category);
+const ruleCls = (r) => (r.type === 'Income' ? 'income' : r.type === 'Expense' ? 'expense' : 'transfer');
+const ruleSign = (r) => (r.type === 'Income' ? '+' : r.type === 'Expense' ? '−' : '');
+
+// The latest date handled; never moves backwards.
+function markRule(id, date) {
+  return saveRules(rules().map((r) => (r.id === id && date > (r.lastDone || '') ? { ...r, lastDone: date } : r)));
+}
+
+function everyText(r) {
+  if (r.every === 'week') return t('Every week on {day}', { day: C.parseDate(r.start).toLocaleDateString(dateLocale(), { weekday: 'long' }) });
+  return t('Every month on day {d}', { d: C.parseDate(r.start).getDate() });
+}
+
+function updateRepeatHint() {
+  const every = $('#txn-repeat').value;
+  const el = $('#txn-repeat-hint');
+  el.hidden = !every;
+  if (!every) return;
+  const start = $('#txn-date').value || C.today();
+  el.textContent = `${everyText({ every, start })}. ${t('You will get a reminder on the Dashboard; nothing is added without your tap.')}`;
+}
+
+function dueCard() {
+  const list = Rc.due(rules(), C.today());
+  if (!list.length) return '';
+  return `<div class="card due-card">
+    <h3>${t('Due now')} <small>${t('regular payments')}</small></h3>
+    ${list
+      .map(({ rule: r, dates }) => {
+        const more = dates.length - 1;
+        return `<div class="due-row">
+          <div class="mid"><strong>${esc(ruleName(r))}</strong>
+            <div class="sub"><span class="num ${ruleCls(r)}">${ruleSign(r)}${money(r.amount)}</span> · ${esc(accName(r.account))} · ${niceDate(dates[0], { day: 'numeric', month: 'short' })}${
+              more ? ` · <strong>${t('{n} more due', { n: more })}</strong>` : ''
+            }</div></div>
+          <div class="due-actions">
+            <button class="btn sm" data-rskip="${esc(r.id)}">${t('Skip')}</button>
+            <button class="btn sm" data-rchange="${esc(r.id)}">${t('Change')}</button>
+            <button class="btn sm primary" data-radd="${esc(r.id)}">${t('Add')}</button>
+          </div></div>`;
+      })
+      .join('')}
+  </div>`;
+}
+
+function comingUpCard() {
+  if (!rules().length) return '';
+  const today = C.today();
+  const list = Rc.upcoming(rules(), today, C.monthRange(today).end);
+  const out = list.filter((x) => x.rule.type === 'Expense').reduce((s, x) => s + Number(x.rule.amount), 0);
+  const inc = list.filter((x) => x.rule.type === 'Income').reduce((s, x) => s + Number(x.rule.amount), 0);
+  return `<div class="card">
+    <h3>${t('Coming up this month')} <small class="num">${[out ? `${t('to pay')} ${money(out)}` : '', inc ? `${t('to receive')} ${money(inc)}` : ''].filter(Boolean).join(' · ')}</small></h3>
+    ${
+      list.length
+        ? `<div class="list">${list
+            .slice(0, 6)
+            .map(
+              ({ rule: r, date }) => `<div class="li"><span class="name">${niceDate(date, { day: 'numeric', month: 'short' })} · ${esc(ruleName(r))}</span>
+              <span class="num ${ruleCls(r)}">${ruleSign(r)}${money(r.amount)}</span></div>`,
+            )
+            .join('')}</div>`
+        : `<p class="muted" style="margin:0">${t('Nothing else this month.')}</p>`
+    }
+  </div>`;
+}
+
+function rulesCard() {
+  const list = rules();
+  return `<div class="card" id="rules-card">
+    <h3>${t('Regular payments')}</h3>
+    ${
+      list.length
+        ? list
+            .map((r) => {
+              const next = r.paused ? null : Rc.nextAfter(r, r.lastDone || C.addDays(r.start, -1));
+              return `<div class="rule-row">
+                <div class="mid"><strong>${esc(ruleName(r))}</strong>
+                  <div class="sub">${t(r.type)} · ${esc(accName(r.account))} · ${everyText(r)}${
+                    r.paused ? ` · <strong>${t('Paused')}</strong>` : next ? ` · ${t('next {date}', { date: niceDate(next, { day: 'numeric', month: 'short' }) })}` : ''
+                  }</div></div>
+                <input type="number" inputmode="decimal" min="0" step="any" value="${Number(r.amount)}" data-ramount="${esc(r.id)}" aria-label="${esc(t('Amount for {name}', { name: ruleName(r) }))}">
+                <div class="rule-actions">
+                  <button class="btn sm" data-rpause="${esc(r.id)}">${r.paused ? t('Resume') : t('Pause')}</button>
+                  <button class="icon-btn" data-rdel="${esc(r.id)}" aria-label="${esc(t('Remove {name}', { name: ruleName(r) }))}">✕</button>
+                </div></div>`;
+            })
+            .join('')
+        : `<p class="muted" style="margin:0;font-size:13px">${t('Rent, tuition, DPS, a mobile pack… When you add a transaction, choose Repeat: Every month, and AmrPotli reminds you each time it is due.')}</p>`
+    }
+  </div>`;
+}
+
+function bindRecurring(root) {
+  const find = (id) => rules().find((r) => r.id === id);
+  $$('[data-radd]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const r = find(b.dataset.radd);
+        const date = Rc.dueDates(r, C.today())[0];
+        // A deleted account: let the user pick another in the form.
+        if (!accById(r.account) || (r.type === 'Transfer' && !accById(r.toAccount))) return changeDue(r, date);
+        b.disabled = true;
+        const x = Rc.txnFor(r, date);
+        await state.store.saveTxn(x);
+        await ensureFeeCategory(x);
+        await markRule(r.id, date);
+        toast(t('Added {name}: {amount}', { name: ruleName(r), amount: money(r.amount) }));
+      }),
+  );
+  $$('[data-rskip]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const r = find(b.dataset.rskip);
+        const date = Rc.dueDates(r, C.today())[0];
+        await markRule(r.id, date);
+        toast(t('Skipped {name} for {date}', { name: ruleName(r), date: niceDate(date, { day: 'numeric', month: 'short' }) }));
+      }),
+  );
+  $$('[data-rchange]', root).forEach((b) => (b.onclick = () => changeDue(find(b.dataset.rchange))));
+  $$('[data-ramount]', root).forEach(
+    (inp) =>
+      (inp.onchange = () => {
+        const amount = Number(inp.value);
+        if (!(amount > 0)) return toast(t('Enter an amount greater than 0.'));
+        saveRules(rules().map((r) => (r.id === inp.dataset.ramount ? { ...r, amount } : r))).then(() => toast(t('Saved')));
+      }),
+  );
+  $$('[data-rpause]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        // Resuming starts from today, so months while paused are not all due at once.
+        const today = C.today();
+        saveRules(rules().map((r) => (r.id === b.dataset.rpause ? (r.paused ? { ...r, paused: false, lastDone: r.lastDone > today ? r.lastDone : today } : { ...r, paused: true }) : r)));
+      }),
+  );
+  $$('[data-rdel]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        const r = find(b.dataset.rdel);
+        if (!confirm(t('Stop "{name}" from repeating? Transactions already added stay.', { name: ruleName(r) }))) return;
+        saveRules(rules().filter((x) => x.id !== r.id));
+      }),
+  );
+}
+
+// Opens the form filled from the rule, for a different amount or account this time.
+function changeDue(r, date = Rc.dueDates(r, C.today())[0]) {
+  occ = { rule: r, date };
+  txnType = r.type;
+  openTxn();
+  $('#txn-save-another').hidden = true;
+  $('#txn-amount').value = r.amount;
+  $('#txn-date').value = date;
+  $('#txn-note').value = r.note || '';
+  $('#txn-fee').value = r.fee || '';
+  const pick = (sel, v) => v && [...$(sel).options].some((o) => o.value === v) && ($(sel).value = v);
+  pick('#txn-category', r.category);
+  pick('#txn-account', r.account);
+  if (r.type === 'Transfer') pick('#txn-to', r.toAccount);
+  updateTxnHint();
 }
 
 // ---------------------------------------------------------------- reports
@@ -1471,6 +1667,8 @@ function renderSetup() {
         <div class="add-row"><input id="new-inc" placeholder="${t('New income source')}"><button class="btn" id="add-inc">${t('Add')}</button></div>
       </div>
 
+      ${rulesCard()}
+
       ${installCard()}
 
       <div class="card">
@@ -1579,6 +1777,7 @@ function renderSetup() {
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
   bindInstall(v);
+  bindRecurring(v);
   $('#guide-show', v)?.addEventListener('click', () => {
     showGuide(true);
     switchView('dashboard');
