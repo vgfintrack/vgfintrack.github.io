@@ -11,14 +11,26 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Deploy
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
+          if [ -z "$SERVICE_ACCOUNT" ]; then
+            echo "::error::The FIREBASE_SERVICE_ACCOUNT secret is missing."
+            exit 1
+          fi
           echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx --yes firebase-tools@13 deploy --only hosting,firestore:rules --non-interactive
+          set +e
+          npx --yes firebase-tools@latest deploy --only hosting,firestore:rules --non-interactive 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Surface the error in the run summary so it is easy to read.
+            msg=$(grep -iE "error|denied|permission|not enabled|failed" "$RUNNER_TEMP/deploy.log" | tail -8 | tr '\n' ' ')
+            echo "::error::Firebase deploy failed: ${msg:-see the log above}"
+          fi
+          exit $status
