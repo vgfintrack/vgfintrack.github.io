@@ -4,7 +4,7 @@
 //   users/{uid}/transactions/{txnId}
 //   users/{uid}/meta/settings
 
-import { firebaseConfig } from './firebase-config.js';
+import { firebaseConfig, allowedEmail } from './firebase-config.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
 
@@ -121,13 +121,20 @@ async function createFirestoreStore() {
   return {
     mode: 'firebase',
     onAuth(cb) {
-      authMod.onAuthStateChanged(auth, (u) => {
+      authMod.onAuthStateChanged(auth, async (u) => {
+        if (u && allowedEmail && u.email?.toLowerCase() !== allowedEmail.toLowerCase()) {
+          await authMod.signOut(auth);
+          cb(null, `${u.email} is not allowed. Sign in with ${allowedEmail}.`);
+          return;
+        }
         uid = u ? u.uid : null;
         cb(u);
       });
     },
     async signIn() {
       const provider = new authMod.GoogleAuthProvider();
+      // Always show the account picker and suggest the allowed account.
+      provider.setCustomParameters({ prompt: 'select_account', ...(allowedEmail && { login_hint: allowedEmail }) });
       try {
         await authMod.signInWithPopup(auth, provider);
       } catch (e) {

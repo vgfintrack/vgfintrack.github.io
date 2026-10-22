@@ -12,3 +12,7 @@ export const firebaseConfig = {
   messagingSenderId: '',
   appId: '',
 };
+
+// The only Google account allowed to use the app. Anyone else is signed out
+// immediately, and firestore.rules blocks them from the data as well.
+export const allowedEmail = 'vgfintrack@gmail.com';

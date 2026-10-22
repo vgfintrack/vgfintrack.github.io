@@ -49,8 +49,10 @@ async function boot() {
   if (state.store.mode === 'demo') $('#demo-banner').hidden = false;
   let unsub = null;
 
-  state.store.onAuth((user) => {
+  state.store.onAuth((user, error) => {
     state.user = user;
+    $('#login-error').textContent = error || '';
+    $('#login-error').hidden = !error;
     unsub?.();
     $('#loading').hidden = true;
     if (!user) {
@@ -68,11 +70,11 @@ async function boot() {
   });
 
   $('#btn-signin').onclick = async () => {
-    $('#login-error').hidden = true;
     try {
       await state.store.signIn();
     } catch (e) {
-      $('#login-error').textContent = e.message;
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+      $('#login-error').textContent = e.code === 'auth/admin-restricted-operation' ? 'This account is not allowed.' : e.message;
       $('#login-error').hidden = false;
     }
   };
