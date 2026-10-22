@@ -18,6 +18,10 @@ const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
 const FILE_NAME = 'amrpotli.json';
 const LAST_USER_KEY = 'mt:last-user';
+// Google access token for the signed-in user. It lasts about an hour and only
+// allows this app's Drive folder and basic profile, so keeping it across page
+// reloads lets the app sync without asking again every time.
+const tokenKey = (uid) => `mt:token:${uid}`;
 
 export const DEFAULT_SETTINGS = {
   savingsGoal: 0,
@@ -300,6 +304,11 @@ async function createDriveStore() {
   };
 
   const hasToken = () => token && Date.now() < token.expiresAt - 60_000;
+  const keepToken = () => user && save(tokenKey(user.uid), token);
+  const dropToken = () => {
+    token = null;
+    if (user) save(tokenKey(user.uid), null);
+  };
 
   // --- Google sign-in (needs a tap, because it may open a popup)
   let tokenClient = null;
@@ -329,7 +338,7 @@ async function createDriveStore() {
   async function api(url, opts = {}) {
     const res = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${token.value}` } });
     if (res.status === 401) {
-      token = null;
+      dropToken();
       throw Object.assign(new Error('Google sign-in expired'), { needsAuth: true });
     }
     if (!res.ok) throw new Error(`Google Drive error ${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -417,10 +426,32 @@ async function createDriveStore() {
   }
 
   window.addEventListener('online', () => engine && sync());
+  // Coming back to the app: pick up changes made on other devices.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && engine && hasToken()) sync();
+  });
+
+  // Reconnects to Google without a separate tap. Must run during a tap or
+  // click (e.g. pressing Save), because Google may briefly open a popup.
+  let reconnecting = null;
+  function reconnect() {
+    reconnecting ||= requestToken(false)
+      .then(() => {
+        keepToken();
+        return sync();
+      })
+      .catch((e) => {
+        console.warn('Could not reconnect to Google Drive', e);
+        setStatus(engine?.dirty ? 'unsynced' : 'tap');
+      })
+      .finally(() => (reconnecting = null));
+    return reconnecting;
+  }
 
   const mutate = (fn) => async (...args) => {
     if (!engine) throw new Error('Not signed in');
     fn(...args);
+    if (!hasToken()) reconnect();
   };
 
   return {
@@ -428,9 +459,14 @@ async function createDriveStore() {
     onAuth(cb) {
       authCb = cb;
       if (user) {
+        token = load(tokenKey(user.uid));
         openEngine();
         cb(user);
-        setStatus(engine.dirty ? 'unsynced' : 'tap');
+        if (hasToken()) sync();
+        else {
+          setStatus(engine.dirty ? 'unsynced' : 'tap');
+          loadGis().catch(() => {}); // ready for a quick reconnect on the next tap
+        }
       } else cb(null);
     },
     onStatus(cb) {
@@ -444,6 +480,7 @@ async function createDriveStore() {
       if (!user || user.uid !== profile.uid) fileId = null;
       user = profile;
       save(LAST_USER_KEY, user);
+      keepToken();
       openEngine();
       authCb(user);
       await sync();
@@ -453,6 +490,7 @@ async function createDriveStore() {
       if (!hasToken()) {
         try {
           await requestToken(true);
+          keepToken();
         } catch (e) {
           setStatus('tap');
           throw e;
@@ -468,7 +506,7 @@ async function createDriveStore() {
         if (engine.dirty && !confirm('Some changes could not be saved to Google Drive yet. Sign out anyway and lose them?')) return;
       }
       if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
-      token = null;
+      dropToken();
       fileId = null;
       engine?.clear();
       engine = null;
