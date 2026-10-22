@@ -387,8 +387,13 @@ function loansCard(accs, w) {
   const open = (type) => accs.filter((a) => a.type === type && w.balances[a.id].value > 0.004);
   const debts = open('Debt');
   const lends = open('Lend');
+  const planText = (a) => {
+    const p = a.type === 'Debt' ? planInfo(a) : null;
+    return p && !p.done ? `Installment ${p.k} of ${p.n} · next ${money2(Math.round((p.principal + p.interest) * 100) / 100)}` : '';
+  };
   const row = (a, action, label) => `<div class="li">
-      <span class="mid" style="min-width:0"><div class="name">${esc(a.name)}</div><div class="sub">${dueText(a)}</div></span>
+      <span class="mid" style="min-width:0"><div class="name">${esc(a.name)}</div>
+        <div class="sub">${[planText(a), dueText(a)].filter(Boolean).join(' · ')}</div></span>
       <span class="num" style="margin-left:auto">${moneyExact(w.balances[a.id].value)}</span>
       <button class="btn sm" data-loan="${action}" data-person="${esc(a.id)}">${label}</button>
     </div>`;
@@ -625,8 +630,13 @@ function setupTxnDialog() {
   $('#txn-loan').onchange = () => fillLoanFields();
   $('#txn-person').onchange = () => ($('#txn-person').value === '__new' ? addLoanPerson() : fillLoanFields());
   $('#txn-category').onchange = updateTxnHint;
-  $('#txn-amount').oninput = updateFeeSuggestion;
+  $('#txn-amount').oninput = () => {
+    delete $('#txn-amount').dataset.auto;
+    updateFeeSuggestion();
+  };
   $('#txn-fee').oninput = updateTxnHint;
+  $('#txn-plan-count').oninput = updateTxnHint;
+  $('#txn-plan-interest').oninput = updateTxnHint;
   $('#txn-fee-suggest').onclick = () => {
     $('#txn-fee').value = $('#txn-fee-suggest').dataset.fee;
     updateTxnHint();
@@ -642,7 +652,7 @@ function fillSelect(sel, items, value) {
 // and a person/lender account (type Debt = I owe them, Lend = they owe me).
 const LOAN = {
   borrow: { personType: 'Debt', person: 'Borrowed from', money: 'Received in', personIsFrom: true, due: true },
-  repay: { personType: 'Debt', person: 'Repaid to', money: 'Paid from', personIsFrom: false, interest: true },
+  repay: { personType: 'Debt', person: 'Repaid to', money: 'Paid from', personIsFrom: false, interest: true, due: true },
   lend: { personType: 'Lend', person: 'Lent to', money: 'Paid from', personIsFrom: false, due: true },
   collect: { personType: 'Lend', person: 'Paid back by', money: 'Received in', personIsFrom: true },
 };
@@ -674,8 +684,47 @@ function fillLoanFields(t = null, preset = null) {
   $('#txn-fee-field').hidden = !cfg.interest;
   $('#txn-fee-label').innerHTML = cfg.interest ? 'Interest or extra paid <span class="muted">(optional)</span>' : FEE_LABEL;
   $('#txn-due-field').hidden = !cfg.due;
-  if (cfg.due) $('#txn-due').value = accById($('#txn-person').value)?.dueDate || '';
+  $('#txn-plan-field').hidden = action !== 'borrow';
+  const acc = accById($('#txn-person').value);
+  const plan = action === 'repay' && acc ? planInfo(acc) : null;
+  $('#txn-due-label').innerHTML =
+    action === 'repay' ? 'Next payment due <span class="muted">(optional)</span>'
+    : action === 'borrow' ? 'Due date <span class="muted">(optional: first installment, or when it all must be paid)</span>'
+    : 'Due date <span class="muted">(optional: when it should be paid back)</span>';
+  if (t) {
+    $('#txn-due').value = action === 'repay' ? '' : acc?.dueDate || '';
+    if (action === 'borrow' && acc?.plan?.txn === t.id) {
+      $('#txn-plan-count').value = acc.plan.count;
+      $('#txn-plan-interest').value = acc.plan.interest || '';
+    }
+  } else if (action === 'repay') {
+    // Next due date moves one month on, unless this is the last installment.
+    $('#txn-due').value = acc?.dueDate && !(plan && plan.k >= plan.n) ? C.addMonths(acc.dueDate, 1) : '';
+    const amt = $('#txn-amount');
+    if (plan && !plan.done && (amt.value === '' || amt.dataset.auto === '1')) {
+      amt.value = plan.principal;
+      amt.dataset.auto = '1';
+      $('#txn-fee').value = plan.interest || '';
+    }
+  } else if (cfg.due) $('#txn-due').value = acc?.dueDate || '';
   updateTxnHint();
+}
+
+// Installment plan of a loan account: which installment is next and how much.
+function planInfo(acc) {
+  const p = acc.plan;
+  if (!p?.count) return null;
+  const paid = state.data.transactions.filter((t) => t.toAccount === acc.id && loanActionOf(t) === 'repay' && t.date >= p.date).length;
+  const owed = C.worth(accounts(), state.data.transactions).balances[acc.id]?.value ?? 0;
+  const per = Math.round((p.principal / p.count) * 100) / 100;
+  const k = paid + 1;
+  return {
+    k,
+    n: p.count,
+    done: owed <= 0.004 || k > p.count,
+    principal: k >= p.count ? Math.round(owed * 100) / 100 : Math.min(per, Math.round(owed * 100) / 100),
+    interest: Math.round(((p.interest || 0) / p.count) * 100) / 100,
+  };
 }
 
 // Creates a lender/borrower account from inside the form.
@@ -724,7 +773,10 @@ function setTxnType(type, t = null, preset = null) {
   const order = (a) => (isT ? 0 : a.type === 'Liquid' ? 0 : 1);
   const accItems = [...accs].sort((a, b) => order(a) - order(b)).map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${a.type})`]);
   const prevFrom = $('#txn-account').value;
-  fillSelect($('#txn-account'), accItems, t?.account ?? prevFrom);
+  // Income and expenses default to a spendable account, never a loan account.
+  const prevOk = isT || accById(prevFrom)?.type === 'Liquid';
+  const firstLiquid = accs.find((a) => a.type === 'Liquid')?.id;
+  fillSelect($('#txn-account'), accItems, t?.account ?? (prevOk ? prevFrom : firstLiquid ?? prevFrom));
   const prevTo = $('#txn-to').value;
   fillSelect($('#txn-to'), accItems, t?.toAccount ?? prevTo);
   if (isT && $('#txn-to').value === $('#txn-account').value) {
@@ -766,13 +818,22 @@ function updateTxnHint() {
     const owed = person ? C.worth(accounts(), state.data.transactions).balances[person.id].value : 0;
     hint = {
       borrow: `Borrowed money is not income. You will owe ${name} more.`,
-      repay: `Repaying is not spending: you will owe ${name} less. Only interest counts as spending (Loan Interest).`,
+      repay: `Repaying is not spending: you will owe ${name} less.`,
       lend: `Lending is not spending. ${name} will owe you.`,
       collect: `Getting your money back is not income. ${name} will owe you less.`,
     }[action];
     if (person && owed > 0) hint += LOAN[action].personType === 'Debt' ? ` You owe ${name} ${moneyExact(owed)} now.` : ` ${name} owes you ${moneyExact(owed)} now.`;
+    const plan = action === 'repay' && person ? planInfo(person) : null;
+    if (plan && !plan.done) hint += ` Installment ${plan.k} of ${plan.n}.`;
+    const count = Number($('#txn-plan-count').value);
+    const amount = Number($('#txn-amount').value);
+    if (action === 'borrow' && count > 1 && amount > 0) {
+      const each = (amount + (Number($('#txn-plan-interest').value) || 0)) / count;
+      hint += ` You will pay about ${money2(Math.round(each * 100) / 100)} a month for ${count} months.`;
+    }
     const interest = Number($('#txn-fee').value);
-    if (action === 'repay' && interest > 0) hint += ` The ${money2(interest)} interest is counted as spending.`;
+    if (action === 'repay')
+      hint += interest > 0 ? ` The ${money2(interest)} interest is counted as spending (Loan Interest).` : ' Only interest would count as spending.';
     $('#txn-hint').textContent = hint;
     return;
   }
@@ -809,6 +870,9 @@ function openTxn(t = null, preset = null) {
   $('#txn-note').value = t?.note ?? '';
   $('#txn-fee').value = t?.fee || '';
   $('#txn-due').value = '';
+  $('#txn-plan-count').value = '';
+  $('#txn-plan-interest').value = '';
+  delete $('#txn-amount').dataset.auto;
   const type = t ? (loanActionOf(t) ? 'Loan' : t.type) : preset?.loan ? 'Loan' : txnType;
   setTxnType(type, t, preset);
   $('#txn-dialog').showModal();
@@ -870,7 +934,7 @@ async function saveLoan(amount, another, err) {
   const interest = cfg.interest ? Number($('#txn-fee').value) || 0 : 0;
   if (interest < 0) return err('Interest cannot be negative.');
   const t = {
-    ...(editing || {}),
+    ...(editing || { id: newId() }),
     type: 'Transfer',
     loan: action,
     category: 'Transfer',
@@ -886,8 +950,16 @@ async function saveLoan(amount, another, err) {
     await state.store.saveTxn(t);
     await ensureFeeCategory(t);
     const acc = accById(person);
-    const due = $('#txn-due').value;
-    if (cfg.due && acc && due !== (acc.dueDate || '')) await state.store.saveAccount({ ...acc, dueDate: due || undefined });
+    let due = $('#txn-due').value;
+    const owedNow = C.worth(accounts(), state.data.transactions).balances[person]?.value ?? 0;
+    if (owedNow <= 0.004) due = ''; // fully repaid: nothing is due any more
+    const count = Math.floor(Number($('#txn-plan-count').value));
+    const plan =
+      action === 'borrow' && count >= 1
+        ? { count, interest: Number($('#txn-plan-interest').value) || 0, principal: amount, date: t.date, txn: t.id }
+        : acc?.plan;
+    if (acc && ((cfg.due && due !== (acc.dueDate || '')) || plan !== acc.plan))
+      await state.store.saveAccount({ ...acc, dueDate: due || undefined, plan });
   } catch (e) {
     return err(e.message);
   }

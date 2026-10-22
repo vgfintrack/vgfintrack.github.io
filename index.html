@@ -105,8 +105,18 @@
           <button type="button" id="txn-fee-suggest" class="suggest" hidden></button>
         </div>
       </div>
+      <div class="row2" id="txn-plan-field" hidden>
+        <div class="field">
+          <label for="txn-plan-count">Monthly installments <span class="muted">(optional)</span></label>
+          <input id="txn-plan-count" type="number" inputmode="numeric" min="1" step="1" placeholder="e.g. 3" />
+        </div>
+        <div class="field">
+          <label for="txn-plan-interest">Total interest <span class="muted">(optional)</span></label>
+          <input id="txn-plan-interest" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 162" />
+        </div>
+      </div>
       <div class="field" id="txn-due-field" hidden>
-        <label for="txn-due">Due date <span class="muted">(optional: when it should be paid back)</span></label>
+        <label for="txn-due" id="txn-due-label">Due date <span class="muted">(optional: when it should be paid back)</span></label>
         <input id="txn-due" type="date" />
       </div>
       <div class="row2">

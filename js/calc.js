@@ -54,6 +54,15 @@ export function daysUntil(date, from = today()) {
   return daysBetween(from, date) - 1;
 }
 
+export function addMonths(s, n) {
+  const d = parseDate(s);
+  const day = d.getDate();
+  const out = new Date(d.getFullYear(), d.getMonth() + n, 1, 12);
+  // Keep the same day of month where possible (31 Jan + 1 month = 28/29 Feb).
+  out.setDate(Math.min(day, new Date(out.getFullYear(), out.getMonth() + 1, 0).getDate()));
+  return fmtDate(out);
+}
+
 export function daysBetween(a, b) {
   return Math.round((parseDate(b) - parseDate(a)) / 86400000) + 1;
 }
