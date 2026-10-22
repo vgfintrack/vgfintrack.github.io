@@ -2,12 +2,27 @@
 // Small and pure: it only reads the data the Dashboard already has. The
 // first-run wizard itself lives in onboarding.js and loads only for new users.
 
-import { t } from './i18n.js';
+import { t, lang } from './i18n.js';
 
-// Feedback goes to a Google Form, never with any money data.
-export const FEEDBACK_URL = 'https://forms.gle/zqNXMRPYDcfC43Ls6';
+// Bump on each release, so feedback shows which version people were using.
+export const APP_VERSION = '2026.10.22';
+
+// Feedback goes to a Google Form, never with any money data. The form's last
+// question ("App info") is filled in with version, language, device type and
+// where the button was, which helps find bugs and says nothing about the person.
+const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdvSfgm0FSD-HoNBByTHWaTj-Kl_0-zTXREGdng5tHuB1Xkcg/viewform';
+const APP_INFO_FIELD = 'entry.247074758';
+
+export function feedbackUrl(from) {
+  const ua = navigator.userAgent;
+  const device = /android/i.test(ua) ? 'Android' : /iphone|ipad|ipod/i.test(ua) ? 'iPhone' : /windows/i.test(ua) ? 'Windows' : /mac/i.test(ua) ? 'Mac' : 'Other';
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const info = `v${APP_VERSION} · ${lang} · ${device} · ${installed ? 'installed' : 'browser'} · ${innerWidth}px · from ${from}`;
+  return `${FORM}?usp=pp_url&${APP_INFO_FIELD}=${encodeURIComponent(info)}`;
+}
+
 const feedbackLink = () =>
-  `<a class="linkish guide-help" href="${FEEDBACK_URL}" target="_blank" rel="noopener">💬 ${t('Stuck, or have an idea? Tell us')}</a>`;
+  `<a class="linkish guide-help" href="${feedbackUrl('guide')}" target="_blank" rel="noopener">💬 ${t('Stuck, or have an idea? Tell us')}</a>`;
 
 // Each step is done when the data shows it, so the list stays right on every
 // device. Report and install leave no data behind, so they are flags in settings.

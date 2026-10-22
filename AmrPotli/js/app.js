@@ -1476,7 +1476,7 @@ function renderSetup() {
       <div class="card">
         <h3>${t('Help &amp; feedback')}</h3>
         <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
-        <a class="btn" href="${G.FEEDBACK_URL}" target="_blank" rel="noopener">💬 ${t('Send feedback')}</a>
+        <a class="btn" href="${G.feedbackUrl('setup')}" target="_blank" rel="noopener">💬 ${t('Send feedback')}</a>
       </div>
 
       <div class="card">
