@@ -348,4 +348,15 @@ export const BN = {
   'Account saved': 'অ্যাকাউন্ট সেভ হয়েছে',
   'This account has transactions. Delete or move them first.': 'এই অ্যাকাউন্টে লেনদেন আছে। আগে সেগুলো মুছুন বা সরান।',
   'Delete "{name}"?': '"{name}" মুছে ফেলবেন?',
+  // ---- install
+  'Install the app': 'অ্যাপ ইনস্টল করুন',
+  'Install AmrPotli': 'AmrPotli ইনস্টল করুন',
+  Install: 'ইনস্টল',
+  'Not now': 'এখন না',
+  'One tap from your home screen, even without internet.': 'হোম স্ক্রিন থেকে এক চাপে খুলুন, ইন্টারনেট ছাড়াও।',
+  'Open AmrPotli from your home screen like any app. It works offline too.': 'অন্য অ্যাপের মতো হোম স্ক্রিন থেকে AmrPotli খুলুন। অফলাইনেও চলে।',
+  'Installed on this device. It opens from your home screen, even offline.': 'এই ডিভাইসে ইনস্টল করা আছে। হোম স্ক্রিন থেকে খোলে, অফলাইনেও।',
+  'On iPhone: tap the Share button in Safari, then "Add to Home Screen".': 'iPhone-এ: Safari-র Share বাটনে চাপুন, তারপর "Add to Home Screen"।',
+  'Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".': 'ব্রাউজারের মেনু (⋮) খুলে "Install app" বা "Add to Home screen" বাছুন।',
+  'AmrPotli is installed. Open it from your home screen.': 'AmrPotli ইনস্টল হয়েছে। হোম স্ক্রিন থেকে খুলুন।',
 };

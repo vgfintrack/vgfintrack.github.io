@@ -67,6 +67,82 @@ function applyTheme(pref = themePref()) {
 
 darkQuery.addEventListener('change', () => themePref() === 'auto' && applyTheme('auto'));
 
+// ---------------------------------------------------------------- install (PWA)
+// The app works offline through sw.js. Chrome/Android offer an install
+// prompt we can trigger from a button; iPhone needs Share → Add to Home Screen.
+
+let installPrompt = null;
+const INSTALL_TIP_KEY = 'mt:install-tip';
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Offline support unavailable', e)));
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  if (state.data?.loaded && !$('#app').hidden) render();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  toast(t('AmrPotli is installed. Open it from your home screen.'));
+  if (state.data?.loaded) render();
+});
+
+async function installApp() {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;
+  render();
+}
+
+function installTipDismissed() {
+  try {
+    return localStorage.getItem(INSTALL_TIP_KEY) === 'no';
+  } catch {
+    return false;
+  }
+}
+
+// Setup card: install button, iPhone steps, or "installed".
+function installCard() {
+  let body;
+  if (isInstalled()) body = `<p style="margin:0">✓ ${t('Installed on this device. It opens from your home screen, even offline.')}</p>`;
+  else if (installPrompt)
+    body = `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Open AmrPotli from your home screen like any app. It works offline too.')}</p>
+      <button class="btn primary" data-install>${t('Install AmrPotli')}</button>`;
+  else if (isIOS())
+    body = `<p class="muted" style="margin:0;font-size:13px">${t('On iPhone: tap the Share button in Safari, then "Add to Home Screen".')}</p>`;
+  else body = `<p class="muted" style="margin:0;font-size:13px">${t('Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".')}</p>`;
+  return `<div class="card"><h3>${t('Install the app')}</h3>${body}</div>`;
+}
+
+// One-time Dashboard tip when the browser can install the app.
+function installTip() {
+  if (isInstalled() || !installPrompt || installTipDismissed()) return '';
+  return `<div class="card install-tip">
+    <img src="icons/icon.svg" alt="" width="40" height="40">
+    <div><strong>${t('Install AmrPotli')}</strong>
+      <div class="muted" style="font-size:13px">${t('One tap from your home screen, even without internet.')}</div></div>
+    <div class="tip-actions"><button class="btn sm" data-install-later>${t('Not now')}</button><button class="btn primary sm" data-install>${t('Install')}</button></div>
+  </div>`;
+}
+
+function bindInstall(root) {
+  $$('[data-install]', root).forEach((b) => (b.onclick = installApp));
+  $$('[data-install-later]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        try {
+          localStorage.setItem(INSTALL_TIP_KEY, 'no');
+        } catch {}
+        render();
+      }),
+  );
+}
+
 // ---------------------------------------------------------------- state
 
 const state = {
@@ -314,6 +390,7 @@ function renderDashboard() {
       </div>`;
 
   $('#view-dashboard').innerHTML = `
+    ${installTip()}
     ${importCard}
     <div class="periodbar">
       <div class="segmented" id="period-seg">
@@ -421,6 +498,7 @@ function renderDashboard() {
   $('#prev').onclick = () => shiftPeriod(-1);
   $('#next').onclick = () => shiftPeriod(1);
   $('#see-all').onclick = () => switchView('transactions');
+  bindInstall($('#view-dashboard'));
   $$('#view-dashboard [data-loan]').forEach((b) => (b.onclick = () => openTxn(null, { loan: b.dataset.loan, person: b.dataset.person || undefined })));
   if ($('#dash-import')) $('#dash-import').onchange = (e) => importFile(e.target.files[0]);
   bindTxnRows($('#view-dashboard'));
@@ -1251,6 +1329,8 @@ function renderSetup() {
         <div class="add-row"><input id="new-inc" placeholder="${t('New income source')}"><button class="btn" id="add-inc">${t('Add')}</button></div>
       </div>
 
+      ${installCard()}
+
       <div class="card">
         <h3>${t('Language')} · ভাষা</h3>
         <div class="segmented" style="display:flex">
@@ -1348,6 +1428,7 @@ function renderSetup() {
   };
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
+  bindInstall(v);
   $$('[data-lang]', v).forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
   $('#export', v).onclick = exportJson;
   $('#export-csv', v).onclick = exportCsv;

@@ -321,3 +321,9 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);
 }
+
+/* install tip on the Dashboard */
+.install-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.install-tip img { border-radius: 10px; flex: none; }
+.install-tip > div:nth-child(2) { flex: 1 1 180px; }
+.install-tip .tip-actions { display: flex; gap: 8px; }
