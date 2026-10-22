@@ -76,6 +76,15 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.top-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sync {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 11px;
+  font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw;
+}
+.sync.ok { color: var(--ok); }
+.sync.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.sync.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.sync:disabled { cursor: default; }
 .avatar {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2);
   overflow: hidden; padding: 0; cursor: pointer; font-weight: 600;

@@ -1,12 +1,23 @@
-// Data layer. Firestore when configured, browser localStorage in demo mode.
-// Layout in Firestore (every path is private to the signed-in user):
-//   users/{uid}/accounts/{accountId}
-//   users/{uid}/transactions/{txnId}
-//   users/{uid}/meta/settings
+// Data layer.
+//
+// Each user's data lives in ONE place: a hidden file in their own Google Drive
+// ("app data folder", which only this app can open). There is no central
+// server or database, so nobody else, the app's owner included, can read it.
+//
+// A copy is also kept in this browser so the app opens instantly and works
+// offline. Changes are saved locally first and then synced to Drive.
+// Signing out removes the copy from this browser; signing in again on any
+// device brings everything back from Drive.
+//
+// Without a Google client ID (see config.js) the app runs in demo mode and
+// keeps data in this browser only.
 
-import { firebaseConfig, allowedEmail } from './firebase-config.js';
+import { googleClientId } from './config.js';
 
-const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
+const FILE_NAME = 'money-tracker.json';
+const LAST_USER_KEY = 'mt:last-user';
 
 export const DEFAULT_SETTINGS = {
   savingsGoal: 0,
@@ -35,167 +46,424 @@ export function newId() {
 
 const clean = (o) => JSON.parse(JSON.stringify(o)); // drops undefined values
 
+function load(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+function save(key, value) {
+  try {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+// ---------------------------------------------------------------- merging
+//
+// Every account and transaction carries `updatedAt`. Deleting keeps a small
+// "tombstone" ({ id, deleted: true, updatedAt }) so a delete made on one phone
+// is not undone by an older copy on another. Merging keeps the newest version
+// of each item, which lets two devices edit offline and sync later.
+
+export function emptyDoc() {
+  return { version: 2, accounts: {}, transactions: {}, settings: null, settingsUpdatedAt: 0 };
+}
+
+export function mergeDocs(a, b) {
+  const out = emptyDoc();
+  for (const key of ['accounts', 'transactions']) {
+    out[key] = { ...a[key] };
+    for (const [id, item] of Object.entries(b[key] || {})) {
+      const mine = out[key][id];
+      if (!mine || (item.updatedAt || 0) > (mine.updatedAt || 0)) out[key][id] = item;
+    }
+  }
+  const useB = (b.settingsUpdatedAt || 0) > (a.settingsUpdatedAt || 0) || (!a.settings && b.settings);
+  out.settings = useB ? b.settings : a.settings;
+  out.settingsUpdatedAt = useB ? b.settingsUpdatedAt || 0 : a.settingsUpdatedAt || 0;
+  return out;
+}
+
+// Accepts both this format and the older arrays-based backup file.
+export function docFromBackup(d, stamp = Date.now()) {
+  const doc = emptyDoc();
+  if (d && !Array.isArray(d.accounts) && d.accounts) return mergeDocs(doc, d);
+  for (const a of d.accounts || []) doc.accounts[a.id] = { ...a, updatedAt: a.updatedAt || stamp };
+  for (const t of d.transactions || []) doc.transactions[t.id] = { ...t, updatedAt: t.updatedAt || stamp };
+  doc.settings = d.settings || null;
+  doc.settingsUpdatedAt = d.settings ? stamp : 0;
+  return doc;
+}
+
+const live = (map) => Object.values(map).filter((x) => !x.deleted);
+
+// ---------------------------------------------------------------- local engine
+
+function createEngine(cacheKey, onChanged, { readyWithoutCache = true } = {}) {
+  let cached = cacheKey ? load(cacheKey) : null;
+  // A new device has nothing to show until the first download from Drive.
+  let ready = readyWithoutCache || !!cached;
+  let doc = cached?.doc || emptyDoc();
+  let dirty = !!cached?.dirty;
+  let rev = 0; // bumps on every local change
+  const listeners = new Set();
+
+  const view = () => ({
+    accounts: live(doc.accounts),
+    transactions: live(doc.transactions),
+    settings: doc.settings,
+    loaded: ready,
+  });
+  const persist = () => cacheKey && save(cacheKey, { doc, dirty });
+  const emit = () => listeners.forEach((cb) => cb(view()));
+  const change = (fn) => {
+    fn(Date.now());
+    rev++;
+    dirty = true;
+    persist();
+    emit();
+    onChanged?.();
+  };
+
+  return {
+    get doc() {
+      return doc;
+    },
+    get dirty() {
+      return dirty;
+    },
+    get rev() {
+      return rev;
+    },
+    hasCache: !!cached,
+    // Replace the local doc after a sync. `stillDirty` is set if the user
+    // changed something while the sync was in flight.
+    replace(next, stillDirty = false) {
+      ready = true;
+      doc = next;
+      dirty = stillDirty;
+      persist();
+      emit();
+    },
+    subscribe(cb) {
+      listeners.add(cb);
+      cb(view());
+      return () => listeners.delete(cb);
+    },
+    saveTxn(t) {
+      change((now) => {
+        const id = t.id || newId();
+        doc.transactions[id] = clean({ ...t, id, createdAt: t.createdAt || now, updatedAt: now });
+      });
+    },
+    deleteTxn(id) {
+      change((now) => (doc.transactions[id] = { id, deleted: true, updatedAt: now }));
+    },
+    saveAccount(a) {
+      change((now) => {
+        const id = a.id || newId();
+        doc.accounts[id] = clean({ ...a, id, updatedAt: now });
+      });
+    },
+    deleteAccount(id) {
+      change((now) => (doc.accounts[id] = { id, deleted: true, updatedAt: now }));
+    },
+    saveSettings(s) {
+      change((now) => {
+        doc.settings = clean(s);
+        doc.settingsUpdatedAt = now;
+      });
+    },
+    // Restoring a backup replaces everything, on every device.
+    importAll(d) {
+      change((now) => {
+        for (const key of ['accounts', 'transactions'])
+          for (const id of Object.keys(doc[key])) doc[key][id] = { id, deleted: true, updatedAt: now };
+        const incoming = docFromBackup(clean(d), now + 1);
+        for (const key of ['accounts', 'transactions'])
+          for (const [id, item] of Object.entries(incoming[key])) doc[key][id] = { ...item, updatedAt: now + 1 };
+        doc.settings = incoming.settings || DEFAULT_SETTINGS;
+        doc.settingsUpdatedAt = now + 1;
+      });
+    },
+    clear() {
+      if (cacheKey) save(cacheKey, null);
+      doc = emptyDoc();
+      dirty = false;
+    },
+  };
+}
+
 export async function createStore() {
-  const demo = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'REPLACE_ME';
-  return demo ? createLocalStore() : createFirestoreStore();
+  const demo = !googleClientId || googleClientId.startsWith('REPLACE');
+  return demo ? createDemoStore() : createDriveStore();
 }
 
 // ---------------------------------------------------------------- demo mode
 
-function createLocalStore() {
-  const KEY = 'money-tracker-demo';
-  let data;
-  try {
-    data = JSON.parse(localStorage.getItem(KEY));
-  } catch {}
-  data ||= { accounts: [], transactions: [], settings: null };
-  const listeners = new Set();
-  const emit = () => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(data));
-    } catch {}
-    for (const cb of listeners) cb({ ...data, loaded: true });
-  };
+function createDemoStore() {
+  const engine = createEngine('mt:demo');
   const user = { uid: 'demo', displayName: 'Demo mode', email: 'Data stays in this browser' };
-
   return {
     mode: 'demo',
-    onAuth(cb) {
-      cb(user);
-    },
+    onAuth: (cb) => cb(user),
+    onStatus: (cb) => cb('demo'),
     async signIn() {},
     async signOut() {},
-    subscribe(cb) {
-      listeners.add(cb);
-      cb({ ...data, loaded: true });
-      return () => listeners.delete(cb);
-    },
-    async saveTxn(t) {
-      t = clean({ ...t, id: t.id || newId(), createdAt: t.createdAt || Date.now() });
-      data.transactions = data.transactions.filter((x) => x.id !== t.id).concat(t);
-      emit();
-    },
-    async deleteTxn(id) {
-      data.transactions = data.transactions.filter((x) => x.id !== id);
-      emit();
-    },
-    async saveAccount(a) {
-      a = clean({ ...a, id: a.id || newId() });
-      data.accounts = data.accounts.filter((x) => x.id !== a.id).concat(a);
-      emit();
-    },
-    async deleteAccount(id) {
-      data.accounts = data.accounts.filter((x) => x.id !== id);
-      emit();
-    },
-    async saveSettings(s) {
-      data.settings = clean(s);
-      emit();
-    },
-    async importAll(d) {
-      data = clean({ accounts: d.accounts, transactions: d.transactions, settings: d.settings });
-      emit();
-    },
+    async syncNow() {},
+    subscribe: (cb) => engine.subscribe(cb),
+    saveTxn: async (t) => engine.saveTxn(t),
+    deleteTxn: async (id) => engine.deleteTxn(id),
+    saveAccount: async (a) => engine.saveAccount(a),
+    deleteAccount: async (id) => engine.deleteAccount(id),
+    saveSettings: async (s) => engine.saveSettings(s),
+    importAll: async (d) => engine.importAll(d),
   };
 }
 
-// ---------------------------------------------------------------- Firestore
+// ---------------------------------------------------------------- Google Drive
 
-async function createFirestoreStore() {
-  const [{ initializeApp }, authMod, fs] = await Promise.all([
-    import(`${SDK}/firebase-app.js`),
-    import(`${SDK}/firebase-auth.js`),
-    import(`${SDK}/firebase-firestore.js`),
-  ]);
-  const app = initializeApp(firebaseConfig);
-  const auth = authMod.getAuth(app);
-  // Offline cache: the app keeps working without internet and syncs later.
-  const db = fs.initializeFirestore(app, {
-    localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }),
+function loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Could not load Google sign-in. Check your internet connection.'));
+    document.head.appendChild(s);
   });
+}
 
-  let uid = null;
-  const col = (name) => fs.collection(db, 'users', uid, name);
-  const settingsRef = () => fs.doc(db, 'users', uid, 'meta', 'settings');
+async function createDriveStore() {
+  let user = load(LAST_USER_KEY); // { uid, email, displayName, photoURL }
+  let token = null; // { value, expiresAt }
+  let engine = null;
+  let fileId = null;
+  let status = 'idle';
+  let syncing = null;
+  let again = false;
+  let syncTimer = null;
+  let authCb = () => {};
+  const statusListeners = new Set();
+  const dataSubs = new Map(); // listener -> unsubscribe from current engine
+
+  const setStatus = (s) => {
+    status = s;
+    statusListeners.forEach((cb) => cb(s));
+  };
+
+  const scheduleSync = () => {
+    if (engine?.dirty) setStatus(hasToken() ? 'syncing' : 'unsynced');
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => sync(), 1200);
+  };
+
+  const openEngine = () => {
+    engine = createEngine(`mt:data:${user.uid}`, scheduleSync, { readyWithoutCache: false });
+    for (const [cb, off] of dataSubs) {
+      off?.();
+      dataSubs.set(cb, engine.subscribe(cb));
+    }
+  };
+
+  const hasToken = () => token && Date.now() < token.expiresAt - 60_000;
+
+  // --- Google sign-in (needs a tap, because it may open a popup)
+  let tokenClient = null;
+  let pending = null;
+  async function requestToken(interactive) {
+    await loadGis();
+    tokenClient ||= google.accounts.oauth2.initTokenClient({
+      client_id: googleClientId,
+      scope: SCOPES,
+      callback: (resp) => pending?.resolve(resp),
+      error_callback: (err) => pending?.reject(err),
+    });
+    const resp = await new Promise((resolve, reject) => {
+      pending = { resolve, reject };
+      tokenClient.requestAccessToken({
+        prompt: interactive && !user ? 'select_account' : '',
+        ...(user?.email && { login_hint: user.email }),
+      });
+    });
+    if (resp.error) throw new Error(resp.error_description || resp.error);
+    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE_SCOPE)) {
+      throw new Error('Please tick the box that lets the app keep its data in your Google Drive. That is where your data is stored.');
+    }
+    token = { value: resp.access_token, expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000 };
+  }
+
+  async function api(url, opts = {}) {
+    const res = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${token.value}` } });
+    if (res.status === 401) {
+      token = null;
+      throw Object.assign(new Error('Google sign-in expired'), { needsAuth: true });
+    }
+    if (!res.ok) throw new Error(`Google Drive error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    return res;
+  }
+
+  async function fetchProfile() {
+    const p = await (await api('https://www.googleapis.com/oauth2/v3/userinfo')).json();
+    return { uid: p.sub, email: p.email, displayName: p.name || p.email, photoURL: p.picture || '' };
+  }
+
+  async function readRemote() {
+    if (!fileId) {
+      const q = encodeURIComponent(`name='${FILE_NAME}'`);
+      const list = await (
+        await api(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)&orderBy=modifiedTime desc`)
+      ).json();
+      fileId = list.files?.[0]?.id || null;
+    }
+    if (!fileId) return null;
+    const res = await api(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    return docFromBackup(await res.json(), 0);
+  }
+
+  async function writeRemote(doc) {
+    const body = JSON.stringify(doc);
+    if (fileId) {
+      await api(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      return;
+    }
+    const boundary = 'mt' + newId();
+    const meta = JSON.stringify({ name: FILE_NAME, parents: ['appDataFolder'], mimeType: 'application/json' });
+    const multipart =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`;
+    const res = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body: multipart,
+    });
+    fileId = (await res.json()).id;
+  }
+
+  // Download, merge with local changes, upload if anything differs.
+  async function sync() {
+    if (!engine) return;
+    if (!hasToken()) return setStatus(engine.dirty ? 'unsynced' : 'tap');
+    if (!navigator.onLine) return setStatus('offline');
+    if (syncing) {
+      again = true;
+      return syncing;
+    }
+    syncing = (async () => {
+      setStatus('syncing');
+      try {
+        const base = engine.doc;
+        const startRev = engine.rev;
+        const remote = await readRemote();
+        const merged = remote ? mergeDocs(base, remote) : base;
+        const remoteJson = remote ? JSON.stringify(remote) : null;
+        // A brand-new user with nothing yet: don't create an empty file.
+        const nothingYet = !remote && !engine.dirty && JSON.stringify(merged) === JSON.stringify(emptyDoc());
+        if (!nothingYet && JSON.stringify(merged) !== remoteJson) await writeRemote(merged);
+        // Keep edits made while we were syncing.
+        const changedMeanwhile = engine.rev !== startRev;
+        engine.replace(changedMeanwhile ? mergeDocs(engine.doc, merged) : merged, changedMeanwhile);
+        setStatus(changedMeanwhile ? 'syncing' : 'synced');
+        if (changedMeanwhile) again = true;
+      } catch (e) {
+        console.error(e);
+        setStatus(e.needsAuth ? 'tap' : navigator.onLine ? 'error' : 'offline');
+      } finally {
+        syncing = null;
+        if (again) {
+          again = false;
+          scheduleSync();
+        }
+      }
+    })();
+    return syncing;
+  }
+
+  window.addEventListener('online', () => engine && sync());
+
+  const mutate = (fn) => async (...args) => {
+    if (!engine) throw new Error('Not signed in');
+    fn(...args);
+  };
 
   return {
-    mode: 'firebase',
+    mode: 'drive',
     onAuth(cb) {
-      authMod.onAuthStateChanged(auth, async (u) => {
-        if (u && allowedEmail && u.email?.toLowerCase() !== allowedEmail.toLowerCase()) {
-          await authMod.signOut(auth);
-          cb(null, `${u.email} is not allowed. Sign in with ${allowedEmail}.`);
-          return;
-        }
-        uid = u ? u.uid : null;
-        cb(u);
-      });
+      authCb = cb;
+      if (user) {
+        openEngine();
+        cb(user);
+        setStatus(engine.dirty ? 'unsynced' : 'tap');
+      } else cb(null);
     },
+    onStatus(cb) {
+      statusListeners.add(cb);
+      cb(status);
+    },
+    // Called from a button tap.
     async signIn() {
-      const provider = new authMod.GoogleAuthProvider();
-      // Always show the account picker and suggest the allowed account.
-      provider.setCustomParameters({ prompt: 'select_account', ...(allowedEmail && { login_hint: allowedEmail }) });
-      try {
-        await authMod.signInWithPopup(auth, provider);
-      } catch (e) {
-        // Popups are often blocked in installed / in-app browsers.
-        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-          await authMod.signInWithRedirect(auth, provider);
-        } else throw e;
-      }
+      await requestToken(true);
+      const profile = await fetchProfile();
+      if (!user || user.uid !== profile.uid) fileId = null;
+      user = profile;
+      save(LAST_USER_KEY, user);
+      openEngine();
+      authCb(user);
+      await sync();
     },
+    // Called from a button tap. Reconnects to Drive if needed, then syncs.
+    async syncNow() {
+      if (!hasToken()) {
+        try {
+          await requestToken(true);
+        } catch (e) {
+          setStatus('tap');
+          throw e;
+        }
+      }
+      await sync();
+    },
+    // Saves any unsynced changes, then removes this browser's copy.
     async signOut() {
-      await authMod.signOut(auth);
+      if (engine?.dirty) {
+        if (!hasToken()) await requestToken(true).catch(() => {});
+        await sync();
+        if (engine.dirty && !confirm('Some changes could not be saved to Google Drive yet. Sign out anyway and lose them?')) return;
+      }
+      if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
+      token = null;
+      fileId = null;
+      engine?.clear();
+      engine = null;
+      for (const [cb, off] of dataSubs) {
+        off?.();
+        dataSubs.set(cb, null);
+      }
+      user = null;
+      save(LAST_USER_KEY, null);
+      setStatus('idle');
+      authCb(null);
     },
     subscribe(cb) {
-      const state = { accounts: [], transactions: [], settings: null };
-      const seen = new Set();
-      const update = (part) => () => {
-        seen.add(part);
-        cb({ ...state, loaded: seen.size === 3 });
+      dataSubs.set(cb, engine ? engine.subscribe(cb) : null);
+      return () => {
+        dataSubs.get(cb)?.();
+        dataSubs.delete(cb);
       };
-      const docs = (snap) => snap.docs.map((d) => ({ ...d.data(), id: d.id }));
-      const unsubs = [
-        fs.onSnapshot(col('accounts'), (s) => ((state.accounts = docs(s)), update('a')())),
-        fs.onSnapshot(col('transactions'), (s) => ((state.transactions = docs(s)), update('t')())),
-        fs.onSnapshot(settingsRef(), (s) => ((state.settings = s.exists() ? s.data() : null), update('s')())),
-      ];
-      return () => unsubs.forEach((u) => u());
     },
-    async saveTxn(t) {
-      const id = t.id || newId();
-      await fs.setDoc(fs.doc(col('transactions'), id), clean({ ...t, id, createdAt: t.createdAt || Date.now() }));
-    },
-    async deleteTxn(id) {
-      await fs.deleteDoc(fs.doc(col('transactions'), id));
-    },
-    async saveAccount(a) {
-      const id = a.id || newId();
-      await fs.setDoc(fs.doc(col('accounts'), id), clean({ ...a, id }));
-    },
-    async deleteAccount(id) {
-      await fs.deleteDoc(fs.doc(col('accounts'), id));
-    },
-    async saveSettings(s) {
-      await fs.setDoc(settingsRef(), clean(s));
-    },
-    // Replaces everything with the contents of a backup file.
-    async importAll(d) {
-      const ops = [];
-      for (const name of ['accounts', 'transactions']) {
-        const existing = await fs.getDocs(col(name));
-        existing.forEach((doc) => ops.push((b) => b.delete(doc.ref)));
-        for (const item of d[name] || []) {
-          const id = item.id || newId();
-          ops.push((b) => b.set(fs.doc(col(name), id), clean({ ...item, id })));
-        }
-      }
-      ops.push((b) => b.set(settingsRef(), clean(d.settings || DEFAULT_SETTINGS)));
-      for (let i = 0; i < ops.length; i += 450) {
-        const batch = fs.writeBatch(db);
-        ops.slice(i, i + 450).forEach((op) => op(batch));
-        await batch.commit();
-      }
-    },
+    saveTxn: mutate((t) => engine.saveTxn(t)),
+    deleteTxn: mutate((id) => engine.deleteTxn(id)),
+    saveAccount: mutate((a) => engine.saveAccount(a)),
+    deleteAccount: mutate((id) => engine.deleteAccount(id)),
+    saveSettings: mutate((s) => engine.saveSettings(s)),
+    importAll: mutate((d) => engine.importAll(d)),
   };
 }

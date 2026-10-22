@@ -6,29 +6,33 @@ run Saturday to Friday.
 
 - **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `vendor/`
 - **Hosting:** GitHub Pages at <https://vgfintrack.github.io>. Every push to `main` goes live in about a minute.
-- **Login:** Google sign-in, **only `vgfintrack@gmail.com`** (set in `js/firebase-config.js` and enforced in `firestore.rules`)
-- **Data:** Cloud Firestore (project `vgfintrack-11a9c`), works offline and syncs later
+- **Sign-in:** anyone can sign in with their own Google account
+- **Storage:** each user's data is one file in **their own Google Drive app data folder**
+  (`drive.appdata` scope), plus a local copy in their browser for speed and offline use
 
-No financial data is stored in this repository, so it is safe for it to be public.
+### Privacy model
+- There is no server or database. The site's owner never receives anyone's data.
+- The app data folder is hidden from the user's Drive file list and readable only by this app's OAuth client.
+- Signing out deletes the local copy from that browser. Signing in on any device downloads it again.
+- Edits from several devices are merged per item (newest `updatedAt` wins; deletes are kept as tombstones).
+- See `privacy.html`.
 
-## One-time setup
+Until `js/config.js` has a real client ID, the app runs in **demo mode** and keeps data in the browser only.
 
-### 1. GitHub Pages
-1. Repo **Settings → General → Danger Zone → Change visibility → Public**.
-2. Repo **Settings → Pages**: Source *Deploy from a branch*, branch `main`, folder `/ (root)`, **Save**.
+## One-time setup (Google Cloud project `vgfintrack-11a9c`)
 
-### 2. Firebase (`vgfintrack-11a9c`, free Spark plan)
-1. **Authentication → Sign-in method → Google → Enable.**
-2. **Authentication → Settings → Authorized domains → Add domain:** `vgfintrack.github.io`
-3. **Firestore → Rules:** paste the contents of `firestore.rules` and **Publish**.
-   Do this again whenever `firestore.rules` changes.
+1. **Enable the Drive API:** <https://console.cloud.google.com/apis/library/drive.googleapis.com?project=vgfintrack-11a9c> → **Enable**.
+2. **Google Auth Platform → Branding:** app name `Money Tracker`, support email, home page
+   `https://vgfintrack.github.io`, privacy policy `https://vgfintrack.github.io/privacy.html`,
+   authorised domain `vgfintrack.github.io`.
+3. **Audience:** user type **External** → **Publish app** (so anyone can sign in, not just test users).
+4. **Data access → Add or remove scopes:** `.../auth/drive.appdata`, plus `openid`, `email`, `profile`.
+5. **Clients → Create client → Web application:** authorised JavaScript origin `https://vgfintrack.github.io`
+   (add `http://localhost:8080` for local testing). Put the client ID in `js/config.js`.
 
-### 3. Bring in your data
-Open <https://vgfintrack.github.io>, sign in as vgfintrack@gmail.com, choose **Import backup file**, and
-pick `omayer-money-data.json`. Keep that file private and never commit it.
-
-### 4. Put it on your phone
-Open the site in Chrome → menu → **Add to Home screen**. It opens like a normal app.
+## First use
+Open <https://vgfintrack.github.io>, sign in, then **Import backup file** or **Start fresh**.
+On a phone: Chrome → ⋮ → **Add to Home screen**.
 
 ## Using it
 

@@ -66,16 +66,28 @@ async function boot() {
     unsub = state.store.subscribe((data) => {
       state.data = data;
       if (data.loaded) render();
+      else renderLoading();
     });
   });
 
   $('#btn-signin').onclick = async () => {
+    $('#login-error').hidden = true;
     try {
       await state.store.signIn();
     } catch (e) {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
-      $('#login-error').textContent = e.code === 'auth/admin-restricted-operation' ? 'This account is not allowed.' : e.message;
+      if (e.type === 'popup_closed') return;
+      $('#login-error').textContent =
+        e.type === 'popup_failed_to_open' ? 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.' : e.message || String(e);
       $('#login-error').hidden = false;
+    }
+  };
+
+  state.store.onStatus(renderSync);
+  $('#sync').onclick = async () => {
+    try {
+      await state.store.syncNow();
+    } catch (e) {
+      if (e.type !== 'popup_closed') toast(e.message || 'Could not connect to Google Drive');
     }
   };
 
@@ -95,6 +107,36 @@ function renderAvatar() {
     : esc((u.displayName || u.email || '?')[0].toUpperCase());
 }
 
+const SYNC_LABELS = {
+  synced: ['✓ Saved to Drive', 'ok'],
+  syncing: ['Syncing…', ''],
+  tap: ['Tap to sync', ''],
+  unsynced: ['Not synced · tap', 'warn'],
+  offline: ['Offline · saved on this device', 'warn'],
+  error: ['Sync failed · tap to retry', 'bad'],
+};
+
+function renderSync(status) {
+  const btn = $('#sync');
+  const [label, cls] = SYNC_LABELS[status] || [];
+  btn.hidden = !label;
+  if (!label) return;
+  btn.textContent = label;
+  btn.className = `sync ${cls}`;
+  btn.disabled = status === 'syncing';
+}
+
+function renderLoading() {
+  $('#fab').hidden = true;
+  $$('.view').forEach((s) => (s.hidden = s.id !== 'view-dashboard'));
+  $('#view-dashboard').innerHTML = `
+    <div class="card" style="max-width:520px;margin:24px auto;display:grid;gap:12px;justify-items:center;text-align:center">
+      <div class="spinner"></div>
+      <p style="margin:0">Loading your data from Google Drive…</p>
+      <p class="muted" style="margin:0;font-size:13px">If this takes long, tap the sync button at the top.</p>
+    </div>`;
+}
+
 function switchView(v) {
   state.view = v;
   $$('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.view === v));
@@ -107,6 +149,7 @@ function render() {
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
   $('#fab').hidden = empty;
   if (empty) return renderWelcome();
+  $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
   if (state.view === 'dashboard') renderDashboard();
   if (state.view === 'transactions') renderTransactions();
   if (state.view === 'setup') renderSetup();
@@ -658,7 +701,13 @@ function renderSetup() {
       <div class="card">
         <h3>Signed in</h3>
         <p style="margin:0 0 10px">${esc(u.displayName || '')}<br><span class="muted">${esc(u.email || '')}</span></p>
-        ${state.store.mode === 'firebase' ? '<button class="btn" id="signout">Sign out</button>' : '<p class="muted" style="margin:0;font-size:13px">Demo mode. Add your Firebase config to <code>js/firebase-config.js</code> to sign in and sync.</p>'}
+        ${
+          state.store.mode === 'drive'
+            ? `<p class="muted" style="margin:0 0 10px;font-size:13px">Your data is stored in a private app folder in this Google account's Drive.
+               Nobody else can see it, including the people who run this website. Signing out removes it from this device only.</p>
+               <button class="btn" id="signout">Sign out</button>`
+            : '<p class="muted" style="margin:0;font-size:13px">Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.</p>'
+        }
       </div>
     </div>`;
 

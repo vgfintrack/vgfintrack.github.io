@@ -18,6 +18,8 @@
       <h1>Money Tracker</h1>
       <p class="muted">Your income, spending, savings and investments in one place.</p>
       <button id="btn-signin" class="btn primary wide">Sign in with Google</button>
+      <p class="muted" style="font-size:13px">🔒 Your data is saved in your own Google Drive, in a private folder only this app can open.
+        Nobody else can see it, not even the people who run this website. <a href="privacy.html">Privacy</a></p>
       <p id="login-error" class="error" hidden></p>
     </div>
   </div>
@@ -27,10 +29,13 @@
   <div id="app" hidden>
     <header class="topbar">
       <div class="brand"><span class="logo sm">৳</span> Money Tracker</div>
-      <button id="btn-user" class="avatar" title="Account"></button>
+      <div class="top-right">
+        <button id="sync" class="sync" hidden></button>
+        <button id="btn-user" class="avatar" title="Account"></button>
+      </div>
     </header>
     <div id="demo-banner" class="banner" hidden>
-      Demo mode: data is saved in this browser only. Add your Firebase config to sync across devices.
+      Demo mode: data is saved in this browser only. Add a Google client ID in js/config.js to sync with Google Drive.
     </div>
 
     <main>
