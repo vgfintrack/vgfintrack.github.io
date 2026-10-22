@@ -656,7 +656,7 @@ function renderSetup() {
       <div class="card">
         <h3>Signed in</h3>
         <p style="margin:0 0 10px">${esc(u.displayName || '')}<br><span class="muted">${esc(u.email || '')}</span></p>
-        ${state.store.mode === 'firebase' ? '<button class="btn" id="signout">Sign out</button>' : '<p class="muted" style="margin:0;font-size:13px">Demo mode. Add your Firebase config to <code>public/js/firebase-config.js</code> to sign in and sync.</p>'}
+        ${state.store.mode === 'firebase' ? '<button class="btn" id="signout">Sign out</button>' : '<p class="muted" style="margin:0;font-size:13px">Demo mode. Add your Firebase config to <code>js/firebase-config.js</code> to sign in and sync.</p>'}
       </div>
     </div>`;
 

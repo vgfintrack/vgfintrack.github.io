@@ -4,40 +4,37 @@ A personal finance web app: log income, expenses and transfers, see monthly and 
 dashboards, budgets, savings goal, investments and net worth. Amounts are in BDT and weeks
 run Saturday to Friday.
 
-- **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `public/vendor/`
+- **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `vendor/`
+- **Hosting:** GitHub Pages at <https://vgfintrack.github.io>
 - **Login:** Firebase Authentication (Google sign-in)
 - **Data:** Cloud Firestore, private per user (`firestore.rules`), works offline and syncs later
-- **Hosting:** Firebase Hosting, deployed by GitHub Actions on every push to `main`
 
-Until `public/js/firebase-config.js` is filled in, the app runs in **demo mode** and keeps
+No financial data is stored in this repository. It lives in your Firestore database,
+which only your Google account can read.
+
+Until `js/firebase-config.js` is filled in, the app runs in **demo mode** and keeps
 data in the browser only.
 
 ## One-time setup
 
-### 1. Create the Firebase project
-1. Go to <https://console.firebase.google.com> → **Add project** (Google Analytics is not needed).
-2. **Build → Authentication → Get started → Sign-in method → Google → Enable.**
-3. **Build → Firestore Database → Create database** → choose a location close to you
-   (e.g. `asia-south1`) → start in **production mode**.
-4. **Project settings (⚙) → General → Your apps → Web (`</>`)** → register an app
-   (no need to tick Hosting here). Copy the `firebaseConfig` values into
-   `public/js/firebase-config.js`.
-5. Put your project ID in `.firebaserc` instead of `REPLACE_WITH_FIREBASE_PROJECT_ID`.
+### 1. GitHub Pages
+Repo **Settings → Pages → Build and deployment**: Source *Deploy from a branch*,
+branch `main`, folder `/ (root)`. The site updates a minute after every push.
 
-### 2. Let GitHub deploy it
-1. In Google Cloud console → **IAM & Admin → Service Accounts** (same project) →
-   **Create service account**, name it `github-deploy`, and give it these roles:
-   *Firebase Hosting Admin*, *Firebase Rules Admin*, *Service Account User*, *API Keys Viewer*.
-2. Open the account → **Keys → Add key → JSON**. A file downloads.
-3. In GitHub → this repo → **Settings → Secrets and variables → Actions → New repository secret**:
-   name `FIREBASE_SERVICE_ACCOUNT`, value = the whole contents of that JSON file.
-   Then delete the downloaded file from your computer.
-4. Push to `main` (or run the workflow manually from the **Actions** tab). The site goes live at
-   `https://<project-id>.web.app`.
+### 2. Firebase project (free Spark plan is enough)
+1. <https://console.firebase.google.com> → **Add project** (Google Analytics not needed).
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable.**
+3. **Authentication → Settings → Authorized domains → Add domain:** `vgfintrack.github.io`
+4. **Build → Firestore Database → Create database** → location `asia-south1` (Mumbai)
+   → **production mode**.
+5. **Firestore → Rules:** replace everything with the contents of `firestore.rules`
+   and click **Publish**. This makes each user's data visible to that user only.
+6. **Project settings (⚙) → General → Your apps → Web (`</>`)** → register an app.
+   Copy the `firebaseConfig` values into `js/firebase-config.js` and push.
 
 ### 3. Bring in your data
-Open the site, sign in with Google, choose **Import backup file**, and pick your
-`omayer-money-data.json`. That file holds your personal data and is **not** stored in this repo.
+Open <https://vgfintrack.github.io>, sign in with Google, choose **Import backup file**, and
+pick `omayer-money-data.json`. Keep that file private and never commit it.
 
 ### 4. Put it on your phone
 Open the site in Chrome → menu → **Add to Home screen**. It opens like a normal app.
@@ -65,5 +62,5 @@ Account types:
 
 ## Run locally
 ```sh
-npx http-server public -p 8080
+npx http-server . -p 8080
 ```
