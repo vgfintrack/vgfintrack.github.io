@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Money Tracker</title>
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="vendor/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="login" class="screen" hidden>
+    <div class="login-card">
+      <div class="logo">৳</div>
+      <h1>Money Tracker</h1>
+      <p class="muted">Your income, spending, savings and investments in one place.</p>
+      <button id="btn-signin" class="btn primary wide">Sign in with Google</button>
+      <p id="login-error" class="error" hidden></p>
+    </div>
+  </div>
+
+  <div id="loading" class="screen"><div class="spinner"></div></div>
+
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="brand"><span class="logo sm">৳</span> Money Tracker</div>
+      <button id="btn-user" class="avatar" title="Account"></button>
+    </header>
+    <div id="demo-banner" class="banner" hidden>
+      Demo mode: data is saved in this browser only. Add your Firebase config to sync across devices.
+    </div>
+
+    <main>
+      <section id="view-dashboard" class="view"></section>
+      <section id="view-transactions" class="view" hidden></section>
+      <section id="view-setup" class="view" hidden></section>
+    </main>
+
+    <button id="fab" class="fab" aria-label="Add transaction">+</button>
+
+    <nav class="tabbar">
+      <button data-view="dashboard" class="active"><svg class="ti" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Dashboard</button>
+      <button data-view="transactions"><svg class="ti" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Transactions</button>
+      <button data-view="setup"><svg class="ti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Setup</button>
+    </nav>
+  </div>
+
+  <dialog id="txn-dialog" class="sheet">
+    <form id="txn-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="txn-title">Add transaction</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="segmented" id="txn-type">
+        <button type="button" data-type="Expense">Expense</button>
+        <button type="button" data-type="Income">Income</button>
+        <button type="button" data-type="Transfer">Transfer</button>
+      </div>
+      <label class="amount-field">
+        <span>৳</span>
+        <input id="txn-amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" required />
+      </label>
+      <div class="field" id="txn-category-field">
+        <label for="txn-category">Category</label>
+        <select id="txn-category"></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="txn-account" id="txn-account-label">Paid from</label>
+          <select id="txn-account"></select>
+        </div>
+        <div class="field" id="txn-to-field">
+          <label for="txn-to">To</label>
+          <select id="txn-to"></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="txn-date">Date</label>
+          <input id="txn-date" type="date" required />
+        </div>
+        <div class="field">
+          <label for="txn-note">Note</label>
+          <input id="txn-note" type="text" placeholder="Optional" />
+        </div>
+      </div>
+      <p id="txn-hint" class="hint"></p>
+      <p id="txn-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" id="txn-delete" class="btn danger" hidden>Delete</button>
+        <button type="button" id="txn-save-another" class="btn">Save &amp; add another</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="acc-dialog" class="sheet">
+    <form id="acc-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="acc-title">Account</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="field">
+        <label for="acc-name">Name</label>
+        <input id="acc-name" type="text" required placeholder="e.g. Mother's Account" />
+      </div>
+      <div class="field">
+        <label for="acc-type">Type</label>
+        <select id="acc-type">
+          <option value="Liquid">Liquid: money I can spend (bank, cash, bKash)</option>
+          <option value="Lend">Lend: money someone owes me</option>
+          <option value="Investment">Investment: fund, cow, savings</option>
+          <option value="Debt">Debt: money I owe</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="acc-opening" id="acc-opening-label">Opening balance</label>
+          <input id="acc-opening" type="number" inputmode="decimal" step="any" value="0" />
+        </div>
+        <div class="field inv-only">
+          <label for="acc-value">Current value</label>
+          <input id="acc-value" type="number" inputmode="decimal" step="any" placeholder="Same as book" />
+        </div>
+      </div>
+      <div class="field inv-only">
+        <label for="acc-target">Monthly target</label>
+        <input id="acc-target" type="number" inputmode="decimal" step="any" placeholder="Optional" />
+      </div>
+      <div class="field">
+        <label for="acc-notes">Notes</label>
+        <input id="acc-notes" type="text" placeholder="Optional" />
+      </div>
+      <p id="acc-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" id="acc-delete" class="btn danger" hidden>Delete</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
