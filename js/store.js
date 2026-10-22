@@ -189,6 +189,34 @@ function createEngine(cacheKey, onChanged, { readyWithoutCache = true } = {}) {
         doc.settingsUpdatedAt = now + 1;
       });
     },
+    // Adds a backup's items to the current data. Items already here (same id)
+    // are kept as they are; categories and budgets are combined.
+    mergeAll(d) {
+      change((now) => {
+        const incoming = docFromBackup(clean(d), now);
+        for (const key of ['accounts', 'transactions'])
+          for (const [id, item] of Object.entries(incoming[key])) {
+            const mine = doc[key][id];
+            if (!mine || mine.deleted) doc[key][id] = { ...item, updatedAt: now };
+          }
+        const cur = doc.settings || DEFAULT_SETTINGS;
+        const inc = incoming.settings;
+        if (inc) {
+          const expense = cur.expenseCategories.map((c) => {
+            const other = inc.expenseCategories?.find((x) => x.name === c.name);
+            return !Number(c.budget) && other ? { ...c, budget: other.budget } : c;
+          });
+          for (const c of inc.expenseCategories || []) if (!expense.some((x) => x.name === c.name)) expense.push(c);
+          doc.settings = {
+            ...cur,
+            savingsGoal: Number(cur.savingsGoal) || Number(inc.savingsGoal) || 0,
+            incomeCategories: [...new Set([...cur.incomeCategories, ...(inc.incomeCategories || [])])],
+            expenseCategories: expense,
+          };
+          doc.settingsUpdatedAt = now;
+        }
+      });
+    },
     clear() {
       if (cacheKey) save(cacheKey, null);
       doc = emptyDoc();
@@ -221,6 +249,7 @@ function createDemoStore() {
     deleteAccount: async (id) => engine.deleteAccount(id),
     saveSettings: async (s) => engine.saveSettings(s),
     importAll: async (d) => engine.importAll(d),
+    mergeAll: async (d) => engine.mergeAll(d),
   };
 }
 
@@ -465,5 +494,6 @@ async function createDriveStore() {
     deleteAccount: mutate((id) => engine.deleteAccount(id)),
     saveSettings: mutate((s) => engine.saveSettings(s)),
     importAll: mutate((d) => engine.importAll(d)),
+    mergeAll: mutate((d) => engine.mergeAll(d)),
   };
 }

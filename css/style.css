@@ -254,6 +254,14 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
 }
 @media (min-width: 1100px) { .fab { right: calc(50% - 520px); } }
 
+.choice {
+  display: grid; gap: 4px; text-align: left; width: 100%; padding: 14px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.choice:hover, .choice.recommended { border-color: var(--brand); }
+.choice.recommended { background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
+.choice span { font-size: 13px; color: var(--muted); }
+.choice.recommended strong::after { content: ' · Recommended'; color: var(--brand); font-weight: 600; font-size: 12px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);

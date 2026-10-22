@@ -148,6 +148,25 @@
     </form>
   </dialog>
 
+  <dialog id="import-dialog" class="sheet">
+    <form method="dialog">
+      <div class="sheet-head">
+        <h2>Import file</h2>
+        <button value="cancel" class="icon-btn" aria-label="Close">✕</button>
+      </div>
+      <p id="import-summary" style="margin:0"></p>
+      <button value="replace" id="import-replace" class="choice">
+        <strong>Replace everything</strong>
+        <span>Your current data is replaced by the file. Best if you just started fresh or are restoring a backup.</span>
+      </button>
+      <button value="merge" id="import-merge" class="choice">
+        <strong>Add to my current data</strong>
+        <span>Keeps what you have and adds the file's accounts and transactions. Items you already have are not duplicated.</span>
+      </button>
+      <div class="sheet-actions"><button value="cancel" class="btn">Cancel</button></div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" hidden></div>
 
   <script type="module" src="js/app.js"></script>

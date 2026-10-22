@@ -234,8 +234,17 @@ function renderDashboard() {
   for (const name of Object.keys(spent)) if (!cats.some((c) => c.name === name)) cats.push({ name, budget: 0 });
 
   const recent = [...txns].sort(txnSort).slice(0, 5);
+  const importCard = txns.length
+    ? ''
+    : `<div class="card" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div><strong>No transactions yet</strong>
+          <div class="muted" style="font-size:13px">Have a backup or your spreadsheet data file? Import it here.</div></div>
+        <label class="btn primary">Import .json file
+          <input type="file" accept=".json,application/json" id="dash-import" hidden></label>
+      </div>`;
 
   $('#view-dashboard').innerHTML = `
+    ${importCard}
     <div class="periodbar">
       <div class="segmented" id="period-seg">
         <button data-p="month" class="${!isWeek ? 'active' : ''}">Month</button>
@@ -340,6 +349,7 @@ function renderDashboard() {
   $('#prev').onclick = () => shiftPeriod(-1);
   $('#next').onclick = () => shiftPeriod(1);
   $('#see-all').onclick = () => switchView('transactions');
+  if ($('#dash-import')) $('#dash-import').onchange = (e) => importFile(e.target.files[0]);
   bindTxnRows($('#view-dashboard'));
   drawCharts(r, txns, accs);
 }
@@ -692,9 +702,9 @@ function renderSetup() {
         <div style="display:grid;gap:8px">
           <button class="btn" id="export">Download backup (.json)</button>
           <button class="btn" id="export-csv">Download transactions (.csv)</button>
-          <label class="btn" style="text-align:center">Restore from backup…
+          <label class="btn" style="text-align:center">Import .json file…
             <input type="file" accept=".json,application/json" id="import" hidden></label>
-          <p class="muted" style="font-size:12px;margin:0">Restoring replaces all data in the app with the file's contents.</p>
+          <p class="muted" style="font-size:12px;margin:0">After choosing a file you can replace your data or add the file to it.</p>
         </div>
       </div>
 
@@ -874,18 +884,38 @@ function exportCsv() {
   download(`transactions-${C.today()}.csv`, rows.map((r) => r.map(q).join(',')).join('\n'), 'text/csv');
 }
 
+// Asks whether to replace or add to the current data. Resolves to
+// 'replace', 'merge' or 'cancel'.
+function askImportMode(d) {
+  const dlg = $('#import-dialog');
+  const mine = state.data.transactions.length;
+  $('#import-summary').textContent =
+    `The file has ${d.transactions.length} transactions and ${d.accounts.length} accounts. ` +
+    `You currently have ${mine} transaction${mine === 1 ? '' : 's'}.`;
+  // Nothing logged yet (e.g. after "Start fresh"): replacing is the safe choice.
+  $('#import-replace').classList.toggle('recommended', mine === 0);
+  $('#import-merge').classList.toggle('recommended', mine > 0);
+  dlg.returnValue = 'cancel';
+  dlg.showModal();
+  return new Promise((resolve) => dlg.addEventListener('close', () => resolve(dlg.returnValue || 'cancel'), { once: true }));
+}
+
 async function importFile(file) {
   if (!file) return;
   try {
     const d = JSON.parse(await file.text());
     if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error('This is not an AmrPotli backup file.');
     const hasData = state.data.transactions.length || state.data.accounts.length;
-    if (hasData && !confirm(`Replace everything with ${d.transactions.length} transactions and ${d.accounts.length} accounts from this file?`)) return;
-    await state.store.importAll({ ...d, settings: d.settings || DEFAULT_SETTINGS });
-    toast(`Imported ${d.transactions.length} transactions`);
+    const mode = hasData ? await askImportMode(d) : 'replace';
+    if (mode === 'cancel') return;
+    if (mode === 'merge') await state.store.mergeAll(d);
+    else await state.store.importAll({ ...d, settings: d.settings || DEFAULT_SETTINGS });
+    toast(mode === 'merge' ? `Added ${d.transactions.length} transactions from the file` : `Imported ${d.transactions.length} transactions`);
     switchView('dashboard');
   } catch (e) {
     alert(`Import failed: ${e.message}`);
+  } finally {
+    $$('input[type=file]').forEach((i) => (i.value = ''));
   }
 }
 
