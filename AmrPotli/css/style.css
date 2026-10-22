@@ -335,3 +335,119 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
 .sms-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .sms-info { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; background: color-mix(in srgb, var(--brand) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); }
 .sms-info.warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+
+/* ---------- first-run setup (onboarding.js) ----------
+   One question per screen. Animations use only transform/opacity so they stay
+   smooth on low-end phones, and switch off with "reduce motion". */
+body.onboarding .tabbar, body.onboarding .fab, body.onboarding .add-top { display: none !important; }
+body.onboarding main { padding-bottom: 24px; }
+.ob { max-width: 520px; width: 100%; margin: 0 auto; min-height: calc(100dvh - 90px); display: flex; flex-direction: column; gap: 18px; padding-top: 4px; }
+.ob.enter .ob-body { animation: ob-in 0.22s ease-out; }
+@keyframes ob-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.ob-top { display: flex; align-items: center; gap: 8px; }
+.ob-back { font-size: 26px; line-height: 1; flex: none; }
+.ob-bar { flex: 1; height: 12px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.ob-bar > div { height: 100%; border-radius: inherit; background: var(--brand); transition: width 0.35s ease; position: relative; }
+.ob-bar > div::after { content: ''; position: absolute; left: 8px; right: 8px; top: 3px; height: 3px; border-radius: 99px; background: rgb(255 255 255 / 0.3); }
+.ob-body { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.ob-foot { display: grid; gap: 10px; position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 22%); }
+.ob-cta { padding: 14px 16px; font-size: 16px; border-radius: 14px; box-shadow: 0 3px 0 color-mix(in srgb, var(--brand) 60%, #000); }
+.ob-cta:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--brand) 60%, #000); }
+.ob-cta:disabled { background: var(--surface-2); border-color: var(--line); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+.ob-alt { text-align: center; padding: 13px 16px; border-radius: 14px; }
+.ob-lang { align-self: flex-end; }
+.ob-hero { display: grid; place-items: center; margin-top: 8px; }
+.ob-hero img { border-radius: 26px; animation: ob-bob 2.6s ease-in-out infinite; }
+.ob-hero.pop img { animation: ob-pop 0.5s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes ob-bob { 50% { transform: translateY(-6px); } }
+@keyframes ob-pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.ob-title { text-align: center; font-size: 26px; }
+.ob-lead { text-align: center; margin: 0; font-size: 16px; }
+.ob-small { font-size: 13px; margin: 0; text-align: center; }
+.ob-points { list-style: none; padding: 14px 16px; margin: 0; display: grid; gap: 8px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
+
+.ob-coach { display: flex; align-items: flex-end; gap: 10px; }
+.ob-coach img { flex: none; border-radius: 16px; }
+.ob-bubble { position: relative; flex: 1; display: grid; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 2px solid var(--line); }
+.ob-bubble::before { content: ''; position: absolute; left: -9px; bottom: 16px; width: 14px; height: 14px; background: var(--surface); border-left: 2px solid var(--line); border-bottom: 2px solid var(--line); transform: rotate(45deg); }
+.ob-bubble strong { font-size: 17px; line-height: 1.3; }
+.ob-bubble span { font-size: 13px; color: var(--muted); }
+
+.ob-options { display: grid; gap: 10px; }
+.ob-options.grid { grid-template-columns: 1fr 1fr; }
+.ob-option {
+  display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px; border-radius: 14px; cursor: pointer; position: relative;
+  border: 2px solid var(--line); background: var(--surface); box-shadow: 0 2px 0 var(--line); transition: transform 0.08s, border-color 0.15s;
+}
+.ob-option:active { transform: translateY(2px); box-shadow: none; }
+.ob-option.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 9%, var(--surface)); box-shadow: 0 2px 0 var(--brand); }
+.ob-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: var(--surface-2); }
+.ob-dot { width: 18px; height: 18px; border-radius: 6px; background: var(--c); }
+.ob-txt { display: grid; gap: 2px; min-width: 0; }
+.ob-txt strong { font-size: 15px; }
+.ob-txt small { font-size: 12px; color: var(--muted); }
+.ob-check { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--brand); color: var(--brand-ink); transform: scale(0); transition: transform 0.15s; }
+.ob-option.on .ob-check { transform: scale(1); }
+.ob-options.grid .ob-option { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+.ob-amounts { display: grid; gap: 10px; }
+.ob-amount { display: grid; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.ob-amount label { font-weight: 600; }
+.ob-money { display: flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 12px; padding: 4px 12px; background: var(--surface); }
+.ob-money:focus-within { border-color: var(--brand); }
+.ob-money span { font-size: 20px; color: var(--muted); }
+.ob-money input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 22px; font-weight: 600; padding: 6px 0; font-variant-numeric: tabular-nums; }
+.ob-money input.bad { color: var(--bad); }
+.ob-bank-name { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: var(--surface); }
+.ob-total { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 4px 0; }
+.ob-total strong { font-size: 20px; color: var(--brand-text); }
+
+.ob-chips, .ob-goals { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-chip {
+  border: 2px solid var(--line); background: var(--surface); border-radius: 99px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 14px;
+  box-shadow: 0 2px 0 var(--line); transition: transform 0.08s;
+}
+.ob-chip:active { transform: translateY(2px); box-shadow: none; }
+.ob-chip.on { border-color: var(--brand); color: var(--brand-text); background: color-mix(in srgb, var(--brand) 9%, var(--surface)); box-shadow: 0 2px 0 var(--brand); }
+.ob-chip.big { padding: 12px 18px; font-size: 16px; }
+.ob-add { display: flex; gap: 8px; }
+.ob-add input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+
+.ob-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ob-summary > div { display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 2px solid var(--line); }
+.ob-summary span { font-size: 12px; color: var(--muted); }
+.ob-summary strong { font-size: 20px; color: var(--brand-text); }
+.ob-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; }
+.ob-confetti i { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; opacity: 0; animation: ob-fall 1.9s ease-in forwards; }
+@keyframes ob-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0); }
+  100% { opacity: 0; transform: translateY(95vh) rotate(var(--r)); }
+}
+
+/* ---------- getting-started guide and streak (guide.js) ---------- */
+.guide { display: grid; gap: 10px; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.guide-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.guide-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.guide-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.guide-list li:first-child { border-top: 0; }
+.guide-list .dot { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
+.guide-list .txt { flex: 1; display: grid; min-width: 0; }
+.guide-list .txt small { color: var(--muted); font-size: 12px; }
+.guide-list li.done .dot { background: var(--ok); color: #fff; }
+.guide-list li.done .txt strong { color: var(--muted); font-weight: 500; text-decoration: line-through; }
+.guide-list li.next .dot { background: var(--brand); color: var(--brand-ink); }
+.guide-list li .btn { flex: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.guide-done { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.guide-done > div:nth-child(2) { flex: 1 1 200px; }
+.guide-trophy { font-size: 34px; }
+.streak { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 13px; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.streak span { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ob.enter .ob-body, .ob-hero img, .ob-hero.pop img { animation: none; }
+  .ob-confetti { display: none; }
+  .ob-bar > div, .ob-check, .progress > div { transition: none; }
+}
+.ob-money input::-webkit-outer-spin-button, .ob-money input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ob-money input[type=number] { -moz-appearance: textfield; appearance: textfield; }

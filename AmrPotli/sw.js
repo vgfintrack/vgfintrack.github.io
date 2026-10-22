@@ -4,7 +4,7 @@
 // connection) the saved copy is used. Google sign-in and Google Drive calls
 // are never touched: they always go straight to Google.
 
-const CACHE = 'amrpotli-app-v2';
+const CACHE = 'amrpotli-app-v3';
 const NETWORK_TIMEOUT_MS = 4000;
 
 // Everything the app needs to start. Other same-folder files are saved the
@@ -17,6 +17,8 @@ const SHELL = [
   'css/style.css',
   'js/app.js',
   'js/calc.js',
+  'js/guide.js',
+  'js/onboarding.js',
   'js/config.js',
   'js/i18n.js',
   'js/i18n-bn.js',

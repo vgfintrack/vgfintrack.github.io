@@ -36,6 +36,11 @@ export function t(en, vars) {
   return fill(lang === 'bn' ? BN[en] ?? en : en, vars);
 }
 
+// Screens loaded later (the first-run setup) bring their own Bangla.
+export function addBangla(phrases) {
+  Object.assign(BN, phrases);
+}
+
 // English-only translator, for documents that stay in English.
 export const en = (s, vars) => fill(s, vars);
 

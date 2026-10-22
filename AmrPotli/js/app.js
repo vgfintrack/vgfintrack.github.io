@@ -1,7 +1,8 @@
 import * as C from './calc.js';
 import * as R from './reports.js';
 import { parseSms } from './sms.js';
-import { createStore, DEFAULT_SETTINGS, DEFAULT_ACCOUNTS, newId } from './store.js';
+import * as G from './guide.js';
+import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
 // ---------------------------------------------------------------- helpers
@@ -87,6 +88,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 window.addEventListener('appinstalled', () => {
   installPrompt = null;
+  markGuide('install');
   toast(t('AmrPotli is installed. Open it from your home screen.'));
   if (state.data?.loaded) render();
 });
@@ -117,7 +119,7 @@ function installCard() {
   else if (isIOS())
     body = `<p class="muted" style="margin:0;font-size:13px">${t('On iPhone: tap the Share button in Safari, then "Add to Home Screen".')}</p>`;
   else body = `<p class="muted" style="margin:0;font-size:13px">${t('Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".')}</p>`;
-  return `<div class="card"><h3>${t('Install the app')}</h3>${body}</div>`;
+  return `<div class="card" id="install-card"><h3>${t('Install the app')}</h3>${body}</div>`;
 }
 
 // One-time Dashboard tip when the browser can install the app.
@@ -294,8 +296,11 @@ function switchView(v) {
 
 function render() {
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
-  showAddButton(!empty && (state.view === 'dashboard' || state.view === 'transactions'));
-  if (empty) return renderWelcome();
+  const onboarding = empty || wizard?.isCelebrating();
+  document.body.classList.toggle('onboarding', !!onboarding);
+  showAddButton(!onboarding && (state.view === 'dashboard' || state.view === 'transactions'));
+  if (onboarding) return renderWelcome();
+  G.noticeProgress(state.data, guideFlags(), toast);
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
   if (state.view === 'dashboard') renderDashboard();
   if (state.view === 'transactions') renderTransactions();
@@ -305,22 +310,68 @@ function render() {
 
 // ---------------------------------------------------------------- welcome
 
-function renderWelcome() {
+// New users get a step-by-step setup (onboarding.js). It is loaded only here,
+// so people who already have data never download it.
+let wizard = null;
+
+async function renderWelcome() {
   $$('.view').forEach((s) => (s.hidden = s.id !== 'view-dashboard'));
-  $('#view-dashboard').innerHTML = `
-    <div class="card" style="max-width:520px;margin:24px auto;display:grid;gap:14px">
-      <h2>${t('Welcome 👋')}</h2>
-      <p class="muted" style="margin:0">${t('Bring in your data from a backup file (for example, the file made from your spreadsheet), or start with an empty tracker and add your accounts.')}</p>
-      <label class="btn primary wide" style="text-align:center">${t('Import backup file (.json)')}
-        <input type="file" accept=".json,application/json" id="welcome-import" hidden></label>
-      <button class="btn wide" id="welcome-fresh">${t('Start fresh')}</button>
-    </div>`;
-  $('#welcome-import').onchange = (e) => importFile(e.target.files[0]);
-  $('#welcome-fresh').onclick = async () => {
-    await state.store.importAll({ accounts: DEFAULT_ACCOUNTS, transactions: [], settings: DEFAULT_SETTINGS });
+  if (!wizard) {
+    renderLoading();
+    showAddButton(false);
+    wizard = await import('./onboarding.js');
+  }
+  wizard.renderWizard($('#view-dashboard'), {
+    user: state.user,
+    save: (d) => state.store.importAll(d),
+    importFile,
+    setLang: applyLang,
+    done: (next) => {
+      switchView('dashboard');
+      if (next === 'expense') {
+        txnType = 'Expense';
+        openTxn();
+      }
+    },
+  });
+}
+
+// ---------------------------------------------------------------- getting-started guide
+
+const guideFlags = () => ({ installed: isInstalled() });
+
+// Remembers a guide step that leaves no data behind (report, install).
+function markGuide(id) {
+  const s = state.data.settings;
+  if (!s?.onboarding || s.onboarding.done?.[id]) return;
+  state.store.saveSettings({ ...s, onboarding: { ...s.onboarding, done: { ...s.onboarding.done, [id]: true } } });
+}
+
+function showGuide(on) {
+  const s = settings();
+  return state.store.saveSettings({ ...s, onboarding: { done: {}, ...s.onboarding, hidden: !on } });
+}
+
+function guideAction(id) {
+  const scrollTo = (sel) => setTimeout(() => $(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  if (id === 'expense' || id === 'income') {
+    txnType = id === 'expense' ? 'Expense' : 'Income';
+    openTxn();
+  } else if (id === 'sms') {
+    txnType = 'Expense';
+    openTxn();
+    openSmsPanel();
+  } else if (id === 'budget') {
     switchView('setup');
-    toast(t('Set your opening balances and budgets here'));
-  };
+    scrollTo('#budgets-card');
+    setTimeout(() => $('#budgets-card [data-budget]')?.focus({ preventScroll: true }), 400);
+  } else if (id === 'install') {
+    if (installPrompt) installApp();
+    else {
+      switchView('setup');
+      scrollTo('#install-card');
+    }
+  } else if (id === 'report') switchView('reports');
 }
 
 // ---------------------------------------------------------------- dashboard
@@ -381,7 +432,8 @@ function renderDashboard() {
   for (const name of Object.keys(spent)) if (!cats.some((c) => c.name === name)) cats.push({ name, budget: 0 });
 
   const recent = [...txns].sort(txnSort).slice(0, 5);
-  const importCard = txns.length
+  const guide = G.guideOn(state.data) ? G.guideCard(state.data, guideFlags()) : '';
+  const importCard = txns.length || guide
     ? ''
     : `<div class="card" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
         <div><strong>${t('No transactions yet')}</strong>
@@ -391,7 +443,9 @@ function renderDashboard() {
       </div>`;
 
   $('#view-dashboard').innerHTML = `
-    ${installTip()}
+    ${G.streakPill(txns, C.today())}
+    ${guide}
+    ${guide ? '' : installTip()}
     ${importCard}
     <div class="periodbar">
       <div class="segmented" id="period-seg">
@@ -500,6 +554,14 @@ function renderDashboard() {
   $('#next').onclick = () => shiftPeriod(1);
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
+  $$('[data-guide]').forEach((b) => (b.onclick = () => guideAction(b.dataset.guide)));
+  $$('[data-guide-hide]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        showGuide(false);
+        toast(t('Guide hidden. You can show it again in Setup.'));
+      }),
+  );
   $$('#view-dashboard [data-loan]').forEach((b) => (b.onclick = () => openTxn(null, { loan: b.dataset.loan, person: b.dataset.person || undefined })));
   if ($('#dash-import')) $('#dash-import').onchange = (e) => importFile(e.target.files[0]);
   bindTxnRows($('#view-dashboard'));
@@ -1335,6 +1397,7 @@ function openReport() {
   const name = $('#r-name')?.value.trim();
   if (name && name !== settings().holderName) state.store.saveSettings({ ...settings(), holderName: name });
   const ctx = { ...reportContext(), holder: name || reportContext().holder };
+  markGuide('report');
   const range = reportRange();
   if (report.preset === 'custom' && range.start > range.end) return toast(t('The start date is after the end date'));
   const html = {
@@ -1384,7 +1447,7 @@ function renderSetup() {
           <input type="number" id="goal" inputmode="decimal" value="${Number(s.savingsGoal) || 0}"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="budgets-card">
         <h3>${t('Expense categories &amp; monthly budgets')}
           <small class="num">${t('total {amount}', { amount: money(s.expenseCategories.reduce((a, c) => a + (Number(c.budget) || 0), 0)) })}</small></h3>
         ${s.expenseCategories
@@ -1423,6 +1486,8 @@ function renderSetup() {
             .join('')}
         </div>
         <p class="muted" style="font-size:12px;margin:8px 0 0">${t('Auto follows your phone or computer setting.')}</p>
+        ${G.guideOn(state.data) ? '' : `<h3 style="margin-top:16px">${t('Getting started')}</h3>
+        <button class="btn" id="guide-show">${t('Show the getting-started guide')}</button>`}
       </div>
 
       <div class="card">
@@ -1508,6 +1573,10 @@ function renderSetup() {
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
   bindInstall(v);
+  $('#guide-show', v)?.addEventListener('click', () => {
+    showGuide(true);
+    switchView('dashboard');
+  });
   $$('[data-lang]', v).forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
   $('#export', v).onclick = exportJson;
   $('#export-csv', v).onclick = exportCsv;
