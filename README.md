@@ -1,4 +1,6 @@
-# Money Tracker
+# AmrPotli · আমার পোটলি
+
+*"My money pouch"*: a personal ledger named after the cloth potli Bengali families kept their savings in.
 
 A personal finance web app: log income, expenses and transfers, see monthly and weekly
 dashboards, budgets, savings goal, investments and net worth. Amounts are in BDT and weeks
@@ -22,7 +24,7 @@ Until `js/config.js` has a real client ID, the app runs in **demo mode** and kee
 ## One-time setup (Google Cloud project `vgfintrack-11a9c`)
 
 1. **Enable the Drive API:** <https://console.cloud.google.com/apis/library/drive.googleapis.com?project=vgfintrack-11a9c> → **Enable**.
-2. **Google Auth Platform → Branding:** app name `Money Tracker`, support email, home page
+2. **Google Auth Platform → Branding:** app name `AmrPotli`, support email, home page
    `https://vgfintrack.github.io`, privacy policy `https://vgfintrack.github.io/privacy.html`,
    authorised domain `vgfintrack.github.io`.
 3. **Audience:** user type **External** → **Publish app** (so anyone can sign in, not just test users).

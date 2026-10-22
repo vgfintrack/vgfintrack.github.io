@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Money Tracker</title>
+  <title>AmrPotli · আমার পোটলি</title>
   <meta name="theme-color" content="#0f766e" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -14,8 +14,9 @@
 <body>
   <div id="login" class="screen" hidden>
     <div class="login-card">
-      <div class="logo">৳</div>
-      <h1>Money Tracker</h1>
+      <img class="logo-img" src="icons/icon.svg" alt="" width="72" height="72">
+      <h1>AmrPotli</h1>
+      <p class="bn">আমার পোটলি · আমার হিসাব, আমার হাতে</p>
       <p class="muted">Your income, spending, savings and investments in one place.</p>
       <button id="btn-signin" class="btn primary wide">Sign in with Google</button>
       <p class="muted" style="font-size:13px">🔒 Your data is saved in your own Google Drive, in a private folder only this app can open.
@@ -28,7 +29,7 @@
 
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand"><span class="logo sm">৳</span> Money Tracker</div>
+      <div class="brand"><img class="logo-img sm" src="icons/icon.svg" alt="" width="28" height="28"> AmrPotli</div>
       <div class="top-right">
         <button id="sync" class="sync" hidden></button>
         <button id="btn-user" class="avatar" title="Account"></button>

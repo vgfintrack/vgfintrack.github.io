@@ -863,7 +863,7 @@ function download(name, text, type) {
 
 function exportJson() {
   const { accounts, transactions, settings } = state.data;
-  download(`money-backup-${C.today()}.json`, JSON.stringify({ version: 1, accounts, transactions, settings }, null, 2), 'application/json');
+  download(`amrpotli-backup-${C.today()}.json`, JSON.stringify({ version: 1, accounts, transactions, settings }, null, 2), 'application/json');
 }
 
 function exportCsv() {
@@ -878,7 +878,7 @@ async function importFile(file) {
   if (!file) return;
   try {
     const d = JSON.parse(await file.text());
-    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error('This is not a Money Tracker backup file.');
+    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error('This is not an AmrPotli backup file.');
     const hasData = state.data.transactions.length || state.data.accounts.length;
     if (hasData && !confirm(`Replace everything with ${d.transactions.length} transactions and ${d.accounts.length} accounts from this file?`)) return;
     await state.store.importAll({ ...d, settings: d.settings || DEFAULT_SETTINGS });

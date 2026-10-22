@@ -1,6 +1,7 @@
 # Never commit personal finance data or credentials
 *-data.json
 money-backup-*.json
+amrpotli-backup-*.json
 transactions-*.csv
 *service-account*.json
 .firebase/

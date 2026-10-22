@@ -16,7 +16,7 @@ import { googleClientId } from './config.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
-const FILE_NAME = 'money-tracker.json';
+const FILE_NAME = 'amrpotli.json';
 const LAST_USER_KEY = 'mt:last-user';
 
 export const DEFAULT_SETTINGS = {

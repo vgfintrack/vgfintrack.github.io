@@ -1,6 +1,6 @@
 {
-  "name": "Money Tracker",
-  "short_name": "Money",
+  "name": "AmrPotli · আমার পোটলি",
+  "short_name": "AmrPotli",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f4f6f5",
