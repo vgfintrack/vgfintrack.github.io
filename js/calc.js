@@ -181,6 +181,7 @@ export function monthlySeries(endDate, n, txns, accounts) {
     const r = monthRange(fmtDate(d));
     const s = periodStats(r, txns, accounts, r.end);
     out.push({
+      start: r.start,
       label: d.toLocaleString('en-GB', { month: 'short', year: 'numeric' }),
       income: s.income,
       expenses: s.expenses,

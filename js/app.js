@@ -1,6 +1,7 @@
 import * as C from './calc.js';
 import * as R from './reports.js';
 import { createStore, DEFAULT_SETTINGS, DEFAULT_ACCOUNTS, newId } from './store.js';
+import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
 // ---------------------------------------------------------------- helpers
 
@@ -21,7 +22,7 @@ const moneyExact = (n) => {
 const pct = (r) => (r == null || !isFinite(r) ? '—' : `${Math.round(r * 100)}%`);
 
 function niceDate(s, opts = { weekday: 'short', day: 'numeric', month: 'short' }) {
-  return C.parseDate(s).toLocaleDateString('en-GB', opts);
+  return C.parseDate(s).toLocaleDateString(dateLocale(), opts);
 }
 
 function toast(msg) {
@@ -60,7 +61,7 @@ function applyTheme(pref = themePref()) {
   const dark = isDark();
   const btn = $('#theme-btn');
   btn.innerHTML = dark ? SUN : MOON;
-  btn.title = dark ? 'Switch to day mode' : 'Switch to night mode';
+  btn.title = dark ? t('Switch to day mode') : t('Switch to night mode');
   if (state.data?.loaded && !$('#app').hidden) render(); // charts pick up the new colours
 }
 
@@ -82,7 +83,7 @@ const state = {
 const settings = () => state.data.settings || DEFAULT_SETTINGS;
 const accounts = () => [...state.data.accounts].sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name));
 const accById = (id) => state.data.accounts.find((a) => a.id === id);
-const accName = (id) => accById(id)?.name ?? '(deleted account)';
+const accName = (id) => accById(id)?.name ?? t('(deleted account)');
 // For loan wording: "Lent to JC vai" reads as "JC vai" in "JC vai paid back".
 const personName = (id) => accName(id).replace(/^(lent to|loan from|borrowed from|loan to)\s+/i, '');
 
@@ -121,7 +122,7 @@ async function boot() {
     } catch (e) {
       if (e.type === 'popup_closed') return;
       $('#login-error').textContent =
-        e.type === 'popup_failed_to_open' ? 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.' : e.message || String(e);
+        e.type === 'popup_failed_to_open' ? t('Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.') : e.message || String(e);
       $('#login-error').hidden = false;
     }
   };
@@ -131,7 +132,7 @@ async function boot() {
     try {
       await state.store.syncNow();
     } catch (e) {
-      if (e.type !== 'popup_closed') toast(e.message || 'Could not connect to Google Drive');
+      if (e.type !== 'popup_closed') toast(e.message || t('Could not connect to Google Drive'));
     }
   };
 
@@ -139,6 +140,8 @@ async function boot() {
   $('#fab').onclick = () => openTxn();
   $('#add-top').onclick = () => openTxn();
   $('#theme-btn').onclick = () => applyTheme(isDark() ? 'light' : 'dark');
+  $$('[data-lang]').forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
+  applyLang(lang);
   applyTheme();
   $('#btn-user').onclick = () => switchView('setup');
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
@@ -162,13 +165,27 @@ const SYNC_LABELS = {
   offline: ['Offline · saved on this device', 'warn'],
   error: ['Sync failed · tap to retry', 'bad'],
 };
+let syncStatus = 'idle';
+
+// Switches English / Bangla and redraws everything on screen.
+function applyLang(l) {
+  setLang(l);
+  translateStatic();
+  $$('[data-lang]').forEach((b) => b.classList.toggle('active', b.dataset.lang === l));
+  renderSync(syncStatus);
+  if (state.store && !$('#app').hidden) {
+    applyTheme();
+    if (state.data.loaded) render();
+  }
+}
 
 function renderSync(status) {
+  syncStatus = status;
   const btn = $('#sync');
   const [label, cls] = SYNC_LABELS[status] || [];
   btn.hidden = !label;
   if (!label) return;
-  btn.textContent = label;
+  btn.textContent = t(label);
   btn.className = `sync ${cls}`;
   btn.disabled = status === 'syncing';
 }
@@ -185,8 +202,8 @@ function renderLoading() {
   $('#view-dashboard').innerHTML = `
     <div class="card" style="max-width:520px;margin:24px auto;display:grid;gap:12px;justify-items:center;text-align:center">
       <div class="spinner"></div>
-      <p style="margin:0">Loading your data from Google Drive…</p>
-      <p class="muted" style="margin:0;font-size:13px">If this takes long, tap the sync button at the top.</p>
+      <p style="margin:0">${t('Loading your data from Google Drive…')}</p>
+      <p class="muted" style="margin:0;font-size:13px">${t('If this takes long, tap the sync button at the top.')}</p>
     </div>`;
 }
 
@@ -215,18 +232,17 @@ function renderWelcome() {
   $$('.view').forEach((s) => (s.hidden = s.id !== 'view-dashboard'));
   $('#view-dashboard').innerHTML = `
     <div class="card" style="max-width:520px;margin:24px auto;display:grid;gap:14px">
-      <h2>Welcome 👋</h2>
-      <p class="muted" style="margin:0">Bring in your data from a backup file (for example, the file made from your
-      spreadsheet), or start with an empty tracker and add your accounts.</p>
-      <label class="btn primary wide" style="text-align:center">Import backup file (.json)
+      <h2>${t('Welcome 👋')}</h2>
+      <p class="muted" style="margin:0">${t('Bring in your data from a backup file (for example, the file made from your spreadsheet), or start with an empty tracker and add your accounts.')}</p>
+      <label class="btn primary wide" style="text-align:center">${t('Import backup file (.json)')}
         <input type="file" accept=".json,application/json" id="welcome-import" hidden></label>
-      <button class="btn wide" id="welcome-fresh">Start fresh</button>
+      <button class="btn wide" id="welcome-fresh">${t('Start fresh')}</button>
     </div>`;
   $('#welcome-import').onchange = (e) => importFile(e.target.files[0]);
   $('#welcome-fresh').onclick = async () => {
     await state.store.importAll({ accounts: DEFAULT_ACCOUNTS, transactions: [], settings: DEFAULT_SETTINGS });
     switchView('setup');
-    toast('Set your opening balances and budgets here');
+    toast(t('Set your opening balances and budgets here'));
   };
 }
 
@@ -272,8 +288,8 @@ function renderDashboard() {
   const totalBudget = s.expenseCategories.reduce((a, c) => a + (Number(c.budget) || 0), 0);
 
   const rateText =
-    st.savingsRate == null ? '—' : st.savingsRate < -1 ? 'below −100%' : pct(st.savingsRate);
-  const rateSub = isWeek ? 'Tuition is paid monthly, so check the month view' : 'of income kept';
+    st.savingsRate == null ? '—' : st.savingsRate < -1 ? t('below −100%') : pct(st.savingsRate);
+  const rateSub = isWeek ? t('Tuition is paid monthly, so check the month view') : t('of income kept');
 
   const byType = (t) => accs.filter((a) => a.type === t);
   const accRows = (list, sign = '') =>
@@ -291,9 +307,9 @@ function renderDashboard() {
   const importCard = txns.length
     ? ''
     : `<div class="card" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <div><strong>No transactions yet</strong>
-          <div class="muted" style="font-size:13px">Have a backup or your spreadsheet data file? Import it here.</div></div>
-        <label class="btn primary">Import .json file
+        <div><strong>${t('No transactions yet')}</strong>
+          <div class="muted" style="font-size:13px">${t('Have a backup or your spreadsheet data file? Import it here.')}</div></div>
+        <label class="btn primary">${t('Import .json file')}
           <input type="file" accept=".json,application/json" id="dash-import" hidden></label>
       </div>`;
 
@@ -301,47 +317,47 @@ function renderDashboard() {
     ${importCard}
     <div class="periodbar">
       <div class="segmented" id="period-seg">
-        <button data-p="month" class="${!isWeek ? 'active' : ''}">Month</button>
-        <button data-p="week" class="${isWeek ? 'active' : ''}">Week</button>
+        <button data-p="month" class="${!isWeek ? 'active' : ''}">${t('Month')}</button>
+        <button data-p="week" class="${isWeek ? 'active' : ''}">${t('Week')}</button>
       </div>
       <div class="stepper">
-        <button class="icon-btn" id="prev" aria-label="Previous">‹</button>
+        <button class="icon-btn" id="prev" aria-label="${t('Previous')}">‹</button>
         <span class="label">${rangeLabel(r)}</span>
-        <button class="icon-btn" id="next" aria-label="Next">›</button>
+        <button class="icon-btn" id="next" aria-label="${t('Next')}">›</button>
       </div>
     </div>
 
     <div class="kpis">
-      <div class="kpi"><div class="k">Income</div><div class="v num income">${money(st.income)}</div>
-        <div class="s">${Object.keys(income).length} source${Object.keys(income).length === 1 ? '' : 's'}</div></div>
-      <div class="kpi"><div class="k">Expenses</div><div class="v num expense">${money(st.expenses)}</div>
-        <div class="s">${money(st.avgPerDay)} / day</div></div>
-      <div class="kpi"><div class="k">Net saved</div><div class="v num">${money(st.net)}</div>
-        <div class="s">${st.toInvestments ? `${money(st.toInvestments)} into investments` : 'Income minus expenses'}</div></div>
-      <div class="kpi"><div class="k">Savings rate</div><div class="v num">${rateText}</div>
+      <div class="kpi"><div class="k">${t('Income')}</div><div class="v num income">${money(st.income)}</div>
+        <div class="s">${tn(Object.keys(income).length, '{n} source', '{n} sources')}</div></div>
+      <div class="kpi"><div class="k">${t('Expenses')}</div><div class="v num expense">${money(st.expenses)}</div>
+        <div class="s">${t('{amount} / day', { amount: money(st.avgPerDay) })}</div></div>
+      <div class="kpi"><div class="k">${t('Net saved')}</div><div class="v num">${money(st.net)}</div>
+        <div class="s">${st.toInvestments ? t('{amount} into investments', { amount: money(st.toInvestments) }) : t('Income minus expenses')}</div></div>
+      <div class="kpi"><div class="k">${t('Savings rate')}</div><div class="v num">${rateText}</div>
         <div class="s">${rateSub}</div></div>
     </div>
 
     ${
       goal > 0
         ? `<div class="card">
-      <h3>${isWeek ? 'Weekly' : 'Monthly'} savings goal <small class="num">${money(Math.max(st.net, 0))} of ${money(goal)}</small></h3>
+      <h3>${isWeek ? t('Weekly savings goal') : t('Monthly savings goal')} <small class="num">${t('{a} of {b}', { a: money(Math.max(st.net, 0)), b: money(goal) })}</small></h3>
       <div class="progress ${goalRatio >= 1 ? 'ok' : ''}"><div style="width:${Math.max(0, Math.min(100, (goalRatio || 0) * 100))}%"></div></div>
       <div class="muted" style="font-size:12px;margin-top:6px">${
-        goalRatio >= 1 ? 'Goal reached 🎉' : st.net < 0 ? 'Spending more than earning in this period' : `${pct(goalRatio)} there, ${money(goal - st.net)} to go`
+        goalRatio >= 1 ? t('Goal reached 🎉') : st.net < 0 ? t('Spending more than earning in this period') : t('{pct} there, {amount} to go', { pct: pct(goalRatio), amount: money(goal - st.net) })
       }</div></div>`
         : ''
     }
 
     <div class="grid2">
       <div class="card">
-        <h3>Where my money is</h3>
-        <div class="networth"><span class="muted">Net worth</span><span class="v num">${money(w.netWorth)}</span></div>
+        <h3>${t('Where my money is')}</h3>
+        <div class="networth"><span class="muted">${t('Net worth')}</span><span class="v num">${money(w.netWorth)}</span></div>
         <div class="buckets">
-          <div class="bucket"><div class="k">Spendable now</div><div class="v num">${money(w.liquid)}</div></div>
-          <div class="bucket"><div class="k">Lent to others</div><div class="v num">${money(w.lent)}</div></div>
-          <div class="bucket"><div class="k">Investments</div><div class="v num">${money(w.investments)}</div></div>
-          <div class="bucket"><div class="k">I owe</div><div class="v num">${money(w.debt)}</div></div>
+          <div class="bucket"><div class="k">${t('Spendable now')}</div><div class="v num">${money(w.liquid)}</div></div>
+          <div class="bucket"><div class="k">${t('Lent to others')}</div><div class="v num">${money(w.lent)}</div></div>
+          <div class="bucket"><div class="k">${t('Investments')}</div><div class="v num">${money(w.investments)}</div></div>
+          <div class="bucket"><div class="k">${t('I owe')}</div><div class="v num">${money(w.debt)}</div></div>
         </div>
         <div class="list">
           ${accRows(byType('Liquid'))}${accRows(byType('Lend'))}${accRows(byType('Investment'))}${accRows(byType('Debt'), '−')}
@@ -349,7 +365,7 @@ function renderDashboard() {
       </div>
 
       <div class="card">
-        <h3>Budget vs spending <small>${isWeek ? 'this month · this week' : `${money(st.expenses)} of ${money(totalBudget)}`}</small></h3>
+        <h3>${t('Budget vs spending')} <small>${isWeek ? t('this month · this week') : t('{a} of {b}', { a: money(st.expenses), b: money(totalBudget) })}</small></h3>
         ${cats
           .filter((c) => (Number(c.budget) || 0) > 0 || monthSpent[c.name])
           .map((c) => {
@@ -359,34 +375,34 @@ function renderDashboard() {
             const left = b - m;
             return `<div class="budget">
               <div class="top"><span>${esc(c.name)}</span>
-                <span class="r num">${money(m)} / ${money(b)}${isWeek ? ` · week ${money(spent[c.name] || 0)}` : ''}</span></div>
+                <span class="r num">${money(m)} / ${money(b)}${isWeek ? ` · ${t('week {amount}', { amount: money(spent[c.name] || 0) })}` : ''}</span></div>
               <div class="progress ${budgetClass(ratio)}"><div style="width:${Math.min(100, ratio * 100)}%"></div></div>
-              <div class="left ${left < 0 ? 'bad' : ''}">${left < 0 ? `Over by ${money(-left)}` : `${money(left)} left`}</div>
+              <div class="left ${left < 0 ? 'bad' : ''}">${left < 0 ? t('Over by {amount}', { amount: money(-left) }) : t('{amount} left', { amount: money(left) })}</div>
             </div>`;
           })
-          .join('') || '<p class="muted">Set monthly budgets in Setup.</p>'}
+          .join('') || `<p class="muted">${t('Set monthly budgets in Setup.')}</p>`}
       </div>
 
       ${loansCard(accs, w)}
 
       <div class="card">
-        <h3>${isWeek ? 'Day by day' : 'Daily spending'}</h3>
+        <h3>${isWeek ? t('Day by day') : t('Daily spending')}</h3>
         <div class="chart-box"><canvas id="chart-daily"></canvas></div>
       </div>
 
       <div class="card">
-        <h3>Last 6 months</h3>
+        <h3>${t('Last 6 months')}</h3>
         <div class="chart-box"><canvas id="chart-months"></canvas></div>
       </div>
 
       <div class="card">
-        <h3>Income by source</h3>
+        <h3>${t('Income by source')}</h3>
         <div class="list">
           ${
             Object.entries(income)
               .sort((a, b) => b[1] - a[1])
               .map(([k, v]) => `<div class="li"><span class="name">${esc(k)}</span><span class="num income">${money(v)}</span></div>`)
-              .join('') || '<p class="muted" style="margin:0">No income in this period.</p>'
+              .join('') || `<p class="muted" style="margin:0">${t('No income in this period.')}</p>`
           }
         </div>
       </div>
@@ -394,8 +410,8 @@ function renderDashboard() {
       ${investmentsCard(accs, txns, w, month)}
 
       <div class="card span2">
-        <h3>Recent <button class="linkish" id="see-all">See all</button></h3>
-        ${recent.map(txnRow).join('') || '<p class="muted">No transactions yet. Tap + to add one.</p>'}
+        <h3>${t('Recent')} <button class="linkish" id="see-all">${t('See all')}</button></h3>
+        ${recent.map(txnRow).join('') || `<p class="muted">${t('No transactions yet. Tap + to add one.')}</p>`}
       </div>
     </div>`;
 
@@ -414,10 +430,10 @@ function renderDashboard() {
 function dueText(a) {
   if (!a.dueDate) return '';
   const d = C.daysUntil(a.dueDate);
-  if (d < 0) return `<span class="due bad">Overdue by ${-d} day${d === -1 ? '' : 's'}</span>`;
-  if (d === 0) return '<span class="due warn">Due today</span>';
-  if (d <= 7) return `<span class="due warn">Due in ${d} day${d === 1 ? '' : 's'}</span>`;
-  return `<span class="due">Due ${niceDate(a.dueDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span>`;
+  if (d < 0) return `<span class="due bad">${tn(-d, 'Overdue by {n} day', 'Overdue by {n} days')}</span>`;
+  if (d === 0) return `<span class="due warn">${t('Due today')}</span>`;
+  if (d <= 7) return `<span class="due warn">${tn(d, 'Due in {n} day', 'Due in {n} days')}</span>`;
+  return `<span class="due">${t('Due {date}', { date: niceDate(a.dueDate, { day: 'numeric', month: 'short', year: 'numeric' }) })}</span>`;
 }
 
 // Who I owe and who owes me, with one-tap repay / got-back buttons.
@@ -427,7 +443,7 @@ function loansCard(accs, w) {
   const lends = open('Lend');
   const planText = (a) => {
     const p = a.type === 'Debt' ? planInfo(a) : null;
-    return p && !p.done ? `Installment ${p.k} of ${p.n} · next ${money2(Math.round((p.principal + p.interest) * 100) / 100)}` : '';
+    return p && !p.done ? t('Installment {k} of {n} · next {amount}', { k: p.k, n: p.n, amount: money2(Math.round((p.principal + p.interest) * 100) / 100) }) : '';
   };
   const row = (a, action, label) => `<div class="li">
       <span class="mid" style="min-width:0"><div class="name">${esc(a.name)}</div>
@@ -441,10 +457,10 @@ function loansCard(accs, w) {
          <div class="list">${list.map((a) => row(a, action, label)).join('')}</div></div>`
       : '';
   const body =
-    section('I owe', debts, 'repay', 'Repay', w.debt) + section('Owed to me', lends, 'collect', 'Got back', w.lent) ||
-    '<p class="muted" style="margin:0 0 10px">No open loans. Borrowed money, or lent some to a friend? Add it here.</p>';
+    section(t('I owe'), debts, 'repay', t('Repay'), w.debt) + section(t('Owed to me'), lends, 'collect', t('Got back'), w.lent) ||
+    `<p class="muted" style="margin:0 0 10px">${t('No open loans. Borrowed money, or lent some to a friend? Add it here.')}</p>`;
   return `<div class="card">
-    <h3>Loans <span><button class="btn sm" data-loan="borrow">+ Borrowed</button> <button class="btn sm" data-loan="lend">+ Lent</button></span></h3>
+    <h3>${t('Loans')} <span><button class="btn sm" data-loan="borrow">${t('+ Borrowed')}</button> <button class="btn sm" data-loan="lend">${t('+ Lent')}</button></span></h3>
     ${body}
   </div>`;
 }
@@ -453,15 +469,15 @@ function investmentsCard(accs, txns, w, month) {
   const inv = accs.filter((a) => a.type === 'Investment');
   if (!inv.length) return '';
   return `<div class="card">
-    <h3>Investments <small>${niceDate(month.start, { month: 'short', year: 'numeric' })}</small></h3>
+    <h3>${t('Investments')} <small>${niceDate(month.start, { month: 'short', year: 'numeric' })}</small></h3>
     <div class="table-wrap"><table>
-      <tr><th>Account</th><th>Put in</th><th>Value</th><th>Gain</th><th>Added</th><th>Target</th></tr>
+      <tr><th>${t('Account')}</th><th>${t('Put in')}</th><th>${t('Value')}</th><th>${t('Gain')}</th><th>${t('Added')}</th><th>${t('Target')}</th></tr>
       ${inv
         .map((a) => {
           const b = w.balances[a.id];
           const added = C.netAdded(month, txns, a.id);
-          const t = Number(a.monthlyTarget) || 0;
-          const status = t ? `<span class="pill ${added >= t ? 'ok' : 'warn'}">${added >= t ? 'Paid' : `${money(t - added)} due`}</span>` : '—';
+          const target = Number(a.monthlyTarget) || 0;
+          const status = target ? `<span class="pill ${added >= target ? 'ok' : 'warn'}">${added >= target ? t('Paid') : t('{amount} due', { amount: money(target - added) })}</span>` : '—';
           const gain = b.value - b.book;
           return `<tr><td>${esc(a.name)}</td><td class="num">${money(b.book)}</td><td class="num">${money(b.value)}</td>
             <td class="num ${gain > 0 ? 'income' : gain < 0 ? 'expense' : ''}">${gain ? money(gain) : '—'}</td>
@@ -492,8 +508,8 @@ function drawCharts(r, txns, accs) {
   };
   const days = C.dailySeries(r, txns);
   const isWeek = state.period === 'week';
-  const dailySets = [{ label: 'Expenses', data: days.map((d) => d.expenses), backgroundColor: cssVar('--expense'), borderRadius: 4 }];
-  if (isWeek) dailySets.unshift({ label: 'Income', data: days.map((d) => d.income), backgroundColor: cssVar('--income'), borderRadius: 4 });
+  const dailySets = [{ label: t('Expenses'), data: days.map((d) => d.expenses), backgroundColor: cssVar('--expense'), borderRadius: 4 }];
+  if (isWeek) dailySets.unshift({ label: t('Income'), data: days.map((d) => d.income), backgroundColor: cssVar('--income'), borderRadius: 4 });
   state.charts.daily = new Chart($('#chart-daily'), {
     type: 'bar',
     data: {
@@ -506,10 +522,10 @@ function drawCharts(r, txns, accs) {
   state.charts.months = new Chart($('#chart-months'), {
     type: 'bar',
     data: {
-      labels: months.map((m) => m.label.split(' ')[0]),
+      labels: months.map((m) => C.parseDate(m.start).toLocaleDateString(dateLocale(), { month: 'short' })),
       datasets: [
-        { label: 'Income', data: months.map((m) => m.income), backgroundColor: cssVar('--income'), borderRadius: 4 },
-        { label: 'Expenses', data: months.map((m) => m.expenses), backgroundColor: cssVar('--expense'), borderRadius: 4 },
+        { label: t('Income'), data: months.map((m) => m.income), backgroundColor: cssVar('--income'), borderRadius: 4 },
+        { label: t('Expenses'), data: months.map((m) => m.expenses), backgroundColor: cssVar('--expense'), borderRadius: 4 },
       ],
     },
     options: base,
@@ -536,23 +552,24 @@ function loanActionOf(t) {
   return null;
 }
 
-// Plain-language title and detail line for a transaction (list and reports).
-function describeTxn(t) {
-  const isT = t.type === 'Transfer';
-  const loan = loanActionOf(t);
+// Plain-language title and detail line for a transaction. `L` is the
+// translator: the screen uses t(), reports pass en() to stay in English.
+function describeTxn(x, L = t) {
+  const isT = x.type === 'Transfer';
+  const loan = loanActionOf(x);
   const loanTitle = {
-    borrow: () => `Borrowed from ${personName(t.account)}`,
-    repay: () => `Repaid ${personName(t.toAccount)}`,
-    lend: () => `Lent to ${personName(t.toAccount)}`,
-    collect: () => `${personName(t.account)} paid back`,
+    borrow: () => L('Borrowed from {name}', { name: personName(x.account) }),
+    repay: () => L('Repaid {name}', { name: personName(x.toAccount) }),
+    lend: () => L('Lent to {name}', { name: personName(x.toAccount) }),
+    collect: () => L('{name} paid back', { name: personName(x.account) }),
   }[loan];
-  const title = loanTitle ? loanTitle() : isT ? `${accName(t.account)} → ${accName(t.toAccount)}` : t.category;
-  const moneyAcc = loan === 'borrow' || loan === 'collect' ? t.toAccount : t.account;
-  const feeWord = t.feeCategory === C.INTEREST_CATEGORY ? 'interest' : 'charge';
+  const title = loanTitle ? loanTitle() : isT ? `${accName(x.account)} → ${accName(x.toAccount)}` : x.category;
+  const moneyAcc = loan === 'borrow' || loan === 'collect' ? x.toAccount : x.account;
+  const feeWord = x.feeCategory === C.INTEREST_CATEGORY ? L('interest {amount}', { amount: money2(Number(x.fee)) }) : L('charge {amount}', { amount: money2(Number(x.fee)) });
   const sub = [
-    loan ? `Loan · ${accName(moneyAcc)}` : isT ? 'Transfer' : accName(t.account),
-    Number(t.fee) && t.type !== 'Income' ? `${feeWord} ${money2(Number(t.fee))}` : '',
-    t.note,
+    loan ? `${L('Loan')} · ${accName(moneyAcc)}` : isT ? L('Transfer') : accName(x.account),
+    Number(x.fee) && x.type !== 'Income' ? feeWord : '',
+    x.note,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -608,22 +625,22 @@ function renderTransactions() {
   $('#view-transactions').innerHTML = `
     <div class="card" style="display:grid;gap:10px">
       <div class="filters">
-        <input type="month" id="f-month" value="${esc(f.month)}" aria-label="Month">
-        <select id="f-type" aria-label="Type">
-          <option value="">All types</option>
+        <input type="month" id="f-month" value="${esc(f.month)}" aria-label="${t('Month')}">
+        <select id="f-type" aria-label="${t('Type')}">
+          <option value="">${t('All types')}</option>
           ${[['Expense', 'Expense'], ['Income', 'Income'], ['Transfer', 'Transfer'], ['Loan', 'Loans']]
-            .map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${l}</option>`)
+            .map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${t(l)}</option>`)
             .join('')}
         </select>
-        <select id="f-account" aria-label="Account">
-          <option value="">All accounts</option>
+        <select id="f-account" aria-label="${t('Account')}">
+          <option value="">${t('All accounts')}</option>
           ${accounts().map((a) => `<option value="${esc(a.id)}" ${f.account === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
         </select>
-        <input type="search" id="f-q" placeholder="Search notes, categories…" value="${esc(f.q)}">
+        <input type="search" id="f-q" placeholder="${t('Search notes, categories…')}" value="${esc(f.q)}">
       </div>
-      <div class="muted num" style="font-size:13px">${list.length} transactions ·
+      <div class="muted num" style="font-size:13px">${tn(list.length, '{n} transaction', '{n} transactions')} ·
         <span class="income">+${money(inc)}</span> · <span class="expense">−${money(exp)}</span>
-        ${f.month ? `· <button class="linkish" id="f-all">Show all months</button>` : ''}</div>
+        ${f.month ? `· <button class="linkish" id="f-all">${t('Show all months')}</button>` : ''}</div>
     </div>
     <div>
       ${
@@ -633,7 +650,7 @@ function renderTransactions() {
             <span class="num">${dayTotal(g.items) ? `−${money(dayTotal(g.items))}` : ''}</span></div>
             ${g.items.map(txnRow).join('')}`,
           )
-          .join('') || '<div class="empty">No transactions match.</div>'
+          .join('') || `<div class="empty">${t('No transactions match.')}</div>`
       }
     </div>`;
 
@@ -664,10 +681,10 @@ function setupTxnDialog() {
   };
   $('#txn-save-another').onclick = () => saveTxn(true);
   $('#txn-delete').onclick = async () => {
-    if (!editing || !confirm('Delete this transaction?')) return;
+    if (!editing || !confirm(t('Delete this transaction?'))) return;
     await state.store.deleteTxn(editing.id);
     $('#txn-dialog').close();
-    toast('Deleted');
+    toast(t('Deleted'));
   };
   $('#txn-account').onchange = updateTxnHint;
   $('#txn-to').onchange = updateTxnHint;
@@ -700,18 +717,20 @@ const LOAN = {
   lend: { personType: 'Lend', person: 'Lent to', money: 'Paid from', personIsFrom: false, due: true },
   collect: { personType: 'Lend', person: 'Paid back by', money: 'Received in', personIsFrom: true },
 };
-const FEE_LABEL = $('#txn-fee-label').innerHTML;
+const FEE_LABEL = $('#txn-fee-label').dataset.i18nHtml;
+// Display names for account types (stored values stay in English).
+const TYPE_NAMES = { Liquid: 'Liquid', Lend: 'Lend', Investment: 'Investment', Debt: 'Debt' };
 
-function fillLoanFields(t = null, preset = null) {
+function fillLoanFields(x = null, preset = null) {
   const action = $('#txn-loan').value;
   const cfg = LOAN[action];
   const accs = accounts();
   const people = accs.filter((a) => a.type === cfg.personType);
   const prevPerson = $('#txn-person').value;
-  const person = t ? (cfg.personIsFrom ? t.account : t.toAccount) : preset?.person ?? prevPerson;
+  const person = x ? (cfg.personIsFrom ? x.account : x.toAccount) : preset?.person ?? prevPerson;
   fillSelect(
     $('#txn-person'),
-    [...people.map((a) => [a.id, a.name]), ['__new', cfg.personType === 'Debt' ? '+ New lender (person, bank, bKash…)' : '+ New person…']],
+    [...people.map((a) => [a.id, a.name]), ['__new', cfg.personType === 'Debt' ? t('+ New lender (person, bank, bKash…)') : t('+ New person…')]],
     person,
   );
   // Money side: spendable accounts first, never another loan account.
@@ -720,24 +739,25 @@ function fillLoanFields(t = null, preset = null) {
   const prevMoney = $('#txn-account').value;
   fillSelect(
     $('#txn-account'),
-    moneyAccs.map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${a.type})`]),
-    t ? (cfg.personIsFrom ? t.toAccount : t.account) : prevMoney,
+    moneyAccs.map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${t(TYPE_NAMES[a.type])})`]),
+    x ? (cfg.personIsFrom ? x.toAccount : x.account) : prevMoney,
   );
-  $('#txn-person-label').textContent = cfg.person;
-  $('#txn-account-label').textContent = cfg.money;
+  $('#txn-person-label').textContent = t(cfg.person);
+  $('#txn-account-label').textContent = t(cfg.money);
   $('#txn-fee-field').hidden = !cfg.interest;
-  $('#txn-fee-label').innerHTML = cfg.interest ? 'Interest or extra paid <span class="muted">(optional)</span>' : FEE_LABEL;
+  $('#txn-fee-label').innerHTML = cfg.interest ? t('Interest or extra paid <span class="muted">(optional)</span>') : t(FEE_LABEL);
   $('#txn-due-field').hidden = !cfg.due;
   $('#txn-plan-field').hidden = action !== 'borrow';
   const acc = accById($('#txn-person').value);
   const plan = action === 'repay' && acc ? planInfo(acc) : null;
-  $('#txn-due-label').innerHTML =
+  $('#txn-due-label').innerHTML = t(
     action === 'repay' ? 'Next payment due <span class="muted">(optional)</span>'
     : action === 'borrow' ? 'Due date <span class="muted">(optional: first installment, or when it all must be paid)</span>'
-    : 'Due date <span class="muted">(optional: when it should be paid back)</span>';
-  if (t) {
+    : 'Due date <span class="muted">(optional: when it should be paid back)</span>',
+  );
+  if (x) {
     $('#txn-due').value = action === 'repay' ? '' : acc?.dueDate || '';
-    if (action === 'borrow' && acc?.plan?.txn === t.id) {
+    if (action === 'borrow' && acc?.plan?.txn === x.id) {
       $('#txn-plan-count').value = acc.plan.count;
       $('#txn-plan-interest').value = acc.plan.interest || '';
     }
@@ -774,7 +794,7 @@ function planInfo(acc) {
 // Creates a lender/borrower account from inside the form.
 async function addLoanPerson() {
   const cfg = LOAN[$('#txn-loan').value];
-  const name = prompt(cfg.personType === 'Debt' ? 'Who did you borrow from? (a person, bank, bKash…)' : 'Who did you lend to?')?.trim();
+  const name = prompt(cfg.personType === 'Debt' ? t('Who did you borrow from? (a person, bank, bKash…)') : t('Who did you lend to?'))?.trim();
   if (!name) {
     const first = $('#txn-person').options[0]?.value;
     $('#txn-person').value = first && first !== '__new' ? first : '__new';
@@ -786,7 +806,7 @@ async function addLoanPerson() {
   fillLoanFields(null, { person: id });
 }
 
-function setTxnType(type, t = null, preset = null) {
+function setTxnType(type, x = null, preset = null) {
   txnType = type;
   $$('#txn-type button').forEach((b) => b.classList.toggle('active', b.dataset.type === type));
   const s = settings();
@@ -796,33 +816,33 @@ function setTxnType(type, t = null, preset = null) {
   $('#txn-loan-field').hidden = !isLoan;
   $('#txn-person-field').hidden = !isLoan;
   $('#txn-due-field').hidden = true;
-  $('#txn-fee-label').innerHTML = FEE_LABEL;
+  $('#txn-fee-label').innerHTML = t(FEE_LABEL);
   if (isLoan) {
     $('#txn-category-field').hidden = true;
     $('#txn-to-field').hidden = true;
-    $('#txn-loan').value = (t && loanActionOf(t)) || preset?.loan || $('#txn-loan').value || 'borrow';
-    return fillLoanFields(t, preset);
+    $('#txn-loan').value = (x && loanActionOf(x)) || preset?.loan || $('#txn-loan').value || 'borrow';
+    return fillLoanFields(x, preset);
   }
   $('#txn-category-field').hidden = isT;
   $('#txn-to-field').hidden = !isT;
   $('#txn-fee-field').hidden = type === 'Income';
-  $('#txn-account-label').textContent = type === 'Income' ? 'Received in' : type === 'Expense' ? 'Paid from' : 'From';
+  $('#txn-account-label').textContent = t(type === 'Income' ? 'Received in' : type === 'Expense' ? 'Paid from' : 'From');
 
   const cats = type === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
   const catList = [...cats];
-  if (t?.category && !isT && !catList.includes(t.category)) catList.push(t.category);
-  fillSelect($('#txn-category'), catList.map((c) => [c, c]), t?.category);
+  if (x?.category && !isT && !catList.includes(x.category)) catList.push(x.category);
+  fillSelect($('#txn-category'), catList.map((c) => [c, c]), x?.category);
 
   // Income/Expense normally touch spendable accounts; show those first.
   const order = (a) => (isT ? 0 : a.type === 'Liquid' ? 0 : 1);
-  const accItems = [...accs].sort((a, b) => order(a) - order(b)).map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${a.type})`]);
+  const accItems = [...accs].sort((a, b) => order(a) - order(b)).map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${t(TYPE_NAMES[a.type])})`]);
   const prevFrom = $('#txn-account').value;
   // Income and expenses default to a spendable account, never a loan account.
   const prevOk = isT || accById(prevFrom)?.type === 'Liquid';
   const firstLiquid = accs.find((a) => a.type === 'Liquid')?.id;
-  fillSelect($('#txn-account'), accItems, t?.account ?? (prevOk ? prevFrom : firstLiquid ?? prevFrom));
+  fillSelect($('#txn-account'), accItems, x?.account ?? (prevOk ? prevFrom : firstLiquid ?? prevFrom));
   const prevTo = $('#txn-to').value;
-  fillSelect($('#txn-to'), accItems, t?.toAccount ?? prevTo);
+  fillSelect($('#txn-to'), accItems, x?.toAccount ?? prevTo);
   if (isT && $('#txn-to').value === $('#txn-account').value) {
     const other = accItems.find(([id]) => id !== $('#txn-account').value);
     if (other) $('#txn-to').value = other[0];
@@ -846,7 +866,7 @@ function updateFeeSuggestion() {
   const rate = Number(past[0].fee) / Number(past[0].amount);
   const fee = Math.round(amount * rate * 100) / 100;
   btn.dataset.fee = fee;
-  btn.textContent = `Use ${money2(fee)} · same rate as last time (${(rate * 100).toFixed(2)}%)`;
+  btn.textContent = t('Use {amount} · same rate as last time ({rate}%)', { amount: money2(fee), rate: (rate * 100).toFixed(2) });
   btn.hidden = false;
 }
 
@@ -858,69 +878,76 @@ function updateTxnHint() {
   if (txnType === 'Loan') {
     const action = $('#txn-loan').value;
     const person = accById($('#txn-person').value);
-    const name = person ? personName(person.id) : 'them';
+    const name = person ? personName(person.id) : t('them');
     const owed = person ? C.worth(accounts(), state.data.transactions).balances[person.id].value : 0;
-    hint = {
-      borrow: `Borrowed money is not income. You will owe ${name} more.`,
-      repay: `Repaying is not spending: you will owe ${name} less.`,
-      lend: `Lending is not spending. ${name} will owe you.`,
-      collect: `Getting your money back is not income. ${name} will owe you less.`,
-    }[action];
-    if (person && owed > 0) hint += LOAN[action].personType === 'Debt' ? ` You owe ${name} ${moneyExact(owed)} now.` : ` ${name} owes you ${moneyExact(owed)} now.`;
+    hint = t(
+      {
+        borrow: 'Borrowed money is not income. You will owe {name} more.',
+        repay: 'Repaying is not spending: you will owe {name} less.',
+        lend: 'Lending is not spending. {name} will owe you.',
+        collect: 'Getting your money back is not income. {name} will owe you less.',
+      }[action],
+      { name },
+    );
+    if (person && owed > 0)
+      hint += ' ' + t(LOAN[action].personType === 'Debt' ? 'You owe {name} {amount} now.' : '{name} owes you {amount} now.', { name, amount: moneyExact(owed) });
     const plan = action === 'repay' && person ? planInfo(person) : null;
-    if (plan && !plan.done) hint += ` Installment ${plan.k} of ${plan.n}.`;
+    if (plan && !plan.done) hint += ' ' + t('Installment {k} of {n}.', { k: plan.k, n: plan.n });
     const count = Number($('#txn-plan-count').value);
     const amount = Number($('#txn-amount').value);
     if (action === 'borrow' && count > 1 && amount > 0) {
       const each = (amount + (Number($('#txn-plan-interest').value) || 0)) / count;
-      hint += ` You will pay about ${money2(Math.round(each * 100) / 100)} a month for ${count} months.`;
+      hint += ' ' + t('You will pay about {amount} a month for {n} months.', { amount: money2(Math.round(each * 100) / 100), n: count });
     }
     const interest = Number($('#txn-fee').value);
     if (action === 'repay')
-      hint += interest > 0 ? ` The ${money2(interest)} interest is counted as spending (Loan Interest).` : ' Only interest would count as spending.';
+      hint += ' ' + (interest > 0 ? t('The {amount} interest is counted as spending (Loan Interest).', { amount: money2(interest) }) : t('Only interest would count as spending.'));
     $('#txn-hint').textContent = hint;
     return;
   }
   if (txnType === 'Transfer' && from && to) {
-    if (to.type === 'Investment') hint = `Counts as money moved into investments, not spending.`;
-    else if (to.type === 'Lend') hint = `You're lending money. ${to.name} will owe you more.`;
-    else if (from.type === 'Lend') hint = `${from.name} is paying you back.`;
-    else if (to.type === 'Debt') hint = `Paying off what you owe.`;
-    else if (from.type === 'Debt') hint = `Borrowing money. What you owe goes up.`;
-    else hint = `Moving your own money between accounts. The transfer itself is not spending.`;
+    if (to.type === 'Investment') hint = t('Counts as money moved into investments, not spending.');
+    else if (to.type === 'Lend') hint = t("You're lending money. {name} will owe you more.", { name: to.name });
+    else if (from.type === 'Lend') hint = t('{name} is paying you back.', { name: from.name });
+    else if (to.type === 'Debt') hint = t('Paying off what you owe.');
+    else if (from.type === 'Debt') hint = t('Borrowing money. What you owe goes up.');
+    else hint = t('Moving your own money between accounts. The transfer itself is not spending.');
   } else if (txnType === 'Expense' && $('#txn-category').value === 'Family Support') {
-    hint = 'Money you give to family is spending. If someone is only holding it for you, use Transfer to their account instead.';
+    hint = t('Money you give to family is spending. If someone is only holding it for you, use Transfer to their account instead.');
   }
   const fee = Number($('#txn-fee').value);
   if (txnType !== 'Income' && fee > 0) {
-    hint = `${hint} The ${money2(fee)} charge is taken from ${accById($('#txn-account').value)?.name ?? 'this account'} and counted as spending (Service Charges).`.trim();
+    hint = `${hint} ${t('The {amount} charge is taken from {account} and counted as spending (Service Charges).', {
+      amount: money2(fee),
+      account: accById($('#txn-account').value)?.name ?? t('this account'),
+    })}`.trim();
   }
   $('#txn-hint').textContent = hint;
 }
 
 // `preset` pre-fills a new entry, e.g. { loan: 'repay', person: id }.
-function openTxn(t = null, preset = null) {
+function openTxn(x = null, preset = null) {
   if (!state.data.accounts.length) {
-    toast('Add an account in Setup first');
+    toast(t('Add an account in Setup first'));
     return switchView('setup');
   }
-  editing = t;
-  $('#txn-title').textContent = t ? 'Edit transaction' : 'Add transaction';
-  $('#txn-delete').hidden = !t;
-  $('#txn-save-another').hidden = !!t;
+  editing = x;
+  $('#txn-title').textContent = x ? t('Edit transaction') : t('Add transaction');
+  $('#txn-delete').hidden = !x;
+  $('#txn-save-another').hidden = !!x;
   $('#txn-error').hidden = true;
-  $('#txn-amount').value = t ? t.amount : '';
-  $('#txn-date').value = t ? t.date : C.today();
-  $('#txn-note').value = t?.note ?? '';
-  $('#txn-fee').value = t?.fee || '';
+  $('#txn-amount').value = x ? x.amount : '';
+  $('#txn-date').value = x ? x.date : C.today();
+  $('#txn-note').value = x?.note ?? '';
+  $('#txn-fee').value = x?.fee || '';
   $('#txn-due').value = '';
   $('#txn-plan-count').value = '';
   $('#txn-plan-interest').value = '';
   delete $('#txn-amount').dataset.auto;
-  const type = t ? (loanActionOf(t) ? 'Loan' : t.type) : preset?.loan ? 'Loan' : txnType;
-  setTxnType(type, t, preset);
+  const type = x ? (loanActionOf(x) ? 'Loan' : x.type) : preset?.loan ? 'Loan' : txnType;
+  setTxnType(type, x, preset);
   $('#txn-dialog').showModal();
-  if (!t) $('#txn-amount').focus();
+  if (!x) $('#txn-amount').focus();
 }
 
 async function saveTxn(another) {
@@ -929,14 +956,14 @@ async function saveTxn(another) {
     $('#txn-error').textContent = m;
     $('#txn-error').hidden = false;
   };
-  if (!(amount > 0)) return err('Enter an amount greater than 0.');
-  if (!$('#txn-date').value) return err('Pick a date.');
+  if (!(amount > 0)) return err(t('Enter an amount greater than 0.'));
+  if (!$('#txn-date').value) return err(t('Pick a date.'));
   if (txnType === 'Loan') return saveLoan(amount, another, err);
   const isT = txnType === 'Transfer';
-  if (isT && $('#txn-account').value === $('#txn-to').value) return err('From and To must be different accounts.');
+  if (isT && $('#txn-account').value === $('#txn-to').value) return err(t('From and To must be different accounts.'));
   const fee = txnType === 'Income' ? 0 : Number($('#txn-fee').value) || 0;
-  if (fee < 0) return err('The service charge cannot be negative.');
-  const t = {
+  if (fee < 0) return err(t('The service charge cannot be negative.'));
+  const x = {
     ...(editing || {}),
     type: txnType,
     amount,
@@ -950,19 +977,22 @@ async function saveTxn(another) {
     loan: undefined,
   };
   try {
-    await state.store.saveTxn(t);
-    await ensureFeeCategory(t);
+    await state.store.saveTxn(x);
+    await ensureFeeCategory(x);
   } catch (e) {
     return err(e.message);
   }
-  toast(editing ? 'Updated' : `Saved ${txnType.toLowerCase()} of ${money(amount)}${fee ? ` + ${money2(fee)} charge` : ''}`);
+  const saved = t({ Expense: 'Saved expense of {amount}', Income: 'Saved income of {amount}', Transfer: 'Saved transfer of {amount}' }[txnType], {
+    amount: money(amount),
+  });
+  toast(editing ? t('Updated') : fee ? `${saved} + ${t('charge {amount}', { amount: money2(fee) })}` : saved);
   afterSave(another);
 }
 
 // Fees and interest get a category in Setup so they can be given a budget.
-async function ensureFeeCategory(t) {
-  if (!(Number(t.fee) > 0)) return;
-  const name = C.feeCategory(t);
+async function ensureFeeCategory(x) {
+  if (!(Number(x.fee) > 0)) return;
+  const name = C.feeCategory(x);
   const s = settings();
   if (!s.expenseCategories.some((c) => c.name === name))
     await state.store.saveSettings({ ...s, expenseCategories: [...s.expenseCategories, { name, budget: 0 }] });
@@ -973,11 +1003,11 @@ async function saveLoan(amount, another, err) {
   const cfg = LOAN[action];
   const person = $('#txn-person').value;
   const moneyAcc = $('#txn-account').value;
-  if (!person || person === '__new') return err(cfg.personType === 'Debt' ? 'Choose or add who you borrowed from.' : 'Choose or add the person.');
-  if (!moneyAcc) return err('Choose the account the money went into or came out of.');
+  if (!person || person === '__new') return err(cfg.personType === 'Debt' ? t('Choose or add who you borrowed from.') : t('Choose or add the person.'));
+  if (!moneyAcc) return err(t('Choose the account the money went into or came out of.'));
   const interest = cfg.interest ? Number($('#txn-fee').value) || 0 : 0;
-  if (interest < 0) return err('Interest cannot be negative.');
-  const t = {
+  if (interest < 0) return err(t('Interest cannot be negative.'));
+  const x = {
     ...(editing || { id: newId() }),
     type: 'Transfer',
     loan: action,
@@ -991,8 +1021,8 @@ async function saveLoan(amount, another, err) {
     feeCategory: interest > 0 ? C.INTEREST_CATEGORY : undefined,
   };
   try {
-    await state.store.saveTxn(t);
-    await ensureFeeCategory(t);
+    await state.store.saveTxn(x);
+    await ensureFeeCategory(x);
     const acc = accById(person);
     let due = $('#txn-due').value;
     const owedNow = C.worth(accounts(), state.data.transactions).balances[person]?.value ?? 0;
@@ -1000,7 +1030,7 @@ async function saveLoan(amount, another, err) {
     const count = Math.floor(Number($('#txn-plan-count').value));
     const plan =
       action === 'borrow' && count >= 1
-        ? { count, interest: Number($('#txn-plan-interest').value) || 0, principal: amount, date: t.date, txn: t.id }
+        ? { count, interest: Number($('#txn-plan-interest').value) || 0, principal: amount, date: x.date, txn: x.id }
         : acc?.plan;
     if (acc && ((cfg.due && due !== (acc.dueDate || '')) || plan !== acc.plan))
       await state.store.saveAccount({ ...acc, dueDate: due || undefined, plan });
@@ -1008,8 +1038,11 @@ async function saveLoan(amount, another, err) {
     return err(e.message);
   }
   const name = personName(person);
-  const what = { borrow: `Borrowed ${money(amount)} from ${name}`, repay: `Repaid ${money(amount)} to ${name}`, lend: `Lent ${money(amount)} to ${name}`, collect: `${name} paid back ${money(amount)}` }[action];
-  toast(editing ? 'Updated' : what);
+  const what = t(
+    { borrow: 'Borrowed {amount} from {name}', repay: 'Repaid {amount} to {name}', lend: 'Lent {amount} to {name}', collect: '{name} paid back {amount}' }[action],
+    { amount: money(amount), name },
+  );
+  toast(editing ? t('Updated') : what);
   afterSave(another);
 }
 
@@ -1040,7 +1073,7 @@ function reportContext() {
     txns: state.data.transactions,
     holder: s.holderName || state.user?.displayName || '',
     email: state.user?.email && state.store.mode === 'drive' ? state.user.email : '',
-    describe: describeTxn,
+    describe: (x) => describeTxn(x, en),
     personName,
     declaration: report.declaration,
   };
@@ -1053,74 +1086,73 @@ function renderReports() {
   if (!report.asOf) report.asOf = C.today();
   const s = settings();
   const presets = [
-    ['this-month', 'This month'],
-    ['last-month', 'Last month'],
-    ['last-3', 'Last 3 months'],
-    ['last-6', 'Last 6 months'],
-    ['this-iy', `This income year (${R.incomeYear(C.today()).label})`],
-    ['last-iy', `Last income year (${R.incomeYear(C.today(), -1).label})`],
-    ['this-year', `Calendar year ${C.today().slice(0, 4)}`],
-    ['custom', 'Custom dates…'],
+    ['this-month', t('This month')],
+    ['last-month', t('Last month')],
+    ['last-3', t('Last 3 months')],
+    ['last-6', t('Last 6 months')],
+    ['this-iy', t('This income year ({label})', { label: R.incomeYear(C.today()).label })],
+    ['last-iy', t('Last income year ({label})', { label: R.incomeYear(C.today(), -1).label })],
+    ['this-year', t('Calendar year {year}', { year: C.today().slice(0, 4) })],
+    ['custom', t('Custom dates…')],
   ];
-  const t = report.type;
-  if (t === 'tax' && !report.preset.endsWith('-iy')) report.preset = 'last-iy';
+  const kind = report.type;
+  if (kind === 'tax' && !report.preset.endsWith('-iy')) report.preset = 'last-iy';
   const r = reportRange();
   $('#view-reports').innerHTML = `
     <div class="card" style="display:grid;gap:10px">
-      <h3 style="margin:0">Documents</h3>
-      <p class="muted" style="margin:0;font-size:13px">Make a printable statement from your records. It opens as a page you can print or save as PDF.</p>
+      <h3 style="margin:0">${t('Documents')}</h3>
+      <p class="muted" style="margin:0;font-size:13px">${t('Make a printable statement from your records. It opens as a page you can print or save as PDF. Documents are in English.')}</p>
       ${Object.entries(R.REPORTS)
         .map(
-          ([k, v]) => `<button class="choice ${t === k ? 'recommended selected' : ''}" data-report="${k}">
-            <strong>${esc(v.title)}</strong><span>${esc(v.uses)}</span></button>`,
+          ([k, v]) => `<button class="choice ${kind === k ? 'recommended selected' : ''}" data-report="${k}">
+            <strong>${esc(t(v.title))}</strong><span>${esc(t(v.uses))}</span></button>`,
         )
         .join('')}
     </div>
 
     <div class="card" style="display:grid;gap:12px">
-      <h3 style="margin:0">${esc(R.REPORTS[t].title)}</h3>
+      <h3 style="margin:0">${esc(t(R.REPORTS[kind].title))}</h3>
       ${
-        t === 'networth'
-          ? `<div class="field"><label for="r-asof">As of date</label><input type="date" id="r-asof" value="${esc(report.asOf)}"></div>`
-          : `<div class="field"><label for="r-preset">Period</label>
+        kind === 'networth'
+          ? `<div class="field"><label for="r-asof">${t('As of date')}</label><input type="date" id="r-asof" value="${esc(report.asOf)}"></div>`
+          : `<div class="field"><label for="r-preset">${t('Period')}</label>
               <select id="r-preset">${presets
-                .filter(([k]) => t !== 'tax' || k.endsWith('-iy') || k === 'custom')
+                .filter(([k]) => kind !== 'tax' || k.endsWith('-iy') || k === 'custom')
                 .map(([k, l]) => `<option value="${k}" ${report.preset === k ? 'selected' : ''}>${esc(l)}</option>`)
                 .join('')}</select></div>
              ${
                report.preset === 'custom'
-                 ? `<div class="row2"><div class="field"><label for="r-start">From</label><input type="date" id="r-start" value="${esc(report.start || r.start)}"></div>
-                    <div class="field"><label for="r-end">To</label><input type="date" id="r-end" value="${esc(report.end || r.end)}"></div></div>`
-                 : `<p class="muted" style="margin:-4px 0 0;font-size:12px">${niceDate(r.start, { day: 'numeric', month: 'short', year: 'numeric' })} to ${niceDate(r.end, { day: 'numeric', month: 'short', year: 'numeric' })}</p>`
+                 ? `<div class="row2"><div class="field"><label for="r-start">${t('From')}</label><input type="date" id="r-start" value="${esc(report.start || r.start)}"></div>
+                    <div class="field"><label for="r-end">${t('To')}</label><input type="date" id="r-end" value="${esc(report.end || r.end)}"></div></div>`
+                 : `<p class="muted" style="margin:-4px 0 0;font-size:12px">${t('{from} to {to}', { from: niceDate(r.start, { day: 'numeric', month: 'short', year: 'numeric' }), to: niceDate(r.end, { day: 'numeric', month: 'short', year: 'numeric' }) })}</p>`
              }`
       }
       ${
-        t === 'statement'
-          ? `<div class="field"><label for="r-account">Account</label><select id="r-account">
-              <option value="__liquid">All spendable accounts (bank, cash, wallets)</option>
+        kind === 'statement'
+          ? `<div class="field"><label for="r-account">${t('Account')}</label><select id="r-account">
+              <option value="__liquid">${t('All spendable accounts (bank, cash, wallets)')}</option>
               ${accs.filter((a) => a.type !== 'Debt').map((a) => `<option value="${esc(a.id)}" ${report.account === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
             </select></div>`
           : ''
       }
       ${
-        t === 'loan'
+        kind === 'loan'
           ? people.length
-            ? `<div class="field"><label for="r-person">Person or lender</label><select id="r-person">
-                ${people.map((a) => `<option value="${esc(a.id)}" ${report.person === a.id ? 'selected' : ''}>${esc(a.name)} (${a.type === 'Debt' ? 'I owe' : 'owes me'})</option>`).join('')}
+            ? `<div class="field"><label for="r-person">${t('Person or lender')}</label><select id="r-person">
+                ${people.map((a) => `<option value="${esc(a.id)}" ${report.person === a.id ? 'selected' : ''}>${esc(a.name)} (${a.type === 'Debt' ? t('I owe') : t('owes me')})</option>`).join('')}
               </select></div>`
-            : '<p class="muted" style="margin:0">No loans recorded yet. Add one with + → Loan.</p>'
+            : `<p class="muted" style="margin:0">${t('No loans recorded yet. Add one with + → Loan.')}</p>`
           : ''
       }
-      <div class="field"><label for="r-name">Name printed on the document</label>
-        <input id="r-name" value="${esc(s.holderName || state.user?.displayName || '')}" placeholder="Your full name"></div>
+      <div class="field"><label for="r-name">${t('Name printed on the document')}</label>
+        <input id="r-name" value="${esc(s.holderName || state.user?.displayName || '')}" placeholder="${t('Your full name (in English)')}"></div>
       <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="r-decl" style="width:auto" ${report.declaration ? 'checked' : ''}>
-        Add a declaration and signature line</label>
+        ${t('Add a declaration and signature line')}</label>
       <div class="sheet-actions" style="justify-content:flex-start">
-        <button class="btn primary" id="r-open">Open document</button>
-        ${t === 'statement' ? '<button class="btn" id="r-csv">Download CSV</button>' : ''}
+        <button class="btn primary" id="r-open">${t('Open document')}</button>
+        ${kind === 'statement' ? `<button class="btn" id="r-csv">${t('Download CSV')}</button>` : ''}
       </div>
-      <p class="muted" style="margin:0;font-size:12px">These documents come from your own records. Banks and embassies usually also need an official,
-        bank-stamped statement, so use these as a summary or supporting document.</p>
+      <p class="muted" style="margin:0;font-size:12px">${t('These documents come from your own records. Banks and embassies usually also need an official, bank-stamped statement, so use these as a summary or supporting document.')}</p>
     </div>`;
 
   const v = $('#view-reports');
@@ -1147,7 +1179,7 @@ function openReport() {
   if (name && name !== settings().holderName) state.store.saveSettings({ ...settings(), holderName: name });
   const ctx = { ...reportContext(), holder: name || reportContext().holder };
   const range = reportRange();
-  if (report.preset === 'custom' && range.start > range.end) return toast('The start date is after the end date');
+  if (report.preset === 'custom' && range.start > range.end) return toast(t('The start date is after the end date'));
   const html = {
     statement: () => R.statementReport(ctx, { range, accountId: report.account }),
     income: () => R.incomeReport(ctx, { range }),
@@ -1163,7 +1195,7 @@ function openReport() {
   } else {
     // Pop-ups blocked: save the page instead; it opens in any browser.
     download(`${report.type}-${C.today()}.html`, html, 'text/html');
-    toast('Saved the document as a file. Open it to print or save as PDF.');
+    toast(t('Saved the document as a file. Open it to print or save as PDF.'));
   }
 }
 
@@ -1176,79 +1208,83 @@ function renderSetup() {
   $('#view-setup').innerHTML = `
     <div class="grid2">
       <div class="card">
-        <h3>Accounts <button class="btn sm" id="add-acc">+ Add account</button></h3>
+        <h3>${t('Accounts')} <button class="btn sm" id="add-acc">${t('+ Add account')}</button></h3>
         <div class="list">
           ${accounts()
             .map(
               (a) => `<button class="li txn" style="border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:10px 2px" data-acc="${esc(a.id)}">
-                <span class="mid"><div class="t">${esc(a.name)}<span class="tag">${a.type}</span></div>
-                <div class="sub">Opening ${money(a.opening || 0)}${a.notes ? ` · ${esc(a.notes)}` : ''}</div></span>
+                <span class="mid"><div class="t">${esc(a.name)}<span class="tag">${t(TYPE_NAMES[a.type])}</span></div>
+                <div class="sub">${t('Opening {amount}', { amount: money(a.opening || 0) })}${a.notes ? ` · ${esc(a.notes)}` : ''}</div></span>
                 <span class="amt num">${a.type === 'Debt' ? '−' : ''}${moneyExact(w.balances[a.id].value)}</span></button>`,
             )
-            .join('') || '<p class="muted">No accounts yet.</p>'}
+            .join('') || `<p class="muted">${t('No accounts yet.')}</p>`}
         </div>
       </div>
 
       <div class="card">
-        <h3>Monthly savings goal</h3>
-        <div class="field"><label for="goal">Income minus expenses, per month (BDT)</label>
+        <h3>${t('Monthly savings goal')}</h3>
+        <div class="field"><label for="goal">${t('Income minus expenses, per month (BDT)')}</label>
           <input type="number" id="goal" inputmode="decimal" value="${Number(s.savingsGoal) || 0}"></div>
       </div>
 
       <div class="card">
-        <h3>Expense categories &amp; monthly budgets
-          <small class="num">total ${money(s.expenseCategories.reduce((a, c) => a + (Number(c.budget) || 0), 0))}</small></h3>
+        <h3>${t('Expense categories &amp; monthly budgets')}
+          <small class="num">${t('total {amount}', { amount: money(s.expenseCategories.reduce((a, c) => a + (Number(c.budget) || 0), 0)) })}</small></h3>
         ${s.expenseCategories
           .map(
             (c, i) => `<div class="edit-row">
-              <button class="linkish" style="text-align:left;color:var(--text);font-weight:500" data-rename-exp="${i}" title="Rename">${esc(c.name)}</button>
-              <input type="number" inputmode="decimal" data-budget="${i}" value="${Number(c.budget) || 0}" aria-label="Budget for ${esc(c.name)}">
-              <button class="icon-btn" data-del-exp="${i}" aria-label="Remove ${esc(c.name)}">✕</button></div>`,
+              <button class="linkish" style="text-align:left;color:var(--text);font-weight:500" data-rename-exp="${i}" title="${t('Rename')}">${esc(c.name)}</button>
+              <input type="number" inputmode="decimal" data-budget="${i}" value="${Number(c.budget) || 0}" aria-label="${esc(t('Budget for {name}', { name: c.name }))}">
+              <button class="icon-btn" data-del-exp="${i}" aria-label="${esc(t('Remove {name}', { name: c.name }))}">✕</button></div>`,
           )
           .join('')}
-        <div class="add-row"><input id="new-exp" placeholder="New expense category"><button class="btn" id="add-exp">Add</button></div>
+        <div class="add-row"><input id="new-exp" placeholder="${t('New expense category')}"><button class="btn" id="add-exp">${t('Add')}</button></div>
       </div>
 
       <div class="card">
-        <h3>Income sources</h3>
+        <h3>${t('Income sources')}</h3>
         <div class="chips">
           ${s.incomeCategories
-            .map((c, i) => `<span class="chip"><span data-rename-inc="${i}" style="cursor:pointer">${esc(c)}</span><button data-del-inc="${i}" aria-label="Remove ${esc(c)}">✕</button></span>`)
+            .map((c, i) => `<span class="chip"><span data-rename-inc="${i}" style="cursor:pointer">${esc(c)}</span><button data-del-inc="${i}" aria-label="${esc(t('Remove {name}', { name: c }))}">✕</button></span>`)
             .join('')}
         </div>
-        <div class="add-row"><input id="new-inc" placeholder="New income source"><button class="btn" id="add-inc">Add</button></div>
+        <div class="add-row"><input id="new-inc" placeholder="${t('New income source')}"><button class="btn" id="add-inc">${t('Add')}</button></div>
       </div>
 
       <div class="card">
-        <h3>Appearance</h3>
+        <h3>${t('Language')} · ভাষা</h3>
+        <div class="segmented" style="display:flex">
+          <button data-lang="en" style="flex:1" class="${lang === 'en' ? 'active' : ''}">English</button>
+          <button data-lang="bn" style="flex:1" class="${lang === 'bn' ? 'active' : ''}">বাংলা</button>
+        </div>
+        <h3 style="margin-top:16px">${t('Appearance')}</h3>
         <div class="segmented" id="theme-seg" style="display:flex">
           ${[['auto', 'Auto'], ['light', '☀️ Day'], ['dark', '🌙 Night']]
-            .map(([v, l]) => `<button data-theme-pref="${v}" style="flex:1" class="${themePref() === v ? 'active' : ''}">${l}</button>`)
+            .map(([v, l]) => `<button data-theme-pref="${v}" style="flex:1" class="${themePref() === v ? 'active' : ''}">${t(l)}</button>`)
             .join('')}
         </div>
-        <p class="muted" style="font-size:12px;margin:8px 0 0">Auto follows your phone or computer setting.</p>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">${t('Auto follows your phone or computer setting.')}</p>
       </div>
 
       <div class="card">
-        <h3>Backup &amp; data</h3>
+        <h3>${t('Backup &amp; data')}</h3>
         <div style="display:grid;gap:8px">
-          <button class="btn" id="export">Download backup (.json)</button>
-          <button class="btn" id="export-csv">Download transactions (.csv)</button>
-          <label class="btn" style="text-align:center">Import .json file…
+          <button class="btn" id="export">${t('Download backup (.json)')}</button>
+          <button class="btn" id="export-csv">${t('Download transactions (.csv)')}</button>
+          <label class="btn" style="text-align:center">${t('Import .json file…')}
             <input type="file" accept=".json,application/json" id="import" hidden></label>
-          <p class="muted" style="font-size:12px;margin:0">After choosing a file you can replace your data or add the file to it.</p>
+          <p class="muted" style="font-size:12px;margin:0">${t('After choosing a file you can replace your data or add the file to it.')}</p>
         </div>
       </div>
 
       <div class="card">
-        <h3>Signed in</h3>
+        <h3>${t('Signed in')}</h3>
         <p style="margin:0 0 10px">${esc(u.displayName || '')}<br><span class="muted">${esc(u.email || '')}</span></p>
         ${
           state.store.mode === 'drive'
-            ? `<p class="muted" style="margin:0 0 10px;font-size:13px">Your data is stored in a private app folder in this Google account's Drive.
-               Nobody else can see it, including the people who run this website. Signing out removes it from this device only.</p>
-               <button class="btn" id="signout">Sign out</button>`
-            : '<p class="muted" style="margin:0;font-size:13px">Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.</p>'
+            ? `<p class="muted" style="margin:0 0 10px;font-size:13px">${t("Your data is stored in a private app folder in this Google account's Drive. Nobody else can see it, including the people who run this website. Signing out removes it from this device only.")}</p>
+               <button class="btn" id="signout">${t('Sign out')}</button>`
+            : `<p class="muted" style="margin:0;font-size:13px">${t('Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.')}</p>`
         }
       </div>
     </div>`;
@@ -1258,20 +1294,20 @@ function renderSetup() {
 
   $('#add-acc', v).onclick = () => openAccount();
   $$('[data-acc]', v).forEach((b) => (b.onclick = () => openAccount(accById(b.dataset.acc))));
-  $('#goal', v).onchange = (e) => save({ savingsGoal: Number(e.target.value) || 0 }).then(() => toast('Goal saved'));
+  $('#goal', v).onchange = (e) => save({ savingsGoal: Number(e.target.value) || 0 }).then(() => toast(t('Goal saved')));
 
   $$('[data-budget]', v).forEach(
     (inp) =>
       (inp.onchange = () => {
         const list = s.expenseCategories.map((c, i) => (i === Number(inp.dataset.budget) ? { ...c, budget: Number(inp.value) || 0 } : c));
-        save({ expenseCategories: list }).then(() => toast('Budget saved'));
+        save({ expenseCategories: list }).then(() => toast(t('Budget saved')));
       }),
   );
   $$('[data-del-exp]', v).forEach(
     (b) =>
       (b.onclick = () => {
         const c = s.expenseCategories[Number(b.dataset.delExp)];
-        if (!confirm(`Remove "${c.name}"? Past transactions keep this category.`)) return;
+        if (!confirm(t('Remove "{name}"? Past transactions keep this category.', { name: c.name }))) return;
         save({ expenseCategories: s.expenseCategories.filter((x) => x !== c) });
       }),
   );
@@ -1294,7 +1330,7 @@ function renderSetup() {
     (b) =>
       (b.onclick = () => {
         const c = s.incomeCategories[Number(b.dataset.delInc)];
-        if (!confirm(`Remove "${c}"? Past transactions keep this source.`)) return;
+        if (!confirm(t('Remove "{name}"? Past transactions keep this source.', { name: c }))) return;
         save({ incomeCategories: s.incomeCategories.filter((x) => x !== c) });
       }),
   );
@@ -1312,6 +1348,7 @@ function renderSetup() {
   };
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
+  $$('[data-lang]', v).forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
   $('#export', v).onclick = exportJson;
   $('#export-csv', v).onclick = exportCsv;
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
@@ -1320,14 +1357,14 @@ function renderSetup() {
 
 // Renames a category and moves its past transactions with it.
 async function renameCategory(type, oldName, buildList) {
-  const name = prompt(`Rename "${oldName}" to:`, oldName)?.trim();
+  const name = prompt(t('Rename "{name}" to:', { name: oldName }), oldName)?.trim();
   if (!name || name === oldName) return;
   const s = settings();
   const key = type === 'Income' ? 'incomeCategories' : 'expenseCategories';
   await state.store.saveSettings({ ...s, [key]: buildList(name) });
   const affected = state.data.transactions.filter((t) => t.type === type && t.category === oldName);
   for (const t of affected) await state.store.saveTxn({ ...t, category: name });
-  toast(`Renamed. ${affected.length} transaction${affected.length === 1 ? '' : 's'} updated.`);
+  toast(tn(affected.length, 'Renamed. {n} transaction updated.', 'Renamed. {n} transactions updated.'));
 }
 
 // ---------------------------------------------------------------- account dialog
@@ -1339,8 +1376,9 @@ function setupAccountDialog() {
     const type = $('#acc-type').value;
     $$('#acc-dialog .inv-only').forEach((el) => (el.hidden = type !== 'Investment'));
     $$('#acc-dialog .loan-only').forEach((el) => (el.hidden = type !== 'Debt' && type !== 'Lend'));
-    $('#acc-opening-label').textContent =
-      type === 'Debt' ? 'Amount I owed at start' : type === 'Lend' ? 'Amount owed to me at start' : 'Opening balance';
+    $('#acc-opening-label').textContent = t(
+      type === 'Debt' ? 'Amount I owed at start' : type === 'Lend' ? 'Amount owed to me at start' : 'Opening balance',
+    );
   };
   $('#acc-type').onchange = syncType;
   setupAccountDialog.syncType = syncType;
@@ -1349,7 +1387,7 @@ function setupAccountDialog() {
     e.preventDefault();
     const name = $('#acc-name').value.trim();
     if (!name) {
-      $('#acc-error').textContent = 'Give the account a name.';
+      $('#acc-error').textContent = t('Give the account a name.');
       $('#acc-error').hidden = false;
       return;
     }
@@ -1366,17 +1404,17 @@ function setupAccountDialog() {
       notes: $('#acc-notes').value.trim(),
     });
     $('#acc-dialog').close();
-    toast('Account saved');
+    toast(t('Account saved'));
   };
 
   $('#acc-delete').onclick = async () => {
     const used = state.data.transactions.some((t) => t.account === editingAcc.id || t.toAccount === editingAcc.id);
     if (used) {
-      $('#acc-error').textContent = 'This account has transactions. Delete or move them first.';
+      $('#acc-error').textContent = t('This account has transactions. Delete or move them first.');
       $('#acc-error').hidden = false;
       return;
     }
-    if (!confirm(`Delete "${editingAcc.name}"?`)) return;
+    if (!confirm(t('Delete "{name}"?', { name: editingAcc.name }))) return;
     await state.store.deleteAccount(editingAcc.id);
     $('#acc-dialog').close();
   };
@@ -1384,7 +1422,7 @@ function setupAccountDialog() {
 
 function openAccount(a = null) {
   editingAcc = a;
-  $('#acc-title').textContent = a ? 'Edit account' : 'New account';
+  $('#acc-title').textContent = a ? t('Edit account') : t('New account');
   $('#acc-delete').hidden = !a;
   $('#acc-error').hidden = true;
   $('#acc-name').value = a?.name ?? '';
@@ -1426,8 +1464,9 @@ function askImportMode(d) {
   const dlg = $('#import-dialog');
   const mine = state.data.transactions.length;
   $('#import-summary').textContent =
-    `The file has ${d.transactions.length} transactions and ${d.accounts.length} accounts. ` +
-    `You currently have ${mine} transaction${mine === 1 ? '' : 's'}.`;
+    t('The file has {tx} transactions and {acc} accounts.', { tx: d.transactions.length, acc: d.accounts.length }) +
+    ' ' +
+    tn(mine, 'You currently have {n} transaction.', 'You currently have {n} transactions.');
   // Nothing logged yet (e.g. after "Start fresh"): replacing is the safe choice.
   $('#import-replace').classList.toggle('recommended', mine === 0);
   $('#import-merge').classList.toggle('recommended', mine > 0);
@@ -1440,16 +1479,16 @@ async function importFile(file) {
   if (!file) return;
   try {
     const d = JSON.parse(await file.text());
-    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error('This is not an AmrPotli backup file.');
+    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error(t('This is not an AmrPotli backup file.'));
     const hasData = state.data.transactions.length || state.data.accounts.length;
     const mode = hasData ? await askImportMode(d) : 'replace';
     if (mode === 'cancel') return;
     if (mode === 'merge') await state.store.mergeAll(d);
     else await state.store.importAll({ ...d, settings: d.settings || DEFAULT_SETTINGS });
-    toast(mode === 'merge' ? `Added ${d.transactions.length} transactions from the file` : `Imported ${d.transactions.length} transactions`);
+    toast(t(mode === 'merge' ? 'Added {n} transactions from the file' : 'Imported {n} transactions', { n: d.transactions.length }));
     switchView('dashboard');
   } catch (e) {
-    alert(`Import failed: ${e.message}`);
+    alert(t('Import failed: {msg}', { msg: e.message }));
   } finally {
     $$('input[type=file]').forEach((i) => (i.value = ''));
   }

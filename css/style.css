@@ -68,7 +68,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", sans-serif;
 }
 [hidden] { display: none !important; }
 button, input, select { font: inherit; color: inherit; }
@@ -309,6 +309,13 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
 .choice.recommended { background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
 .choice span { font-size: 13px; color: var(--muted); }
 .choice.recommended.selected strong::after { content: none; }
+/* Bangla text sits a little small next to Latin; nudge it up. */
+html[lang="bn"] body { font-size: 15.5px; }
+html[lang="bn"] .choice.recommended strong::after { content: ' · প্রস্তাবিত'; }
+html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
+.lang-switch { margin-bottom: 4px; }
+.lang-switch button { padding: 5px 14px; }
+.lang-switch button.active { color: var(--brand-text); }
 .choice.recommended strong::after { content: ' · Recommended'; color: var(--brand-text); font-weight: 600; font-size: 12px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;

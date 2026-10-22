@@ -13,6 +13,7 @@
 // keeps data in this browser only.
 
 import { googleClientId } from './config.js';
+import { t } from './i18n.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
@@ -238,7 +239,7 @@ export async function createStore() {
 
 function createDemoStore() {
   const engine = createEngine('mt:demo');
-  const user = { uid: 'demo', displayName: 'Demo mode', email: 'Data stays in this browser' };
+  const user = { uid: 'demo', displayName: t('Demo mode'), email: t('Data stays in this browser') };
   return {
     mode: 'demo',
     onAuth: (cb) => cb(user),
@@ -266,7 +267,7 @@ function loadGis() {
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
     s.onload = resolve;
-    s.onerror = () => reject(new Error('Could not load Google sign-in. Check your internet connection.'));
+    s.onerror = () => reject(new Error(t('Could not load Google sign-in. Check your internet connection.')));
     document.head.appendChild(s);
   });
 }
@@ -330,7 +331,7 @@ async function createDriveStore() {
     });
     if (resp.error) throw new Error(resp.error_description || resp.error);
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE_SCOPE)) {
-      throw new Error('Please tick the box that lets the app keep its data in your Google Drive. That is where your data is stored.');
+      throw new Error(t('Please tick the box that lets the app keep its data in your Google Drive. That is where your data is stored.'));
     }
     token = { value: resp.access_token, expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000 };
   }
@@ -339,7 +340,7 @@ async function createDriveStore() {
     const res = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${token.value}` } });
     if (res.status === 401) {
       dropToken();
-      throw Object.assign(new Error('Google sign-in expired'), { needsAuth: true });
+      throw Object.assign(new Error(t('Google sign-in expired')), { needsAuth: true });
     }
     if (!res.ok) throw new Error(`Google Drive error ${res.status}: ${(await res.text()).slice(0, 200)}`);
     return res;
@@ -449,7 +450,7 @@ async function createDriveStore() {
   }
 
   const mutate = (fn) => async (...args) => {
-    if (!engine) throw new Error('Not signed in');
+    if (!engine) throw new Error(t('Not signed in'));
     fn(...args);
     if (!hasToken()) reconnect();
   };
@@ -503,7 +504,7 @@ async function createDriveStore() {
       if (engine?.dirty) {
         if (!hasToken()) await requestToken(true).catch(() => {});
         await sync();
-        if (engine.dirty && !confirm('Some changes could not be saved to Google Drive yet. Sign out anyway and lose them?')) return;
+        if (engine.dirty && !confirm(t('Some changes could not be saved to Google Drive yet. Sign out anyway and lose them?'))) return;
       }
       if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
       dropToken();

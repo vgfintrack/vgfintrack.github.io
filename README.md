@@ -9,6 +9,8 @@ run Saturday to Friday.
 - **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `vendor/`
 - **Hosting:** GitHub Pages at <https://vgfintrack.github.io>. Every push to `main` goes live in about a minute.
 - **Sign-in:** anyone can sign in with their own Google account
+- **Languages:** English and বাংলা (Setup → Language, or the switch on the sign-in screen). Bangla text lives in
+  `js/i18n-bn.js`, keyed by the English phrase; documents in Reports stay in English.
 - **Storage:** each user's data is one file in **their own Google Drive app data folder**
   (`drive.appdata` scope), plus a local copy in their browser for speed and offline use
 
