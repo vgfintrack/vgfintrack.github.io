@@ -31,6 +31,41 @@ function toast(msg) {
   toast.t = setTimeout(() => (el.hidden = true), 2600);
 }
 
+// ---------------------------------------------------------------- theme
+// 'auto' follows the device; 'light' (Day) and 'dark' (Night) are forced.
+
+const THEME_KEY = 'mt:theme';
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+function themePref() {
+  try {
+    return localStorage.getItem(THEME_KEY) || 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+
+const isDark = () => themePref() === 'dark' || (themePref() === 'auto' && darkQuery.matches);
+
+function applyTheme(pref = themePref()) {
+  try {
+    if (pref === 'auto') localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, pref);
+  } catch {}
+  if (pref === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = pref;
+  const dark = isDark();
+  $('meta[name=theme-color]').content = dark ? '#0d1412' : '#0f766e';
+  const btn = $('#theme-btn');
+  btn.innerHTML = dark ? SUN : MOON;
+  btn.title = dark ? 'Switch to day mode' : 'Switch to night mode';
+  if (state.data?.loaded && !$('#app').hidden) render(); // charts pick up the new colours
+}
+
+darkQuery.addEventListener('change', () => themePref() === 'auto' && applyTheme('auto'));
+
 // ---------------------------------------------------------------- state
 
 const state = {
@@ -103,6 +138,8 @@ async function boot() {
   $$('.tabbar button').forEach((b) => (b.onclick = () => switchView(b.dataset.view)));
   $('#fab').onclick = () => openTxn();
   $('#add-top').onclick = () => openTxn();
+  $('#theme-btn').onclick = () => applyTheme(isDark() ? 'light' : 'dark');
+  applyTheme();
   $('#btn-user').onclick = () => switchView('setup');
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
   setupTxnDialog();
@@ -1033,6 +1070,16 @@ function renderSetup() {
       </div>
 
       <div class="card">
+        <h3>Appearance</h3>
+        <div class="segmented" id="theme-seg" style="display:flex">
+          ${[['auto', 'Auto'], ['light', '☀️ Day'], ['dark', '🌙 Night']]
+            .map(([v, l]) => `<button data-theme-pref="${v}" style="flex:1" class="${themePref() === v ? 'active' : ''}">${l}</button>`)
+            .join('')}
+        </div>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">Auto follows your phone or computer setting.</p>
+      </div>
+
+      <div class="card">
         <h3>Backup &amp; data</h3>
         <div style="display:grid;gap:8px">
           <button class="btn" id="export">Download backup (.json)</button>
@@ -1114,6 +1161,7 @@ function renderSetup() {
     save({ incomeCategories: [...s.incomeCategories, name] });
   };
 
+  $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
   $('#export', v).onclick = exportJson;
   $('#export-csv', v).onclick = exportCsv;
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);

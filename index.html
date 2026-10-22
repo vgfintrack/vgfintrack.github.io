@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>AmrPotli · আমার পোটলি</title>
   <meta name="theme-color" content="#0f766e" />
+  <script>
+    // Apply a saved Day/Night choice before the page paints, so there is no flash.
+    try {
+      const t = localStorage.getItem('mt:theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch {}
+  </script>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -33,6 +40,7 @@
       <div class="top-right">
         <button id="add-top" class="btn primary sm add-top" hidden>+ Add transaction</button>
         <button id="sync" class="sync" hidden></button>
+        <button id="theme-btn" class="theme-btn" aria-label="Switch day / night"></button>
         <button id="btn-user" class="avatar" title="Account"></button>
       </div>
     </header>

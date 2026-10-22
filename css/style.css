@@ -17,8 +17,10 @@
   --radius: 14px;
   color-scheme: light;
 }
+/* Night theme: follows the device unless the user picked Day or Night
+   (data-theme on <html>, set from Setup or the top-bar toggle). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0d1412;
     --surface: #151f1c;
     --surface-2: #1d2a26;
@@ -36,6 +38,24 @@
     --shadow: none;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1412;
+  --surface: #151f1c;
+  --surface-2: #1d2a26;
+  --text: #e6eeeb;
+  --muted: #93a39e;
+  --line: #2a3833;
+  --brand: #2dd4bf;
+  --brand-ink: #062b27;
+  --income: #4ade80;
+  --expense: #fb923c;
+  --transfer: #60a5fa;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --shadow: none;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -88,6 +108,12 @@ h1, h2, h3 { margin: 0; line-height: 1.2; }
 .sync.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
 .sync.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
 .sync:disabled { cursor: default; }
+.theme-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  display: grid; place-items: center; cursor: pointer; color: var(--muted); padding: 0;
+}
+.theme-btn:hover { color: var(--text); border-color: var(--brand); }
+.theme-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .avatar {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2);
   overflow: hidden; padding: 0; cursor: pointer; font-weight: 600;
