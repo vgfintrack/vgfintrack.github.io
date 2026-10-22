@@ -327,3 +327,11 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
 .install-tip img { border-radius: 10px; flex: none; }
 .install-tip > div:nth-child(2) { flex: 1 1 180px; }
 .install-tip .tip-actions { display: flex; gap: 8px; }
+
+/* paste SMS */
+.sms-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.sms-panel { display: grid; gap: 8px; }
+.sms-panel textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: 14px; resize: vertical; }
+.sms-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sms-info { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; background: color-mix(in srgb, var(--brand) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); }
+.sms-info.warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }

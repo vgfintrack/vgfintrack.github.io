@@ -1,5 +1,6 @@
 import * as C from './calc.js';
 import * as R from './reports.js';
+import { parseSms } from './sms.js';
 import { createStore, DEFAULT_SETTINGS, DEFAULT_ACCOUNTS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
@@ -750,6 +751,7 @@ function renderTransactions() {
 
 let editing = null;
 let txnType = 'Expense';
+let smsRef = ''; // transaction ID from a pasted SMS, saved with the entry
 
 function setupTxnDialog() {
   $$('#txn-type button').forEach((b) => (b.onclick = () => setTxnType(b.dataset.type)));
@@ -776,10 +778,80 @@ function setupTxnDialog() {
   $('#txn-fee').oninput = updateTxnHint;
   $('#txn-plan-count').oninput = updateTxnHint;
   $('#txn-plan-interest').oninput = updateTxnHint;
+  $('#sms-btn').onclick = openSmsPanel;
+  $('#sms-cancel').onclick = () => ($('#sms-panel').hidden = true);
+  $('#sms-read').onclick = () => fillFromSms($('#sms-text').value);
   $('#txn-fee-suggest').onclick = () => {
     $('#txn-fee').value = $('#txn-fee-suggest').dataset.fee;
     updateTxnHint();
   };
+}
+
+// ---- paste SMS: the form is filled for the user to check, never saved automatically.
+
+async function openSmsPanel() {
+  $('#sms-panel').hidden = false;
+  $('#sms-text').value = '';
+  $('#sms-text').focus();
+  try {
+    const clip = await navigator.clipboard?.readText?.();
+    if (clip && /(?:Tk|BDT|৳)\s*[\d,]/i.test(clip)) {
+      $('#sms-text').value = clip;
+      fillFromSms(clip);
+    }
+  } catch {
+    // no clipboard permission: the user pastes into the box instead
+  }
+}
+
+function showSmsInfo(html, warn = false) {
+  const el = $('#sms-info');
+  el.innerHTML = html;
+  el.className = `sms-info${warn ? ' warn' : ''}`;
+  el.hidden = false;
+}
+
+function fillFromSms(text) {
+  const accs = accounts();
+  const r = parseSms(text, accs);
+  if (!r) return showSmsInfo(t("Couldn't read this SMS. Copy the whole message and try again, or fill the form yourself."), true);
+  setTxnType(r.type);
+  $('#txn-amount').value = r.amount;
+  $('#txn-fee').value = r.fee || '';
+  $('#txn-date').value = r.date || C.today();
+  const pick = (sel, id) => id && [...$(sel).options].some((o) => o.value === id) && ($(sel).value = id);
+  pick('#txn-account', r.account);
+  if (r.type === 'Transfer') pick('#txn-to', r.toAccount);
+  if (r.category) pick('#txn-category', r.category);
+  $('#txn-note').value = [t(r.kind), r.counterparty].filter(Boolean).join(' · ');
+  smsRef = r.ref || '';
+  $('#sms-panel').hidden = true;
+  updateTxnHint();
+
+  const lines = [`✓ ${t('Filled from the SMS. Check the details and tap Save.')}`];
+  let warn = false;
+  if (smsRef && state.data.transactions.some((x) => x.ref === smsRef)) {
+    lines.push(`⚠️ ${t('This SMS seems to be added already (TrxID {ref}).', { ref: smsRef })}`);
+    warn = true;
+  }
+  if (!r.account) {
+    lines.push(`⚠️ ${t('No matching account found. Choose the account, or add it in Setup.')}`);
+    warn = true;
+  }
+  // Compare the balance in the SMS with what AmrPotli will show after saving.
+  const accId = r.balanceAccount && accById(r.balanceAccount) ? r.balanceAccount : null;
+  if (r.balance != null && accId) {
+    const now = C.worth(accs, state.data.transactions).balances[accId]?.value ?? 0;
+    const draft = { type: r.type, account: $('#txn-account').value, toAccount: r.type === 'Transfer' ? $('#txn-to').value : null, amount: r.amount, fee: r.fee };
+    const after = C.worth(accs, [...state.data.transactions, draft]).balances[accId]?.value ?? now;
+    const name = accName(accId);
+    if (Math.abs(after - r.balance) < 0.5) lines.push(`✓ ${t('{name} balance will match the SMS ({amount}).', { name, amount: moneyExact(r.balance) })}`);
+    else {
+      lines.push(`ℹ️ ${t('SMS says {name} balance is {sms}; AmrPotli will show {app}. Some entries may be missing.', { name, sms: moneyExact(r.balance), app: moneyExact(after) })}`);
+      warn = true;
+    }
+  }
+  showSmsInfo(lines.map(esc).join('<br>'), warn);
 }
 
 function fillSelect(sel, items, value) {
@@ -1010,6 +1082,10 @@ function openTxn(x = null, preset = null) {
     return switchView('setup');
   }
   editing = x;
+  smsRef = '';
+  $('#sms-row').hidden = !!x;
+  $('#sms-panel').hidden = true;
+  $('#sms-info').hidden = true;
   $('#txn-title').textContent = x ? t('Edit transaction') : t('Add transaction');
   $('#txn-delete').hidden = !x;
   $('#txn-save-another').hidden = !!x;
@@ -1053,6 +1129,7 @@ async function saveTxn(another) {
     fee: fee > 0 ? fee : undefined,
     feeCategory: undefined,
     loan: undefined,
+    ref: smsRef || editing?.ref || undefined,
   };
   try {
     await state.store.saveTxn(x);
@@ -1125,6 +1202,8 @@ async function saveLoan(amount, another, err) {
 }
 
 function afterSave(another) {
+  smsRef = '';
+  $('#sms-info').hidden = true;
   if (another) {
     $('#txn-amount').value = '';
     $('#txn-fee').value = '';
