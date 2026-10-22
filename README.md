@@ -5,33 +5,26 @@ dashboards, budgets, savings goal, investments and net worth. Amounts are in BDT
 run Saturday to Friday.
 
 - **Frontend:** plain HTML/CSS/JS (no build step), Chart.js bundled in `vendor/`
-- **Hosting:** Firebase Hosting at <https://vgfintrack-11a9c.web.app>, deployed by GitHub Actions on every push to `main`
+- **Hosting:** GitHub Pages at <https://vgfintrack.github.io>. Every push to `main` goes live in about a minute.
 - **Login:** Google sign-in, **only `vgfintrack@gmail.com`** (set in `js/firebase-config.js` and enforced in `firestore.rules`)
-- **Data:** Cloud Firestore, works offline and syncs later
+- **Data:** Cloud Firestore (project `vgfintrack-11a9c`), works offline and syncs later
 
-No financial data is stored in this repository.
-
-Until `js/firebase-config.js` is filled in, the app runs in **demo mode** and keeps
-data in the browser only.
+No financial data is stored in this repository, so it is safe for it to be public.
 
 ## One-time setup
 
-### 1. Firebase project (`vgfintrack-11a9c`, free Spark plan)
-1. **Authentication → Sign-in method → Google → Enable.**
-2. **Firestore Database → Create database** → `asia-south1` (Mumbai) → **production mode**.
-3. **Project settings → Your apps → Web app** config goes in `js/firebase-config.js`.
-4. Firestore rules are deployed automatically from `firestore.rules`.
+### 1. GitHub Pages
+1. Repo **Settings → General → Danger Zone → Change visibility → Public**.
+2. Repo **Settings → Pages**: Source *Deploy from a branch*, branch `main`, folder `/ (root)`, **Save**.
 
-### 2. Let GitHub deploy it
-1. Firebase console → ⚙ **Project settings → Service accounts → Generate new private key**.
-   A JSON file downloads.
-2. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
-   name `FIREBASE_SERVICE_ACCOUNT`, value = the whole contents of that file.
-   Then delete the downloaded file.
-3. Push to `main`, or run **Actions → Deploy to Firebase → Run workflow**.
+### 2. Firebase (`vgfintrack-11a9c`, free Spark plan)
+1. **Authentication → Sign-in method → Google → Enable.**
+2. **Authentication → Settings → Authorized domains → Add domain:** `vgfintrack.github.io`
+3. **Firestore → Rules:** paste the contents of `firestore.rules` and **Publish**.
+   Do this again whenever `firestore.rules` changes.
 
 ### 3. Bring in your data
-Open <https://vgfintrack-11a9c.web.app>, sign in as vgfintrack@gmail.com, choose **Import backup file**, and
+Open <https://vgfintrack.github.io>, sign in as vgfintrack@gmail.com, choose **Import backup file**, and
 pick `omayer-money-data.json`. Keep that file private and never commit it.
 
 ### 4. Put it on your phone
