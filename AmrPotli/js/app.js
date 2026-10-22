@@ -1474,6 +1474,12 @@ function renderSetup() {
       ${installCard()}
 
       <div class="card">
+        <h3>${t('Help &amp; feedback')}</h3>
+        <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
+        <a class="btn" href="${G.FEEDBACK_URL}" target="_blank" rel="noopener">💬 ${t('Send feedback')}</a>
+      </div>
+
+      <div class="card">
         <h3>${t('Language')} · ভাষা</h3>
         <div class="segmented" style="display:flex">
           <button data-lang="en" style="flex:1" class="${lang === 'en' ? 'active' : ''}">English</button>

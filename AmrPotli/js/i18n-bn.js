@@ -374,6 +374,10 @@ export const BN = {
   'Bank debit': 'ব্যাংক থেকে কাটা',
   // ---- getting-started guide
   'Getting started': 'শুরু করার ধাপ',
+  'Stuck, or have an idea? Tell us': 'কোথাও আটকে গেছেন, বা কোনো আইডিয়া আছে? জানান',
+  'Help &amp; feedback': 'সাহায্য ও মতামত',
+  "Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.": 'কোনো সমস্যা পেয়েছেন, বা কোনো আইডিয়া আছে? ছোট একটি ফর্মে জানান। টাকার অঙ্ক, ব্যালেন্স বা অ্যাকাউন্ট নম্বর লিখবেন না।',
+  'Send feedback': 'মতামত পাঠান',
   '{a} of {b} done': '{b}টির মধ্যে {a}টি শেষ',
   'Set up your Potli': 'পোটলি সাজানো',
   'Accounts, balances and categories': 'অ্যাকাউন্ট, ব্যালেন্স আর ক্যাটাগরি',

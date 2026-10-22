@@ -4,6 +4,11 @@
 
 import { t } from './i18n.js';
 
+// Feedback goes to a Google Form, never with any money data.
+export const FEEDBACK_URL = 'https://forms.gle/zqNXMRPYDcfC43Ls6';
+const feedbackLink = () =>
+  `<a class="linkish guide-help" href="${FEEDBACK_URL}" target="_blank" rel="noopener">💬 ${t('Stuck, or have an idea? Tell us')}</a>`;
+
 // Each step is done when the data shows it, so the list stays right on every
 // device. Report and install leave no data behind, so they are flags in settings.
 export const GUIDE = [
@@ -35,6 +40,7 @@ export function guideCard(d, flags) {
       <div><strong>${t("You've finished the getting-started guide!")}</strong>
         <div class="muted" style="font-size:13px">${t('You now know the main parts of AmrPotli. Keep adding entries every day.')}</div></div>
       <button class="btn sm" data-guide-hide>${t('Hide')}</button>
+      ${feedbackLink()}
     </div>`;
   return `<div class="card guide">
     <div class="guide-head">
@@ -55,6 +61,7 @@ export function guideCard(d, flags) {
         })
         .join('')}
     </ol>
+    ${feedbackLink()}
   </div>`;
 }
 

@@ -451,3 +451,5 @@ body.onboarding main { padding-bottom: 24px; }
 }
 .ob-money input::-webkit-outer-spin-button, .ob-money input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .ob-money input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.guide-help { justify-self: start; font-weight: 500; }
+.guide-done .guide-help { flex-basis: 100%; }
