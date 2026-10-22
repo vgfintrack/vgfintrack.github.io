@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only vgfintrack@gmail.com, and only their own data. Every other
+    // account (even one that manages to sign in) is refused.
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == 'vgfintrack@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+  }
+}
