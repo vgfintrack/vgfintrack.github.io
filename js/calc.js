@@ -2,6 +2,12 @@
 
 export const ACCOUNT_TYPES = ['Liquid', 'Lend', 'Investment', 'Debt'];
 
+// Service charges (bKash cash-out, bank transfer fees) are stored as `fee`
+// on an Expense or Transfer. They are paid from the same account and count
+// as spending in this category.
+export const FEE_CATEGORY = 'Service Charges';
+const fee = (t) => (t.type === 'Income' ? 0 : Number(t.fee) || 0);
+
 // ---------- dates (all dates are 'YYYY-MM-DD' strings, local time) ----------
 
 export function parseDate(s) {
@@ -56,9 +62,9 @@ export function balances(accounts, txns) {
   for (const t of txns) {
     const amt = Number(t.amount) || 0;
     if (t.type === 'Income' && t.account in bal) bal[t.account] += amt;
-    else if (t.type === 'Expense' && t.account in bal) bal[t.account] -= amt;
+    else if (t.type === 'Expense' && t.account in bal) bal[t.account] -= amt + fee(t);
     else if (t.type === 'Transfer') {
-      if (t.account in bal) bal[t.account] -= amt;
+      if (t.account in bal) bal[t.account] -= amt + fee(t);
       if (t.toAccount in bal) bal[t.toAccount] += amt;
     }
   }
@@ -90,6 +96,7 @@ export function periodStats(range, txns, accounts, refDay = today()) {
   let income = 0, expenses = 0, toInvestments = 0;
   for (const t of ts) {
     const amt = Number(t.amount) || 0;
+    expenses += fee(t);
     if (t.type === 'Income') income += amt;
     else if (t.type === 'Expense') expenses += amt;
     else if (t.type === 'Transfer') {
@@ -115,7 +122,9 @@ export function periodStats(range, txns, accounts, refDay = today()) {
 export function sumBy(range, txns, type, key = 'category') {
   const out = {};
   for (const t of txns) {
-    if (t.type !== type || !inRange(t, range)) continue;
+    if (!inRange(t, range)) continue;
+    if (type === 'Expense' && fee(t)) out[FEE_CATEGORY] = (out[FEE_CATEGORY] || 0) + fee(t);
+    if (t.type !== type) continue;
     out[t[key]] = (out[t[key]] || 0) + (Number(t.amount) || 0);
   }
   return out;
@@ -141,6 +150,7 @@ export function dailySeries(range, txns) {
     if (i === undefined) continue;
     if (t.type === 'Income') days[i].income += Number(t.amount) || 0;
     if (t.type === 'Expense') days[i].expenses += Number(t.amount) || 0;
+    days[i].expenses += fee(t);
   }
   return days;
 }

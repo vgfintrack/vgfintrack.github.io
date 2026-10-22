@@ -10,6 +10,13 @@ const esc = (s) =>
 
 const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const money = (n) => (Math.round(n) === 0 ? '0' : nf.format(Math.round(n)));
+const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money2 = (n) => (Number.isInteger(n) ? nf.format(n) : n.toFixed(2));
+// Exact amounts for balances: whole taka when possible, otherwise with paisa.
+const moneyExact = (n) => {
+  const r = Math.round(n * 100) / 100;
+  return Number.isInteger(r) ? nf.format(r) : nf2.format(r);
+};
 const pct = (r) => (r == null || !isFinite(r) ? '—' : `${Math.round(r * 100)}%`);
 
 function niceDate(s, opts = { weekday: 'short', day: 'numeric', month: 'short' }) {
@@ -226,7 +233,7 @@ function renderDashboard() {
     list
       .map(
         (a) => `<div class="li"><span class="name">${esc(a.name)}</span>
-        <span class="num">${sign}${money(w.balances[a.id].value)}</span></div>`,
+        <span class="num">${sign}${moneyExact(w.balances[a.id].value)}</span></div>`,
       )
       .join('');
 
@@ -430,7 +437,9 @@ function txnSort(a, b) {
 function txnRow(t) {
   const isT = t.type === 'Transfer';
   const title = isT ? `${accName(t.account)} → ${accName(t.toAccount)}` : t.category;
-  const sub = [isT ? 'Transfer' : accName(t.account), t.note].filter(Boolean).join(' · ');
+  const sub = [isT ? 'Transfer' : accName(t.account), Number(t.fee) && t.type !== 'Income' ? `charge ${money2(Number(t.fee))}` : '', t.note]
+    .filter(Boolean)
+    .join(' · ');
   const cls = t.type === 'Income' ? 'income' : t.type === 'Expense' ? 'expense' : 'transfer';
   const sign = t.type === 'Income' ? '+' : t.type === 'Expense' ? '−' : '';
   const icon = t.type === 'Income' ? '↓' : t.type === 'Expense' ? '↑' : '⇄';
@@ -540,6 +549,12 @@ function setupTxnDialog() {
   $('#txn-account').onchange = updateTxnHint;
   $('#txn-to').onchange = updateTxnHint;
   $('#txn-category').onchange = updateTxnHint;
+  $('#txn-amount').oninput = updateFeeSuggestion;
+  $('#txn-fee').oninput = updateTxnHint;
+  $('#txn-fee-suggest').onclick = () => {
+    $('#txn-fee').value = $('#txn-fee-suggest').dataset.fee;
+    updateTxnHint();
+  };
 }
 
 function fillSelect(sel, items, value) {
@@ -555,6 +570,7 @@ function setTxnType(type, t = null) {
   const isT = type === 'Transfer';
   $('#txn-category-field').hidden = isT;
   $('#txn-to-field').hidden = !isT;
+  $('#txn-fee-field').hidden = type === 'Income';
   $('#txn-account-label').textContent = type === 'Income' ? 'Received in' : type === 'Expense' ? 'Paid from' : 'From';
 
   const cats = type === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
@@ -576,7 +592,28 @@ function setTxnType(type, t = null) {
   updateTxnHint();
 }
 
+// Offers the fee at the same rate as the last charge paid from this account
+// (e.g. bKash cash-out), so it does not have to be worked out every time.
+function updateFeeSuggestion() {
+  const btn = $('#txn-fee-suggest');
+  const amount = Number($('#txn-amount').value);
+  const from = $('#txn-account').value;
+  const to = txnType === 'Transfer' ? $('#txn-to').value : null;
+  btn.hidden = true;
+  if (txnType === 'Income' || !(amount > 0) || Number($('#txn-fee').value) > 0) return;
+  const past = state.data.transactions
+    .filter((t) => t.type === txnType && t.account === from && Number(t.fee) > 0 && Number(t.amount) > 0 && t.id !== editing?.id)
+    .sort((a, b) => (b.toAccount === to) - (a.toAccount === to) || txnSort(a, b));
+  if (!past.length) return;
+  const rate = Number(past[0].fee) / Number(past[0].amount);
+  const fee = Math.round(amount * rate * 100) / 100;
+  btn.dataset.fee = fee;
+  btn.textContent = `Use ${money2(fee)} · same rate as last time (${(rate * 100).toFixed(2)}%)`;
+  btn.hidden = false;
+}
+
 function updateTxnHint() {
+  updateFeeSuggestion();
   const from = accById($('#txn-account').value);
   const to = accById($('#txn-to').value);
   let hint = '';
@@ -586,9 +623,13 @@ function updateTxnHint() {
     else if (from.type === 'Lend') hint = `${from.name} is paying you back.`;
     else if (to.type === 'Debt') hint = `Paying off what you owe.`;
     else if (from.type === 'Debt') hint = `Borrowing money. What you owe goes up.`;
-    else hint = `Moving your own money between accounts. Not counted as spending.`;
+    else hint = `Moving your own money between accounts. The transfer itself is not spending.`;
   } else if (txnType === 'Expense' && $('#txn-category').value === 'Family Support') {
     hint = 'Money you give to family is spending. If someone is only holding it for you, use Transfer to their account instead.';
+  }
+  const fee = Number($('#txn-fee').value);
+  if (txnType !== 'Income' && fee > 0) {
+    hint = `${hint} The ${money2(fee)} charge is taken from ${accById($('#txn-account').value)?.name ?? 'this account'} and counted as spending (Service Charges).`.trim();
   }
   $('#txn-hint').textContent = hint;
 }
@@ -606,6 +647,7 @@ function openTxn(t = null) {
   $('#txn-amount').value = t ? t.amount : '';
   $('#txn-date').value = t ? t.date : C.today();
   $('#txn-note').value = t?.note ?? '';
+  $('#txn-fee').value = t?.fee || '';
   setTxnType(t?.type ?? txnType, t);
   $('#txn-dialog').showModal();
   if (!t) $('#txn-amount').focus();
@@ -621,6 +663,8 @@ async function saveTxn(another) {
   if (!$('#txn-date').value) return err('Pick a date.');
   const isT = txnType === 'Transfer';
   if (isT && $('#txn-account').value === $('#txn-to').value) return err('From and To must be different accounts.');
+  const fee = txnType === 'Income' ? 0 : Number($('#txn-fee').value) || 0;
+  if (fee < 0) return err('The service charge cannot be negative.');
   const t = {
     ...(editing || {}),
     type: txnType,
@@ -630,15 +674,22 @@ async function saveTxn(another) {
     account: $('#txn-account').value,
     toAccount: isT ? $('#txn-to').value : null,
     note: $('#txn-note').value.trim(),
+    fee: fee > 0 ? fee : undefined,
   };
   try {
     await state.store.saveTxn(t);
+    // Make sure fees have a category in Setup so they can get a budget.
+    const s = settings();
+    if (fee > 0 && !s.expenseCategories.some((c) => c.name === C.FEE_CATEGORY))
+      await state.store.saveSettings({ ...s, expenseCategories: [...s.expenseCategories, { name: C.FEE_CATEGORY, budget: 0 }] });
   } catch (e) {
     return err(e.message);
   }
-  toast(editing ? 'Updated' : `Saved ${txnType.toLowerCase()} of ${money(amount)}`);
+  toast(editing ? 'Updated' : `Saved ${txnType.toLowerCase()} of ${money(amount)}${fee ? ` + ${money2(fee)} charge` : ''}`);
   if (another) {
     $('#txn-amount').value = '';
+    $('#txn-fee').value = '';
+    $('#txn-fee-suggest').hidden = true;
     $('#txn-note').value = '';
     $('#txn-error').hidden = true;
     $('#txn-amount').focus();
@@ -661,7 +712,7 @@ function renderSetup() {
               (a) => `<button class="li txn" style="border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:10px 2px" data-acc="${esc(a.id)}">
                 <span class="mid"><div class="t">${esc(a.name)}<span class="tag">${a.type}</span></div>
                 <div class="sub">Opening ${money(a.opening || 0)}${a.notes ? ` · ${esc(a.notes)}` : ''}</div></span>
-                <span class="amt num">${a.type === 'Debt' ? '−' : ''}${money(w.balances[a.id].value)}</span></button>`,
+                <span class="amt num">${a.type === 'Debt' ? '−' : ''}${moneyExact(w.balances[a.id].value)}</span></button>`,
             )
             .join('') || '<p class="muted">No accounts yet.</p>'}
         </div>
@@ -878,9 +929,9 @@ function exportJson() {
 
 function exportCsv() {
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['Date', 'Type', 'Category', 'Account', 'To Account', 'Amount', 'Note']];
+  const rows = [['Date', 'Type', 'Category', 'Account', 'To Account', 'Amount', 'Service Charge', 'Note']];
   for (const t of [...state.data.transactions].sort((a, b) => a.date.localeCompare(b.date)))
-    rows.push([t.date, t.type, t.category, accName(t.account), t.toAccount ? accName(t.toAccount) : '', t.amount, t.note]);
+    rows.push([t.date, t.type, t.category, accName(t.account), t.toAccount ? accName(t.toAccount) : '', t.amount, t.fee || '', t.note]);
   download(`transactions-${C.today()}.csv`, rows.map((r) => r.map(q).join(',')).join('\n'), 'text/csv');
 }
 

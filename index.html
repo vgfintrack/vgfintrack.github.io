@@ -83,6 +83,13 @@
           <select id="txn-to"></select>
         </div>
       </div>
+      <div class="field" id="txn-fee-field">
+        <label for="txn-fee">Service charge <span class="muted">(optional: bKash cash-out, bank transfer fee)</span></label>
+        <div class="fee-row">
+          <input id="txn-fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+          <button type="button" id="txn-fee-suggest" class="suggest" hidden></button>
+        </div>
+      </div>
       <div class="row2">
         <div class="field">
           <label for="txn-date">Date</label>
