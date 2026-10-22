@@ -6,7 +6,11 @@ export const ACCOUNT_TYPES = ['Liquid', 'Lend', 'Investment', 'Debt'];
 // on an Expense or Transfer. They are paid from the same account and count
 // as spending in this category.
 export const FEE_CATEGORY = 'Service Charges';
+// Interest paid when repaying a loan is stored the same way, with
+// feeCategory set to this.
+export const INTEREST_CATEGORY = 'Loan Interest';
 const fee = (t) => (t.type === 'Income' ? 0 : Number(t.fee) || 0);
+export const feeCategory = (t) => t.feeCategory || FEE_CATEGORY;
 
 // ---------- dates (all dates are 'YYYY-MM-DD' strings, local time) ----------
 
@@ -43,6 +47,11 @@ export function weekRange(s) {
   const back = (d.getDay() + 1) % 7; // Sat=0, Sun=1, ... Fri=6
   const start = addDays(s, -back);
   return { start, end: addDays(start, 6) };
+}
+
+// Whole days from today until `date` (negative when it has passed).
+export function daysUntil(date, from = today()) {
+  return daysBetween(from, date) - 1;
 }
 
 export function daysBetween(a, b) {
@@ -123,7 +132,7 @@ export function sumBy(range, txns, type, key = 'category') {
   const out = {};
   for (const t of txns) {
     if (!inRange(t, range)) continue;
-    if (type === 'Expense' && fee(t)) out[FEE_CATEGORY] = (out[FEE_CATEGORY] || 0) + fee(t);
+    if (type === 'Expense' && fee(t)) out[feeCategory(t)] = (out[feeCategory(t)] || 0) + fee(t);
     if (t.type !== type) continue;
     out[t[key]] = (out[t[key]] || 0) + (Number(t.amount) || 0);
   }

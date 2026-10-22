@@ -65,6 +65,16 @@
         <button type="button" data-type="Expense">Expense</button>
         <button type="button" data-type="Income">Income</button>
         <button type="button" data-type="Transfer">Transfer</button>
+        <button type="button" data-type="Loan">Loan</button>
+      </div>
+      <div class="field" id="txn-loan-field" hidden>
+        <label for="txn-loan">What happened?</label>
+        <select id="txn-loan">
+          <option value="borrow">I borrowed money</option>
+          <option value="repay">I repaid a loan</option>
+          <option value="lend">I lent money to someone</option>
+          <option value="collect">Someone paid me back</option>
+        </select>
       </div>
       <label class="amount-field">
         <span>৳</span>
@@ -73,6 +83,10 @@
       <div class="field" id="txn-category-field">
         <label for="txn-category">Category</label>
         <select id="txn-category"></select>
+      </div>
+      <div class="field" id="txn-person-field" hidden>
+        <label for="txn-person" id="txn-person-label">Lender</label>
+        <select id="txn-person"></select>
       </div>
       <div class="row2">
         <div class="field">
@@ -85,11 +99,15 @@
         </div>
       </div>
       <div class="field" id="txn-fee-field">
-        <label for="txn-fee">Service charge <span class="muted">(optional: bKash cash-out, bank transfer fee)</span></label>
+        <label for="txn-fee" id="txn-fee-label">Service charge <span class="muted">(optional: bKash cash-out, bank transfer fee)</span></label>
         <div class="fee-row">
           <input id="txn-fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
           <button type="button" id="txn-fee-suggest" class="suggest" hidden></button>
         </div>
+      </div>
+      <div class="field" id="txn-due-field" hidden>
+        <label for="txn-due">Due date <span class="muted">(optional: when it should be paid back)</span></label>
+        <input id="txn-due" type="date" />
       </div>
       <div class="row2">
         <div class="field">
@@ -127,7 +145,7 @@
           <option value="Liquid">Liquid: money I can spend (bank, cash, bKash)</option>
           <option value="Lend">Lend: money someone owes me</option>
           <option value="Investment">Investment: fund, cow, savings</option>
-          <option value="Debt">Debt: money I owe</option>
+          <option value="Debt">Debt: money I owe (loan from a person, bank, bKash…)</option>
         </select>
       </div>
       <div class="row2">
@@ -139,6 +157,10 @@
           <label for="acc-value">Current value</label>
           <input id="acc-value" type="number" inputmode="decimal" step="any" placeholder="Same as book" />
         </div>
+      </div>
+      <div class="field loan-only">
+        <label for="acc-due">Due date <span class="muted">(optional)</span></label>
+        <input id="acc-due" type="date" />
       </div>
       <div class="field inv-only">
         <label for="acc-target">Monthly target</label>

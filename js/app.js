@@ -48,6 +48,8 @@ const settings = () => state.data.settings || DEFAULT_SETTINGS;
 const accounts = () => [...state.data.accounts].sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name));
 const accById = (id) => state.data.accounts.find((a) => a.id === id);
 const accName = (id) => accById(id)?.name ?? '(deleted account)';
+// For loan wording: "Lent to JC vai" reads as "JC vai" in "JC vai paid back".
+const personName = (id) => accName(id).replace(/^(lent to|loan from|borrowed from|loan to)\s+/i, '');
 
 // ---------------------------------------------------------------- boot
 
@@ -327,6 +329,8 @@ function renderDashboard() {
           .join('') || '<p class="muted">Set monthly budgets in Setup.</p>'}
       </div>
 
+      ${loansCard(accs, w)}
+
       <div class="card">
         <h3>${isWeek ? 'Day by day' : 'Daily spending'}</h3>
         <div class="chart-box"><canvas id="chart-daily"></canvas></div>
@@ -363,9 +367,43 @@ function renderDashboard() {
   $('#prev').onclick = () => shiftPeriod(-1);
   $('#next').onclick = () => shiftPeriod(1);
   $('#see-all').onclick = () => switchView('transactions');
+  $$('#view-dashboard [data-loan]').forEach((b) => (b.onclick = () => openTxn(null, { loan: b.dataset.loan, person: b.dataset.person || undefined })));
   if ($('#dash-import')) $('#dash-import').onchange = (e) => importFile(e.target.files[0]);
   bindTxnRows($('#view-dashboard'));
   drawCharts(r, txns, accs);
+}
+
+function dueText(a) {
+  if (!a.dueDate) return '';
+  const d = C.daysUntil(a.dueDate);
+  if (d < 0) return `<span class="due bad">Overdue by ${-d} day${d === -1 ? '' : 's'}</span>`;
+  if (d === 0) return '<span class="due warn">Due today</span>';
+  if (d <= 7) return `<span class="due warn">Due in ${d} day${d === 1 ? '' : 's'}</span>`;
+  return `<span class="due">Due ${niceDate(a.dueDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span>`;
+}
+
+// Who I owe and who owes me, with one-tap repay / got-back buttons.
+function loansCard(accs, w) {
+  const open = (type) => accs.filter((a) => a.type === type && w.balances[a.id].value > 0.004);
+  const debts = open('Debt');
+  const lends = open('Lend');
+  const row = (a, action, label) => `<div class="li">
+      <span class="mid" style="min-width:0"><div class="name">${esc(a.name)}</div><div class="sub">${dueText(a)}</div></span>
+      <span class="num" style="margin-left:auto">${moneyExact(w.balances[a.id].value)}</span>
+      <button class="btn sm" data-loan="${action}" data-person="${esc(a.id)}">${label}</button>
+    </div>`;
+  const section = (title, list, action, label, total) =>
+    list.length
+      ? `<div class="loan-sec"><div class="loan-head"><span>${title}</span><span class="num">${moneyExact(total)}</span></div>
+         <div class="list">${list.map((a) => row(a, action, label)).join('')}</div></div>`
+      : '';
+  const body =
+    section('I owe', debts, 'repay', 'Repay', w.debt) + section('Owed to me', lends, 'collect', 'Got back', w.lent) ||
+    '<p class="muted" style="margin:0 0 10px">No open loans. Borrowed money, or lent some to a friend? Add it here.</p>';
+  return `<div class="card">
+    <h3>Loans <span><button class="btn sm" data-loan="borrow">+ Borrowed</button> <button class="btn sm" data-loan="lend">+ Lent</button></span></h3>
+    ${body}
+  </div>`;
 }
 
 function investmentsCard(accs, txns, w, month) {
@@ -441,10 +479,37 @@ function txnSort(a, b) {
   return b.date.localeCompare(a.date) || (b.createdAt ?? 0) - (a.createdAt ?? 0);
 }
 
+// What a transfer means for loans: borrow, repay, lend or collect. Older
+// entries without `loan` are recognised from the account types.
+function loanActionOf(t) {
+  if (t.type !== 'Transfer') return null;
+  if (t.loan) return t.loan;
+  const from = accById(t.account)?.type;
+  const to = accById(t.toAccount)?.type;
+  if (from === 'Debt') return 'borrow';
+  if (to === 'Debt') return 'repay';
+  if (to === 'Lend') return 'lend';
+  if (from === 'Lend') return 'collect';
+  return null;
+}
+
 function txnRow(t) {
   const isT = t.type === 'Transfer';
-  const title = isT ? `${accName(t.account)} → ${accName(t.toAccount)}` : t.category;
-  const sub = [isT ? 'Transfer' : accName(t.account), Number(t.fee) && t.type !== 'Income' ? `charge ${money2(Number(t.fee))}` : '', t.note]
+  const loan = loanActionOf(t);
+  const loanTitle = {
+    borrow: () => `Borrowed from ${personName(t.account)}`,
+    repay: () => `Repaid ${personName(t.toAccount)}`,
+    lend: () => `Lent to ${personName(t.toAccount)}`,
+    collect: () => `${personName(t.account)} paid back`,
+  }[loan];
+  const title = loanTitle ? loanTitle() : isT ? `${accName(t.account)} → ${accName(t.toAccount)}` : t.category;
+  const moneyAcc = loan === 'borrow' || loan === 'collect' ? t.toAccount : t.account;
+  const feeWord = t.feeCategory === C.INTEREST_CATEGORY ? 'interest' : 'charge';
+  const sub = [
+    loan ? `Loan · ${accName(moneyAcc)}` : isT ? 'Transfer' : accName(t.account),
+    Number(t.fee) && t.type !== 'Income' ? `${feeWord} ${money2(Number(t.fee))}` : '',
+    t.note,
+  ]
     .filter(Boolean)
     .join(' · ');
   const cls = t.type === 'Income' ? 'income' : t.type === 'Expense' ? 'expense' : 'transfer';
@@ -465,7 +530,7 @@ function renderTransactions() {
   const q = f.q.trim().toLowerCase();
   const list = state.data.transactions
     .filter((t) => !f.month || t.date.startsWith(f.month))
-    .filter((t) => !f.type || t.type === f.type)
+    .filter((t) => !f.type || (f.type === 'Loan' ? !!loanActionOf(t) : t.type === f.type))
     .filter((t) => !f.account || t.account === f.account || t.toAccount === f.account)
     .filter(
       (t) =>
@@ -497,7 +562,9 @@ function renderTransactions() {
         <input type="month" id="f-month" value="${esc(f.month)}" aria-label="Month">
         <select id="f-type" aria-label="Type">
           <option value="">All types</option>
-          ${['Expense', 'Income', 'Transfer'].map((t) => `<option ${f.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+          ${[['Expense', 'Expense'], ['Income', 'Income'], ['Transfer', 'Transfer'], ['Loan', 'Loans']]
+            .map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${l}</option>`)
+            .join('')}
         </select>
         <select id="f-account" aria-label="Account">
           <option value="">All accounts</option>
@@ -555,6 +622,8 @@ function setupTxnDialog() {
   };
   $('#txn-account').onchange = updateTxnHint;
   $('#txn-to').onchange = updateTxnHint;
+  $('#txn-loan').onchange = () => fillLoanFields();
+  $('#txn-person').onchange = () => ($('#txn-person').value === '__new' ? addLoanPerson() : fillLoanFields());
   $('#txn-category').onchange = updateTxnHint;
   $('#txn-amount').oninput = updateFeeSuggestion;
   $('#txn-fee').oninput = updateTxnHint;
@@ -569,12 +638,78 @@ function fillSelect(sel, items, value) {
   if (value != null && items.some(([v]) => v === value)) sel.value = value;
 }
 
-function setTxnType(type, t = null) {
+// The Loan tab is a friendly front for transfers between a money account
+// and a person/lender account (type Debt = I owe them, Lend = they owe me).
+const LOAN = {
+  borrow: { personType: 'Debt', person: 'Borrowed from', money: 'Received in', personIsFrom: true, due: true },
+  repay: { personType: 'Debt', person: 'Repaid to', money: 'Paid from', personIsFrom: false, interest: true },
+  lend: { personType: 'Lend', person: 'Lent to', money: 'Paid from', personIsFrom: false, due: true },
+  collect: { personType: 'Lend', person: 'Paid back by', money: 'Received in', personIsFrom: true },
+};
+const FEE_LABEL = $('#txn-fee-label').innerHTML;
+
+function fillLoanFields(t = null, preset = null) {
+  const action = $('#txn-loan').value;
+  const cfg = LOAN[action];
+  const accs = accounts();
+  const people = accs.filter((a) => a.type === cfg.personType);
+  const prevPerson = $('#txn-person').value;
+  const person = t ? (cfg.personIsFrom ? t.account : t.toAccount) : preset?.person ?? prevPerson;
+  fillSelect(
+    $('#txn-person'),
+    [...people.map((a) => [a.id, a.name]), ['__new', cfg.personType === 'Debt' ? '+ New lender (person, bank, bKash…)' : '+ New person…']],
+    person,
+  );
+  // Money side: spendable accounts first, never another loan account.
+  const order = (a) => (a.type === 'Liquid' ? 0 : 1);
+  const moneyAccs = accs.filter((a) => a.type !== 'Debt' && a.type !== 'Lend').sort((a, b) => order(a) - order(b));
+  const prevMoney = $('#txn-account').value;
+  fillSelect(
+    $('#txn-account'),
+    moneyAccs.map((a) => [a.id, a.type === 'Liquid' ? a.name : `${a.name} (${a.type})`]),
+    t ? (cfg.personIsFrom ? t.toAccount : t.account) : prevMoney,
+  );
+  $('#txn-person-label').textContent = cfg.person;
+  $('#txn-account-label').textContent = cfg.money;
+  $('#txn-fee-field').hidden = !cfg.interest;
+  $('#txn-fee-label').innerHTML = cfg.interest ? 'Interest or extra paid <span class="muted">(optional)</span>' : FEE_LABEL;
+  $('#txn-due-field').hidden = !cfg.due;
+  if (cfg.due) $('#txn-due').value = accById($('#txn-person').value)?.dueDate || '';
+  updateTxnHint();
+}
+
+// Creates a lender/borrower account from inside the form.
+async function addLoanPerson() {
+  const cfg = LOAN[$('#txn-loan').value];
+  const name = prompt(cfg.personType === 'Debt' ? 'Who did you borrow from? (a person, bank, bKash…)' : 'Who did you lend to?')?.trim();
+  if (!name) {
+    const first = $('#txn-person').options[0]?.value;
+    $('#txn-person').value = first && first !== '__new' ? first : '__new';
+    return fillLoanFields();
+  }
+  const existing = state.data.accounts.find((a) => a.type === cfg.personType && a.name.toLowerCase() === name.toLowerCase());
+  const id = existing?.id || newId();
+  if (!existing) await state.store.saveAccount({ id, name, type: cfg.personType, opening: 0, order: state.data.accounts.length + 1 });
+  fillLoanFields(null, { person: id });
+}
+
+function setTxnType(type, t = null, preset = null) {
   txnType = type;
   $$('#txn-type button').forEach((b) => b.classList.toggle('active', b.dataset.type === type));
   const s = settings();
   const accs = accounts();
   const isT = type === 'Transfer';
+  const isLoan = type === 'Loan';
+  $('#txn-loan-field').hidden = !isLoan;
+  $('#txn-person-field').hidden = !isLoan;
+  $('#txn-due-field').hidden = true;
+  $('#txn-fee-label').innerHTML = FEE_LABEL;
+  if (isLoan) {
+    $('#txn-category-field').hidden = true;
+    $('#txn-to-field').hidden = true;
+    $('#txn-loan').value = (t && loanActionOf(t)) || preset?.loan || $('#txn-loan').value || 'borrow';
+    return fillLoanFields(t, preset);
+  }
   $('#txn-category-field').hidden = isT;
   $('#txn-to-field').hidden = !isT;
   $('#txn-fee-field').hidden = type === 'Income';
@@ -607,7 +742,7 @@ function updateFeeSuggestion() {
   const from = $('#txn-account').value;
   const to = txnType === 'Transfer' ? $('#txn-to').value : null;
   btn.hidden = true;
-  if (txnType === 'Income' || !(amount > 0) || Number($('#txn-fee').value) > 0) return;
+  if (txnType === 'Income' || txnType === 'Loan' || !(amount > 0) || Number($('#txn-fee').value) > 0) return;
   const past = state.data.transactions
     .filter((t) => t.type === txnType && t.account === from && Number(t.fee) > 0 && Number(t.amount) > 0 && t.id !== editing?.id)
     .sort((a, b) => (b.toAccount === to) - (a.toAccount === to) || txnSort(a, b));
@@ -624,6 +759,23 @@ function updateTxnHint() {
   const from = accById($('#txn-account').value);
   const to = accById($('#txn-to').value);
   let hint = '';
+  if (txnType === 'Loan') {
+    const action = $('#txn-loan').value;
+    const person = accById($('#txn-person').value);
+    const name = person ? personName(person.id) : 'them';
+    const owed = person ? C.worth(accounts(), state.data.transactions).balances[person.id].value : 0;
+    hint = {
+      borrow: `Borrowed money is not income. You will owe ${name} more.`,
+      repay: `Repaying is not spending: you will owe ${name} less. Only interest counts as spending (Loan Interest).`,
+      lend: `Lending is not spending. ${name} will owe you.`,
+      collect: `Getting your money back is not income. ${name} will owe you less.`,
+    }[action];
+    if (person && owed > 0) hint += LOAN[action].personType === 'Debt' ? ` You owe ${name} ${moneyExact(owed)} now.` : ` ${name} owes you ${moneyExact(owed)} now.`;
+    const interest = Number($('#txn-fee').value);
+    if (action === 'repay' && interest > 0) hint += ` The ${money2(interest)} interest is counted as spending.`;
+    $('#txn-hint').textContent = hint;
+    return;
+  }
   if (txnType === 'Transfer' && from && to) {
     if (to.type === 'Investment') hint = `Counts as money moved into investments, not spending.`;
     else if (to.type === 'Lend') hint = `You're lending money. ${to.name} will owe you more.`;
@@ -641,7 +793,8 @@ function updateTxnHint() {
   $('#txn-hint').textContent = hint;
 }
 
-function openTxn(t = null) {
+// `preset` pre-fills a new entry, e.g. { loan: 'repay', person: id }.
+function openTxn(t = null, preset = null) {
   if (!state.data.accounts.length) {
     toast('Add an account in Setup first');
     return switchView('setup');
@@ -655,7 +808,9 @@ function openTxn(t = null) {
   $('#txn-date').value = t ? t.date : C.today();
   $('#txn-note').value = t?.note ?? '';
   $('#txn-fee').value = t?.fee || '';
-  setTxnType(t?.type ?? txnType, t);
+  $('#txn-due').value = '';
+  const type = t ? (loanActionOf(t) ? 'Loan' : t.type) : preset?.loan ? 'Loan' : txnType;
+  setTxnType(type, t, preset);
   $('#txn-dialog').showModal();
   if (!t) $('#txn-amount').focus();
 }
@@ -668,6 +823,7 @@ async function saveTxn(another) {
   };
   if (!(amount > 0)) return err('Enter an amount greater than 0.');
   if (!$('#txn-date').value) return err('Pick a date.');
+  if (txnType === 'Loan') return saveLoan(amount, another, err);
   const isT = txnType === 'Transfer';
   if (isT && $('#txn-account').value === $('#txn-to').value) return err('From and To must be different accounts.');
   const fee = txnType === 'Income' ? 0 : Number($('#txn-fee').value) || 0;
@@ -682,17 +838,66 @@ async function saveTxn(another) {
     toAccount: isT ? $('#txn-to').value : null,
     note: $('#txn-note').value.trim(),
     fee: fee > 0 ? fee : undefined,
+    feeCategory: undefined,
+    loan: undefined,
   };
   try {
     await state.store.saveTxn(t);
-    // Make sure fees have a category in Setup so they can get a budget.
-    const s = settings();
-    if (fee > 0 && !s.expenseCategories.some((c) => c.name === C.FEE_CATEGORY))
-      await state.store.saveSettings({ ...s, expenseCategories: [...s.expenseCategories, { name: C.FEE_CATEGORY, budget: 0 }] });
+    await ensureFeeCategory(t);
   } catch (e) {
     return err(e.message);
   }
   toast(editing ? 'Updated' : `Saved ${txnType.toLowerCase()} of ${money(amount)}${fee ? ` + ${money2(fee)} charge` : ''}`);
+  afterSave(another);
+}
+
+// Fees and interest get a category in Setup so they can be given a budget.
+async function ensureFeeCategory(t) {
+  if (!(Number(t.fee) > 0)) return;
+  const name = C.feeCategory(t);
+  const s = settings();
+  if (!s.expenseCategories.some((c) => c.name === name))
+    await state.store.saveSettings({ ...s, expenseCategories: [...s.expenseCategories, { name, budget: 0 }] });
+}
+
+async function saveLoan(amount, another, err) {
+  const action = $('#txn-loan').value;
+  const cfg = LOAN[action];
+  const person = $('#txn-person').value;
+  const moneyAcc = $('#txn-account').value;
+  if (!person || person === '__new') return err(cfg.personType === 'Debt' ? 'Choose or add who you borrowed from.' : 'Choose or add the person.');
+  if (!moneyAcc) return err('Choose the account the money went into or came out of.');
+  const interest = cfg.interest ? Number($('#txn-fee').value) || 0 : 0;
+  if (interest < 0) return err('Interest cannot be negative.');
+  const t = {
+    ...(editing || {}),
+    type: 'Transfer',
+    loan: action,
+    category: 'Transfer',
+    amount,
+    date: $('#txn-date').value,
+    account: cfg.personIsFrom ? person : moneyAcc,
+    toAccount: cfg.personIsFrom ? moneyAcc : person,
+    note: $('#txn-note').value.trim(),
+    fee: interest > 0 ? interest : undefined,
+    feeCategory: interest > 0 ? C.INTEREST_CATEGORY : undefined,
+  };
+  try {
+    await state.store.saveTxn(t);
+    await ensureFeeCategory(t);
+    const acc = accById(person);
+    const due = $('#txn-due').value;
+    if (cfg.due && acc && due !== (acc.dueDate || '')) await state.store.saveAccount({ ...acc, dueDate: due || undefined });
+  } catch (e) {
+    return err(e.message);
+  }
+  const name = personName(person);
+  const what = { borrow: `Borrowed ${money(amount)} from ${name}`, repay: `Repaid ${money(amount)} to ${name}`, lend: `Lent ${money(amount)} to ${name}`, collect: `${name} paid back ${money(amount)}` }[action];
+  toast(editing ? 'Updated' : what);
+  afterSave(another);
+}
+
+function afterSave(another) {
   if (another) {
     $('#txn-amount').value = '';
     $('#txn-fee').value = '';
@@ -863,6 +1068,7 @@ function setupAccountDialog() {
   const syncType = () => {
     const type = $('#acc-type').value;
     $$('#acc-dialog .inv-only').forEach((el) => (el.hidden = type !== 'Investment'));
+    $$('#acc-dialog .loan-only').forEach((el) => (el.hidden = type !== 'Debt' && type !== 'Lend'));
     $('#acc-opening-label').textContent =
       type === 'Debt' ? 'Amount I owed at start' : type === 'Lend' ? 'Amount owed to me at start' : 'Opening balance';
   };
@@ -886,6 +1092,7 @@ function setupAccountDialog() {
       opening: Number($('#acc-opening').value) || 0,
       currentValue: type === 'Investment' && value !== '' ? Number(value) : null,
       monthlyTarget: type === 'Investment' ? Number($('#acc-target').value) || 0 : 0,
+      dueDate: (type === 'Debt' || type === 'Lend') && $('#acc-due').value ? $('#acc-due').value : undefined,
       notes: $('#acc-notes').value.trim(),
     });
     $('#acc-dialog').close();
@@ -916,6 +1123,7 @@ function openAccount(a = null) {
   $('#acc-value').value = a?.currentValue ?? '';
   $('#acc-target').value = a?.monthlyTarget || '';
   $('#acc-notes').value = a?.notes ?? '';
+  $('#acc-due').value = a?.dueDate || '';
   setupAccountDialog.syncType();
   $('#acc-dialog').showModal();
 }

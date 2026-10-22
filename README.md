@@ -44,8 +44,11 @@ On a phone: Chrome → ⋮ → **Add to Home screen**.
 | Bought something | Expense | where you paid from | |
 | bKash cash-out, ATM withdrawal | Transfer | Bank / bKash | Cash in Hand |
 | Deposit to the land fund | Transfer | Bank | Friends Land Fund |
-| Lent money to a friend | Transfer | Bank / Cash | Lent to … (a *Lend* account) |
-| Friend paid you back | Transfer | Lent to … | Bank / Cash |
+| Borrowed money (person, bank, bKash) | **Loan → I borrowed** | lender (add new in the form) | where it landed; optional due date |
+| Repaid a loan | **Loan → I repaid** | lender | paid from; interest counts as spending (*Loan Interest*) |
+| Lent money to a friend | **Loan → I lent** | the friend | paid from; optional due date |
+| Friend paid you back | **Loan → Someone paid me back** | the friend | received in |
+| bKash cash-out / bank transfer fee | Transfer or Expense + **Service charge** | | counted as spending (*Service Charges*) |
 | Gave money to family | Expense, category *Family Support* | Bank | |
 | Someone holds savings for you | Transfer | Bank | their account (add it as *Liquid* or *Investment*) |
 
