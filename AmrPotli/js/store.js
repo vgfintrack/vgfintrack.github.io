@@ -23,6 +23,11 @@ const LAST_USER_KEY = 'mt:last-user';
 // allows this app's Drive folder and basic profile, so keeping it across page
 // reloads lets the app sync without asking again every time.
 const tokenKey = (uid) => `mt:token:${uid}`;
+// Receipt photos (photos.js) wait in this browser until they are in Drive.
+const photoFlag = (uid) => `mt:photos-pending:${uid}`;
+const photoName = (id) => `receipt-${id}.jpg`;
+const photos = () => import('./photos.js');
+const receiptIds = (doc) => new Set(live(doc.transactions).map((x) => x.receipt).filter(Boolean));
 
 // Free plan: up to this many categories in total (expense categories and
 // income sources together). Ones the app adds itself (Service Charges, Loan
@@ -254,7 +259,14 @@ function createDemoStore() {
     async syncNow() {},
     // Demo data lives only in this browser.
     async deleteMyData() {
-      for (const k of ['mt:demo', 'mt:onb:demo', 'mt:lock:demo']) save(k, null);
+      for (const k of ['mt:demo', 'mt:onb:demo', 'mt:lock:demo', 'mt:backup:demo']) save(k, null);
+      await (await photos()).clearUser('demo').catch(() => {});
+    },
+    async savePhoto(id, blob) {
+      await (await photos()).putLocal('demo', id, blob, false);
+    },
+    async photo(id) {
+      return (await (await photos()).getLocal('demo', id))?.blob || null;
     },
     subscribe: (cb) => engine.subscribe(cb),
     saveTxn: async (t) => engine.saveTxn(t),
@@ -396,6 +408,71 @@ async function createDriveStore() {
     fileId = (await res.json()).id;
   }
 
+  async function uploadPhoto(id, blob) {
+    const boundary = 'mt' + newId();
+    const meta = JSON.stringify({ name: photoName(id), parents: ['appDataFolder'], mimeType: 'image/jpeg' });
+    const body = new Blob([
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`,
+      blob,
+      `\r\n--${boundary}--`,
+    ]);
+    await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+    });
+  }
+
+  async function listFiles(q) {
+    const out = [];
+    let page = '';
+    do {
+      const res = await (
+        await api(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=1000&fields=nextPageToken,files(id,name,createdTime)${q ? `&q=${encodeURIComponent(q)}` : ''}${page ? `&pageToken=${page}` : ''}`)
+      ).json();
+      out.push(...(res.files || []));
+      page = res.nextPageToken || '';
+    } while (page);
+    return out;
+  }
+
+  // Photos go up after the data file, so a photo in Drive always has its
+  // transaction there too.
+  async function pushPhotos() {
+    const uid = user.uid;
+    if (!load(photoFlag(uid))) return;
+    const P = await photos();
+    const used = receiptIds(engine.doc);
+    let left = 0;
+    for (const { id } of (await P.list(uid)).filter((x) => x.pending)) {
+      if (!used.has(id)) {
+        left++; // deleted, maybe undone soon; tidied up later
+        continue;
+      }
+      const item = await P.getLocal(uid, id);
+      await uploadPhoto(id, item.blob);
+      await P.putLocal(uid, id, item.blob, false);
+    }
+    if (!left) save(photoFlag(uid), null);
+  }
+
+  // Once a day: removes photos whose transaction was deleted (or the photo
+  // taken off it) more than two days ago, from Drive and from this browser.
+  async function tidyPhotos() {
+    const uid = user.uid;
+    const dayKey = `mt:photos-tidy:${uid}`;
+    if (Date.now() - (load(dayKey) || 0) < 86400000) return;
+    save(dayKey, Date.now());
+    const used = receiptIds(engine.doc);
+    const old = Date.now() - 2 * 86400000;
+    for (const f of await listFiles("name contains 'receipt-'")) {
+      const id = f.name.replace(/^receipt-|\.jpg$/g, '');
+      if (!used.has(id) && Date.parse(f.createdTime) < old) await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' });
+    }
+    const P = await photos();
+    for (const x of await P.list(uid)) if (!used.has(x.id) && x.at < old) await P.removeLocal(uid, x.id);
+  }
+
   // Download, merge with local changes, upload if anything differs.
   async function sync() {
     if (!engine) return;
@@ -419,6 +496,8 @@ async function createDriveStore() {
         // Keep edits made while we were syncing.
         const changedMeanwhile = engine.rev !== startRev;
         engine.replace(changedMeanwhile ? mergeDocs(engine.doc, merged) : merged, changedMeanwhile);
+        await pushPhotos();
+        if (receiptIds(engine.doc).size || load(photoFlag(user.uid))) await tidyPhotos().catch((e) => console.warn('Photo tidy-up failed', e));
         setStatus(changedMeanwhile ? 'syncing' : 'synced');
         if (changedMeanwhile) again = true;
       } catch (e) {
@@ -544,11 +623,31 @@ async function createDriveStore() {
         await requestToken(true);
         keepToken();
       }
-      const list = await (await api('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id)&pageSize=1000')).json();
-      for (const f of list.files || []) await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' });
+      for (const f of await listFiles('')) await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' });
       const uid = user.uid;
       forget();
-      for (const k of [`mt:data:${uid}`, tokenKey(uid), `mt:onb:${uid}`, `mt:lock:${uid}`]) save(k, null);
+      for (const k of [`mt:data:${uid}`, tokenKey(uid), `mt:onb:${uid}`, `mt:lock:${uid}`, `mt:backup:${uid}`, photoFlag(uid), `mt:photos-tidy:${uid}`]) save(k, null);
+      await (await photos()).clearUser(uid).catch(() => {});
+    },
+    // Keeps the photo here at once; it goes to Drive with the next sync.
+    async savePhoto(id, blob) {
+      if (!engine) throw new Error(t('Not signed in'));
+      await (await photos()).putLocal(user.uid, id, blob, true);
+      save(photoFlag(user.uid), 1);
+    },
+    // From this browser, or downloaded from Drive (another phone took it).
+    async photo(id) {
+      const P = await photos();
+      const uid = user.uid;
+      const local = await P.getLocal(uid, id);
+      if (local) return local.blob;
+      if (!hasToken()) await reconnect();
+      if (!hasToken()) throw new Error(t('Connect to Google Drive to see this photo.'));
+      const [f] = await listFiles(`name='${photoName(id)}'`);
+      if (!f) return null;
+      const blob = await (await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).blob();
+      await P.putLocal(uid, id, blob, false);
+      return blob;
     },
     subscribe(cb) {
       dataSubs.set(cb, engine ? engine.subscribe(cb) : null);

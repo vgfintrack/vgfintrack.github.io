@@ -322,6 +322,17 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);
 }
 
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast[hidden] { display: none; }
+.toast-act { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 4px 2px; cursor: pointer; white-space: nowrap; }
+.error.warn { color: var(--warn); }
+
+/* backup reminder */
+.backup-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.backup-tip .big-ic { font-size: 28px; flex: none; }
+.backup-tip > div:nth-child(2) { flex: 1 1 180px; }
+.backup-tip .tip-actions { display: flex; gap: 8px; }
+
 /* install tip on the Dashboard */
 .install-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
 .install-tip img { border-radius: 10px; flex: none; }
@@ -506,7 +517,8 @@ html.locked #app, html.locked #login { visibility: hidden; }
 
 .field { position: relative; }
 .sr-select { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 236px; overflow-y: auto; padding: 2px; }
+.cat-select { margin-bottom: 8px; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 2px; }
 .cat-grid button { display: grid; justify-items: center; gap: 3px; padding: 8px 2px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; min-width: 0; }
 .cat-grid button span { font-size: 22px; line-height: 1; }
 .cat-grid button small { font-size: 11px; line-height: 1.2; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: center; word-break: break-word; }
@@ -606,3 +618,17 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .cat-count.full { color: var(--warn); font-weight: 600; }
 .limit-note { font-size: 13px; margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); }
 .limit-inline { color: var(--warn); font-weight: 600; }
+
+/* receipt photos */
+.receipt-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 36px; font-size: 13px; }
+.receipt-add { cursor: pointer; }
+.receipt-thumb { width: 56px; height: 56px; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); display: grid; place-items: center; cursor: zoom-in; flex: none; }
+.receipt-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.receipt-txt { display: inline-flex; align-items: center; gap: 10px; }
+.receipt-msg { color: var(--muted); }
+.spinner.sm { width: 18px; height: 18px; border-width: 2px; }
+.photo-dialog { padding: 0; border: 0; background: rgba(0, 0, 0, 0.92); max-width: 100vw; max-height: 100dvh; width: 100vw; height: 100dvh; display: none; place-items: center; }
+.photo-dialog[open] { display: grid; }
+.photo-dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
+.photo-dialog img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.photo-close { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; background: rgba(0, 0, 0, 0.55); color: #fff; }

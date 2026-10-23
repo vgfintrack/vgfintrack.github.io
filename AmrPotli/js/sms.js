@@ -58,6 +58,53 @@ const isCash = (a) => /cash|hand|নগদ|ক্যাশ/i.test(a.name);
 const isWallet = (a) => /bkash|nagad|rocket|upay|wallet/i.test(a.name);
 const isBank = (a) => /bank|ব্যাংক/i.test(a.name) || (!isCash(a) && !isWallet(a));
 
+// Merchant codes after the name ("-MYGP-RM44473", " A/C 1234") are dropped.
+function cleanName(name) {
+  if (/^(?:01|\+?8801)\d/.test(name)) return name;
+  return (
+    name
+      .replace(/-[\w-]*\d[\w-]*$/, '') // "-MYGP-RM44473", "-12345"
+      .replace(/(\s+\S*\d\S*)+$/, '') // " A/C 1234"
+      .trim() || name
+  );
+}
+
+// What kind of spending a company is, matched against the user's own
+// category names (so "Phone Bill" or "Mobile & Internet" both work).
+const KINDS = [
+  { what: /grameen|\bgp\b|mygp|robi|airtel|banglalink|teletalk|skitto|recharge|top.?up|internet|broadband|link3|carnival|amber ?it|bdcom|\bisp\b/i, cats: /mobile|internet|phone|recharge|data|wifi|broadband|ফোন|মোবাইল|ইন্টারনেট/i },
+  { what: /desco|dpdc|nesco|wzpdcl|palli bidyut|\bpbs\b|breb|electric|prepaid meter|titas|karnaphuli|bakhrabad|jalalabad gas|\bgas\b|wasa|water/i, cats: /utilit|bill|electric|gas|water|বিদ্যুৎ|বিল/i },
+  { what: /foodpanda|food ?delivery|pathao food|shohoz food|kfc|pizza|restaurant|cafe|burger/i, cats: /food|dining|meal|restaurant|খাবার/i },
+  { what: /pathao|uber|obhai|shohoz|bus|railway|\brail\b|biman|us-bangla|novoair|air ?ticket|fuel|petrol|cng/i, cats: /transport|travel|fuel|যাতায়াত|ভাড়া/i },
+  { what: /chaldal|shwapno|agora|meena bazar|unimart|grocery|super ?shop/i, cats: /bazar|grocer|market|বাজার/i },
+  { what: /daraz|othoba|pickaboo|ajkerdeal|evaly|aarong|bata|apex|yellow|shopping/i, cats: /shopping|cloth|personal|কেনাকাটা/i },
+  { what: /pharma|lazz|medicine|hospital|clinic|diagnostic|popular medical|ibn sina|labaid|square hospital|doctor/i, cats: /medic|health|doctor|ওষুধ|চিকিৎসা/i },
+  { what: /school|college|university|tuition|coaching|exam fee|admission|udvash|10 ?minute school|shikho/i, cats: /study|education|tuition|school|book|পড়া|শিক্ষা/i },
+  { what: /netflix|bioscope|hoichoi|chorki|toffee|spotify|youtube|cinema|cineplex|star cineplex|game/i, cats: /entertain|fun|movie|subscription|বিনোদন/i },
+  { what: /insurance|metlife|jibon bima|pragati life/i, cats: /insurance|বিমা/i },
+  { what: /zakat|donation|mosque|masjid|charity|bidyanondo/i, cats: /donat|zakat|charity|sadaqah|দান/i },
+];
+
+// The user's category that fits the SMS best, or null.
+export function guessCategory(text, categories = []) {
+  for (const k of KINDS) {
+    if (!k.what.test(text)) continue;
+    const hit = categories.find((c) => k.cats.test(c));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+// "Grameenphone Ltd" and "GRAMEENPHONE" are the same shop for remembering.
+export const merchantKey = (name) =>
+  String(name || '')
+    .toLowerCase()
+    .replace(/\b(ltd|limited|plc|pvt|bd|bangladesh)\b|[^a-z0-9\u0980-\u09ff ]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .join(' ');
+
 export function parseSms(raw, accounts = []) {
   const text = String(raw || '').replace(/\s+/g, ' ').trim();
   if (!text) return null;
@@ -74,7 +121,8 @@ export function parseSms(raw, accounts = []) {
   const wallet = () => findAccount(accounts, [walletHint, 'bkash'], isWallet);
   const bank = () => findAccount(accounts, [bankName, 'bank'], isBank);
   const cash = () => findAccount(accounts, ['cash'], isCash);
-  const counterparty = (text.match(/\b(?:to|from)\s+((?:01|\+?8801)\d{8,9}|[A-Z][\w&.\- ]{2,30}?)(?=[.,]| successful| Ref| Fee| for | on |$)/) || [])[1]?.trim() || '';
+  // "to Grameenphone Ltd-MYGP-RM44473 is successful" -> "Grameenphone Ltd"
+  const counterparty = cleanName((text.match(/\b(?:to|from)\s+((?:01|\+?8801)\d{8,9}|[A-Z][\w&.\- ]{2,40}?)(?=[.,]| is | was | has | successful| Ref| Fee| Trx| Txn| for | on | at |$)/) || [])[1]?.trim() || '');
   const own = provider === 'bank' ? bank() : wallet();
 
   const base = { amount, fee: fee || 0, date, ref, balance, provider, counterparty, balanceAccount: own };

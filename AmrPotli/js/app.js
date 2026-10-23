@@ -1,6 +1,6 @@
 import * as C from './calc.js';
 import * as R from './reports.js';
-import { parseSms } from './sms.js';
+import { parseSms, guessCategory, merchantKey } from './sms.js';
 import * as G from './guide.js';
 import * as Rc from './recurring.js';
 import { catIcon, accIcon, productIcon } from './icons.js';
@@ -30,12 +30,43 @@ function niceDate(s, opts = { weekday: 'short', day: 'numeric', month: 'short' }
   return C.parseDate(s).toLocaleDateString(dateLocale(), opts);
 }
 
-function toast(msg) {
+// `action` adds a button to the message, e.g. { label: 'Undo', run }.
+function toast(msg, action = null) {
   const el = $('#toast');
   el.textContent = msg;
+  if (action) {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'toast-act', textContent: action.label });
+    b.onclick = () => {
+      el.hidden = true;
+      clearTimeout(toast.t);
+      action.run();
+    };
+    el.append(b);
+  }
   el.hidden = false;
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => (el.hidden = true), 2600);
+  toast.t = setTimeout(() => (el.hidden = true), action ? 7000 : 2600);
+}
+
+// Deleting asks no questions: it happens at once and can be undone for a few seconds.
+function undoToast(msg, restore) {
+  toast(msg, {
+    label: t('Undo'),
+    run: async () => {
+      await restore();
+      toast(t('Brought back'));
+    },
+  });
+}
+
+// Puts a removed item back into a settings list (categories, products) where it was.
+async function restoreToList(key, item, index) {
+  const s = settings();
+  const list = [...(s[key] || [])];
+  const same = (x) => JSON.stringify(x) === JSON.stringify(item) || (x?.name ?? x) === (item?.name ?? item);
+  if (list.some(same)) return;
+  list.splice(Math.min(index, list.length), 0, item);
+  await state.store.saveSettings({ ...s, [key]: list });
 }
 
 // ---------------------------------------------------------------- theme
@@ -328,6 +359,9 @@ async function boot() {
     if (!isInstalled()) openInstall();
   }
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
+  txnReceipt = receiptPicker($('#txn-receipt'));
+  buyReceipt = receiptPicker($('#buy-receipt'));
+  $('#photo-dialog').onclick = (e) => e.target.id === 'photo-dialog' && $('#photo-dialog').close();
   setupTxnDialog();
   setupAccountDialog();
   setupDeleteDialog();
@@ -672,6 +706,7 @@ function openPurchase(supplierId = null) {
   $('#buy-date').value = C.today();
   $('#buy-new-product').value = '';
   $('#buy-error').hidden = true;
+  buyReceipt.reset();
   renderBuyProducts();
   $('#buy-dialog').showModal();
 }
@@ -800,6 +835,7 @@ function setupShopDialogs() {
       items: items.length ? items : undefined,
       memo: $('#buy-memo').value.trim() || undefined,
       purchase: pid,
+      receipt: await buyReceipt.keep(),
     });
     if (paid > 0)
       await state.store.saveTxn({ type: 'Transfer', amount: paid, date, category: 'Transfer', account: $('#buy-from').value, toAccount: sup, note: '', purchase: pid });
@@ -922,7 +958,15 @@ function productsCard() {
 
 function bindProducts(root) {
   const save = (list) => state.store.saveSettings({ ...settings(), productGroups: list });
-  $$('[data-del-prod]', root).forEach((b) => (b.onclick = () => save(productGroups().filter((_, i) => i !== Number(b.dataset.delProd)))));
+  $$('[data-del-prod]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const i = Number(b.dataset.delProd);
+        const p = productGroups()[i];
+        await save(productGroups().filter((_, j) => j !== i));
+        undoToast(t('Removed {name}', { name: p }), () => restoreToList('productGroups', p, i));
+      }),
+  );
   const add = $('#add-prod', root);
   if (!add) return;
   add.onclick = () => {
@@ -1417,6 +1461,7 @@ function renderDashboard() {
     ${dueCard()}
     ${guide}
     ${guide ? '' : installTip()}
+    ${guide ? '' : backupCard()}
     ${importCard}
     <div class="periodbar">
       <div class="segmented" id="period-seg">
@@ -1530,6 +1575,7 @@ function renderDashboard() {
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
   bindRecurring($('#view-dashboard'));
+  bindBackup($('#view-dashboard'));
   $('#back-simple')?.addEventListener('click', backToSimple);
   bindShop($('#view-dashboard'));
   bindBaki($('#view-dashboard'));
@@ -1711,6 +1757,7 @@ function describeTxn(x, L = t) {
     Number(x.fee) && x.type !== 'Income' ? feeWord : '',
     x.recurring ? `↻ ${L('regular')}` : '',
     x.memo ? `${L('Memo')} ${x.memo}` : '',
+    x.receipt ? '📎' : '',
     x.note,
   ]
     .filter(Boolean)
@@ -1829,8 +1876,89 @@ function renderTransactions() {
 let editing = null;
 let txnType = 'Expense';
 let smsRef = ''; // transaction ID from a pasted SMS, saved with the entry
+let smsShop = ''; // who the SMS payment went to; its category is remembered on Save
 let occ = null; // { rule, date } when adding a due regular payment with changes
 let feeOpen = false; // the service charge box, folded away until it is needed
+
+// ---- receipt photos (the work is in photos.js and the store)
+
+// A "📷 Receipt" button with a small preview, used in the Add form and the
+// purchase form. The photo is saved only when the entry is saved.
+function receiptPicker(root) {
+  let cur = null; // { id, blob, url, saved }
+  let shown = 0; // ignores a slow photo load after the form moved on
+  const draw = (msg = '') => {
+    root.innerHTML = cur
+      ? `<button type="button" class="receipt-thumb" data-r-view aria-label="${esc(t('See the receipt'))}">${cur.url ? `<img src="${cur.url}" alt="">` : '<span class="spinner sm"></span>'}</button>
+         <span class="receipt-txt">📎 ${t('Receipt photo')}<button type="button" class="linkish" data-r-remove>${t('Remove')}</button></span>`
+      : `<label class="btn sm receipt-add">📷 ${t('Receipt photo')}<input type="file" accept="image/*" data-r-file hidden></label>`;
+    if (msg) root.insertAdjacentHTML('beforeend', `<span class="receipt-msg">${esc(msg)}</span>`);
+    $('[data-r-file]', root)?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      root.innerHTML = `<span class="spinner sm"></span> <span class="receipt-msg">${t('Making the photo smaller…')}</span>`;
+      try {
+        const blob = await (await import('./photos.js')).shrink(file);
+        cur = { id: newId(), blob, url: URL.createObjectURL(blob), saved: false };
+        draw();
+      } catch {
+        cur = null;
+        draw(t('That file is not a photo.'));
+      }
+    });
+    $('[data-r-view]', root)?.addEventListener('click', () => cur?.url && showPhoto(cur.url));
+    $('[data-r-remove]', root)?.addEventListener('click', () => {
+      if (cur?.url) URL.revokeObjectURL(cur.url);
+      cur = null;
+      draw();
+    });
+  };
+  return {
+    // Shows the form's photo (or none). Photos from another phone come from Drive.
+    reset(id = null) {
+      const n = ++shown;
+      if (cur?.url) URL.revokeObjectURL(cur.url);
+      cur = id ? { id, saved: true } : null;
+      draw();
+      if (!id) return;
+      state.store
+        .photo(id)
+        .then((blob) => {
+          if (n !== shown) return;
+          if (!blob) return draw(t('The photo could not be found.'));
+          cur.url = URL.createObjectURL(blob);
+          draw();
+        })
+        .catch((e) => n === shown && draw(e.message || t('Could not load the photo.')));
+    },
+    // Saves a new photo; returns the id to keep on the entry (or undefined).
+    async keep() {
+      if (cur && !cur.saved) {
+        await state.store.savePhoto(cur.id, cur.blob);
+        cur.saved = true;
+      }
+      return cur?.id;
+    },
+  };
+}
+
+function showPhoto(url) {
+  $('#photo-full').src = url;
+  $('#photo-dialog').showModal();
+}
+
+let txnReceipt = null;
+let buyReceipt = null;
+
+// A purchase or a baki sale is saved as two entries: what was bought or sold,
+// and what was paid. Deleting the first removes its payment too, or the
+// supplier's or customer's balance would be left wrong. A payment alone can go.
+function linkedTxns(x) {
+  const group = x.purchase && x.type === 'Expense' ? ['purchase', x.purchase] : x.baki && x.type === 'Income' ? ['baki', x.baki] : null;
+  if (!group) return [x];
+  return [x, ...state.data.transactions.filter((o) => o.id !== x.id && o[group[0]] === group[1])];
+}
 
 function setupTxnDialog() {
   $$('#txn-type button').forEach((b) => (b.onclick = () => setTxnType(b.dataset.type)));
@@ -1848,10 +1976,13 @@ function setupTxnDialog() {
   $('#txn-dialog').addEventListener('close', () => (occ = null));
   $('#txn-date').addEventListener('change', updateRepeatHint);
   $('#txn-delete').onclick = async () => {
-    if (!editing || !confirm(t('Delete this transaction?'))) return;
-    await state.store.deleteTxn(editing.id);
+    if (!editing) return;
+    const gone = linkedTxns(editing);
+    for (const x of gone) await state.store.deleteTxn(x.id);
     $('#txn-dialog').close();
-    toast(t('Deleted'));
+    undoToast(gone.length > 1 ? tn(gone.length, 'Deleted {n} entry', 'Deleted {n} entries') : t('Deleted'), async () => {
+      for (const x of gone) await state.store.saveTxn(x);
+    });
   };
   $('#txn-account').onchange = updateTxnHint;
   $('#txn-to').onchange = updateTxnHint;
@@ -1958,13 +2089,26 @@ function fillFromSms(text) {
   const pick = (sel, id) => id && [...$(sel).options].some((o) => o.value === id) && ($(sel).value = id);
   pick('#txn-account', r.account);
   if (r.type === 'Transfer') pick('#txn-to', r.toAccount);
-  if (r.category) pick('#txn-category', r.category);
+  // Category: what the user chose last time for this shop or number, else a guess from the name.
+  const cats = [...$('#txn-category').options].map((o) => o.value);
+  const learned = settings().smsCategories?.[merchantKey(r.counterparty)];
+  const category = r.type === 'Transfer' ? null : [learned, r.category, guessCategory(text, cats)].find((c) => c && cats.includes(c));
+  if (category) pick('#txn-category', category);
   $('#txn-note').value = [t(r.kind), r.counterparty].filter(Boolean).join(' · ');
   smsRef = r.ref || '';
+  smsShop = r.type === 'Transfer' ? '' : merchantKey(r.counterparty);
   $('#sms-panel').hidden = true;
   updateTxnHint();
 
   const lines = [`✓ ${t('Filled from the SMS. Check the details and tap Save.')}`];
+  if (r.type !== 'Transfer')
+    lines.push(
+      category
+        ? `✓ ${t('Category: {cat}', { cat: category })}`
+        : r.counterparty
+          ? `👉 ${t('Pick a category. Next time AmrPotli will choose it for {name}.', { name: r.counterparty })}`
+          : `👉 ${t('Pick a category.')}`,
+    );
   let warn = false;
   if (smsRef && state.data.transactions.some((x) => x.ref === smsRef)) {
     lines.push(`⚠️ ${t('This SMS seems to be added already (TrxID {ref}).', { ref: smsRef })}`);
@@ -1990,17 +2134,30 @@ function fillFromSms(text) {
   showSmsInfo(lines.map(esc).join('<br>'), warn);
 }
 
-// Category tiles: the real <select> stays (hidden) and holds the value; the
+// Category: a dropdown with all of the user's own categories, and below it
+// tiles for the most used ones (one tap). The dropdown holds the value; the
 // tiles mirror it, so code that sets the select only needs syncCatGrid().
+const TILES = 8;
+
+// The categories used most in the last 90 days, in the user's own order.
+function tileCats(all) {
+  if (all.length <= TILES) return all;
+  const since = C.addDays(C.today(), -90);
+  const used = {};
+  for (const x of state.data.transactions) if (x.type === txnType && x.date >= since) used[x.category] = (used[x.category] || 0) + 1;
+  const top = new Set([...all].sort((a, b) => (used[b] || 0) - (used[a] || 0)).slice(0, TILES));
+  return all.filter((c) => top.has(c));
+}
+
 function syncCatGrid() {
   const sel = $('#txn-category');
   const grid = $('#txn-cat-grid');
   const opts = [...sel.options];
-  const key = opts.map((o) => o.value).join('|');
+  const key = `${opts.map((o) => o.value).join('|')}#${state.data.transactions.length}`;
   if (grid.dataset.key !== key) {
     grid.dataset.key = key;
-    grid.innerHTML = opts
-      .map((o) => `<button type="button" role="radio" data-cat="${esc(o.value)}"><span aria-hidden="true">${catIcon(o.value)}</span><small>${esc(o.textContent)}</small></button>`)
+    grid.innerHTML = tileCats(opts.map((o) => o.value))
+      .map((c) => `<button type="button" role="radio" data-cat="${esc(c)}"><span aria-hidden="true">${catIcon(c)}</span><small>${esc(c)}</small></button>`)
       .join('');
     $$('[data-cat]', grid).forEach(
       (b) =>
@@ -2150,7 +2307,7 @@ function setTxnType(type, x = null, preset = null) {
   const cats = type === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
   const catList = [...cats];
   if (x?.category && !isT && !catList.includes(x.category)) catList.push(x.category);
-  fillSelect($('#txn-category'), catList.map((c) => [c, c]), x?.category);
+  fillSelect($('#txn-category'), catList.map((c) => [c, `${catIcon(c)} ${c}`]), x?.category);
 
   // Income/Expense normally touch spendable accounts; show those first.
   const order = (a) => (isT ? 0 : a.type === 'Liquid' ? 0 : 1);
@@ -2266,6 +2423,7 @@ function openTxn(x = null, preset = null) {
   }
   editing = x;
   smsRef = '';
+  smsShop = '';
   $('#sms-row').hidden = !!x;
   $('#sms-panel').hidden = true;
   $('#sms-info').hidden = true;
@@ -2273,6 +2431,8 @@ function openTxn(x = null, preset = null) {
   $('#txn-delete').hidden = !x;
   $('#txn-save-another').hidden = !!x;
   $('#txn-error').hidden = true;
+  checkedOnce = '';
+  txnReceipt.reset(x?.receipt);
   $('#txn-amount').value = x ? x.amount : '';
   $('#txn-date').value = x ? x.date : C.today();
   $('#txn-note').value = x?.note ?? '';
@@ -2303,14 +2463,51 @@ function noteWithSum() {
   return note.includes(sum) ? note : [note, sum].filter(Boolean).join(' · ');
 }
 
+let checkedOnce = ''; // a warning already shown for this entry; Save again saves anyway
+
+// Catches slips of the finger before they become wrong numbers: a date far
+// off, an amount far bigger than usual, or the same entry saved twice.
+function doubleCheck(type, amount, date) {
+  const today = C.today();
+  const txns = state.data.transactions;
+  const day = niceDate(date, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (date > C.addDays(today, 1)) return t('The date is in the future: {date}.', { date: day });
+  if (date < C.addDays(today, -730)) return t('The date is more than two years ago: {date}.', { date: day });
+  const same = txns.filter((x) => x.type === (type === 'Loan' ? 'Transfer' : type) && !!loanActionOf(x) === (type === 'Loan'));
+  const usual = same.map((x) => x.amount).sort((a, b) => a - b);
+  const middle = usual[Math.floor(usual.length / 2)];
+  if (amount >= 10_000_000 || (usual.length >= 10 && amount >= 50_000 && amount > middle * 50))
+    return t('{amount} is much bigger than usual. Is the amount right?', { amount: `৳${money2(amount)}` });
+  if (!editing) {
+    // Same amount, day, accounts and category (or, for a loan, the same action and person).
+    const alike = (x) =>
+      type === 'Loan'
+        ? loanActionOf(x) === $('#txn-loan').value && [x.account, x.toAccount].includes($('#txn-person').value)
+        : x.account === $('#txn-account').value && (type === 'Transfer' ? x.toAccount === $('#txn-to').value : x.category === $('#txn-category').value);
+    const twin = same.find((x) => x.amount === amount && x.date === date && Date.now() - (x.createdAt || 0) < 10 * 60_000 && alike(x));
+    if (twin) return t('You saved the same {amount} a moment ago. Save it again?', { amount: `৳${money2(amount)}` });
+  }
+  return '';
+}
+
 async function saveTxn(another) {
   const amount = amountValue();
   const err = (m) => {
     $('#txn-error').textContent = m;
+    $('#txn-error').classList.remove('warn');
     $('#txn-error').hidden = false;
   };
   if (!(amount > 0)) return err(t('Enter an amount greater than 0.'));
   if (!$('#txn-date').value) return err(t('Pick a date.'));
+  const warning = doubleCheck(txnType, amount, $('#txn-date').value);
+  const key = `${warning}|${txnType}|${amount}|${$('#txn-date').value}`;
+  if (warning && checkedOnce !== key) {
+    checkedOnce = key;
+    err(`${warning} ${t('Tap Save again to save it anyway.')}`);
+    $('#txn-error').classList.add('warn');
+    return;
+  }
+  checkedOnce = '';
   if (txnType === 'Loan') return saveLoan(amount, another, err);
   const isT = txnType === 'Transfer';
   if (isT && $('#txn-account').value === $('#txn-to').value) return err(t('From and To must be different accounts.'));
@@ -2329,11 +2526,13 @@ async function saveTxn(another) {
     feeCategory: undefined,
     loan: undefined,
     ref: smsRef || editing?.ref || undefined,
+    receipt: undefined,
   };
   const every = !editing && !occ ? $('#txn-repeat').value : '';
   const ruleId = every ? newId() : occ?.rule.id;
   if (ruleId) x.recurring = ruleId;
   try {
+    x.receipt = await txnReceipt.keep();
     await state.store.saveTxn(x);
     await ensureFeeCategory(x);
     if (every)
@@ -2342,6 +2541,7 @@ async function saveTxn(another) {
         { id: ruleId, type: x.type, amount, category: x.category, account: x.account, toAccount: x.toAccount, fee: x.fee, note: x.note, every, start: x.date, lastDone: x.date },
       ]);
     if (occ) await markRule(occ.rule.id, occ.date);
+    await rememberSmsCategory(x);
   } catch (e) {
     return err(e.message);
   }
@@ -2351,6 +2551,20 @@ async function saveTxn(another) {
   });
   toast(editing ? t('Updated') : fee ? `${saved} + ${t('charge {amount}', { amount: money2(fee) })}` : saved);
   afterSave(another);
+}
+
+// "Grameenphone -> Mobile & Internet": the next SMS from the same shop or
+// number fills in the category the user picked. Kept in settings, so it
+// follows the user to other phones. The oldest are forgotten after 200.
+async function rememberSmsCategory(x) {
+  const shop = smsShop;
+  smsShop = '';
+  if (!shop || x.type === 'Transfer' || !x.category) return;
+  const map = settings().smsCategories || {};
+  if (map[shop] === x.category) return;
+  const { [shop]: _, ...rest } = map;
+  const next = Object.fromEntries([...Object.entries(rest), [shop, x.category]].slice(-200));
+  await state.store.saveSettings({ ...settings(), smsCategories: next });
 }
 
 // Fees and interest get a category in Setup so they can be given a budget.
@@ -2385,6 +2599,7 @@ async function saveLoan(amount, another, err) {
     feeCategory: interest > 0 ? C.INTEREST_CATEGORY : undefined,
   };
   try {
+    x.receipt = await txnReceipt.keep();
     await state.store.saveTxn(x);
     await ensureFeeCategory(x);
     const acc = accById(person);
@@ -2412,6 +2627,7 @@ async function saveLoan(amount, another, err) {
 
 function afterSave(another) {
   smsRef = '';
+  smsShop = '';
   occ = null;
   $('#txn-repeat').value = '';
   $('#txn-repeat-hint').hidden = true;
@@ -2424,6 +2640,7 @@ function afterSave(another) {
     showFee();
     $('#txn-note').value = '';
     $('#txn-error').hidden = true;
+    txnReceipt.reset();
     $('#txn-amount').focus();
   } else $('#txn-dialog').close();
 }
@@ -2576,8 +2793,11 @@ function bindRecurring(root) {
     (b) =>
       (b.onclick = () => {
         const r = find(b.dataset.rdel);
-        if (!confirm(t('Stop "{name}" from repeating? Transactions already added stay.', { name: ruleName(r) }))) return;
+        const at = rules().indexOf(r);
         saveRules(rules().filter((x) => x.id !== r.id));
+        undoToast(t('Stopped "{name}". Transactions already added stay.', { name: ruleName(r) }), () =>
+          rules().some((x) => x.id === r.id) ? null : saveRules([...rules().slice(0, at), r, ...rules().slice(at)]),
+        );
       }),
   );
 }
@@ -2822,6 +3042,7 @@ function renderSetup() {
         <h3>${t('Help &amp; feedback')}</h3>
         <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
         <a class="btn" href="${G.feedbackUrl('setup')}" target="_blank" rel="noopener">💬 ${t('Send feedback')}</a>
+        <p class="muted" style="margin:10px 0 0;font-size:13px"><a href="privacy.html">${t('Privacy')}</a> · <a href="terms.html">${t('Terms of use')}</a></p>
       </div>
 
       <div class="card">
@@ -2851,6 +3072,7 @@ function renderSetup() {
         <h3>${t('Backup &amp; data')}</h3>
         <div style="display:grid;gap:8px">
           <button class="btn" id="export">${t('Download backup (.json)')}</button>
+          <p class="muted" style="margin:0;font-size:12px">${backupInfo()?.last ? t('Last backup on this device: {date}', { date: niceDate(C.fmtDate(new Date(backupInfo().last)), { day: 'numeric', month: 'short', year: 'numeric' }) }) : t('No backup on this device yet.')} ${state.store.mode === 'drive' ? t('Receipt photos stay in your Google Drive and are not in the file.') : t('Receipt photos are not in the file.')}</p>
           <button class="btn" id="export-csv">${t('Download transactions (.csv)')}</button>
           <label class="btn" style="text-align:center">${t('Import .json file…')}
             <input type="file" accept=".json,application/json" id="import" hidden></label>
@@ -2887,9 +3109,10 @@ function renderSetup() {
   $$('[data-del-exp]', v).forEach(
     (b) =>
       (b.onclick = () => {
-        const c = s.expenseCategories[Number(b.dataset.delExp)];
-        if (!confirm(t('Remove "{name}"? Past transactions keep this category.', { name: c.name }))) return;
+        const i = Number(b.dataset.delExp);
+        const c = s.expenseCategories[i];
         save({ expenseCategories: s.expenseCategories.filter((x) => x !== c) });
+        undoToast(t('Removed {name}. Past transactions keep it.', { name: c.name }), () => restoreToList('expenseCategories', c, i));
       }),
   );
   $$('[data-rename-exp]', v).forEach(
@@ -2911,9 +3134,10 @@ function renderSetup() {
   $$('[data-del-inc]', v).forEach(
     (b) =>
       (b.onclick = () => {
-        const c = s.incomeCategories[Number(b.dataset.delInc)];
-        if (!confirm(t('Remove "{name}"? Past transactions keep this source.', { name: c }))) return;
+        const i = Number(b.dataset.delInc);
+        const c = s.incomeCategories[i];
         save({ incomeCategories: s.incomeCategories.filter((x) => x !== c) });
+        undoToast(t('Removed {name}. Past transactions keep it.', { name: c }), () => restoreToList('incomeCategories', c, i));
       }),
   );
   $$('[data-rename-inc]', v).forEach(
@@ -2947,7 +3171,10 @@ function renderSetup() {
     switchView('dashboard');
   });
   $$('[data-lang]', v).forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
-  $('#export', v).onclick = exportJson;
+  $('#export', v).onclick = () => {
+    exportJson();
+    renderSetup();
+  };
   $('#export-csv', v).onclick = exportCsv;
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
@@ -3013,9 +3240,10 @@ function setupAccountDialog() {
       $('#acc-error').hidden = false;
       return;
     }
-    if (!confirm(t('Delete "{name}"?', { name: editingAcc.name }))) return;
-    await state.store.deleteAccount(editingAcc.id);
+    const gone = editingAcc;
+    await state.store.deleteAccount(gone.id);
     $('#acc-dialog').close();
+    undoToast(t('Deleted {name}', { name: gone.name }), () => state.store.saveAccount(gone));
   };
 }
 
@@ -3082,6 +3310,67 @@ function setupDeleteDialog() {
 function exportJson() {
   const { accounts, transactions, settings } = state.data;
   download(`amrpotli-backup-${C.today()}.json`, JSON.stringify({ version: 1, accounts, transactions, settings }, null, 2), 'application/json');
+  backupMark({ last: Date.now(), later: 0 });
+}
+
+// ---- backup reminder
+// Drive already keeps the data, but a file on the phone is a second copy, in
+// case something is deleted by mistake. In demo mode it is the only copy.
+// The date is per device, because the file is saved on this device.
+
+const backupKey = () => `mt:backup:${state.user?.uid}`;
+// { since, last, later }: when counting started, the last backup, and "Later".
+function backupInfo() {
+  try {
+    return JSON.parse(localStorage.getItem(backupKey()));
+  } catch {
+    return null;
+  }
+}
+function backupMark(patch) {
+  try {
+    localStorage.setItem(backupKey(), JSON.stringify({ ...backupInfo(), ...patch }));
+  } catch {}
+}
+
+function backupCard() {
+  if (state.data.transactions.length < 20) return '';
+  const info = backupInfo();
+  // Start counting from the first time there is enough to lose.
+  if (!info?.since && !info?.last) {
+    backupMark({ since: Date.now() });
+    return '';
+  }
+  const every = state.store.mode === 'demo' ? 7 : 30;
+  const days = Math.floor((Date.now() - (info.last || info.since)) / 86400000);
+  if (days < every || Date.now() < (info.later || 0)) return '';
+  return `<div class="card backup-tip">
+    <span class="big-ic" aria-hidden="true">💾</span>
+    <div><strong>${t('Keep a spare copy')}</strong>
+      <div class="muted" style="font-size:13px">${
+        state.store.mode === 'demo'
+          ? t('Your data is only in this browser. Save a backup file in case the browser is cleared.')
+          : t('Your data is safe in Google Drive. A backup file on this phone is a second copy.')
+      } ${info.last ? tn(days, 'Last backup: {n} day ago.', 'Last backup: {n} days ago.') : t('No backup yet.')}</div></div>
+    <div class="tip-actions">
+      <button class="btn primary sm" id="backup-now">⬇️ ${t('Download')}</button>
+      <button class="btn sm" id="backup-later">${t('Later')}</button>
+    </div>
+  </div>`;
+}
+
+function bindBackup(root) {
+  const now = $('#backup-now', root);
+  if (!now) return;
+  now.onclick = () => {
+    exportJson();
+    toast(t('Backup saved. Keep the file somewhere safe.'));
+    render();
+  };
+  $('#backup-later', root).onclick = () => {
+    backupMark({ later: Date.now() + 7 * 86400000 });
+    render();
+  };
 }
 
 function exportCsv() {
