@@ -1,11 +1,8 @@
 // Potli tips and the "How do I…?" help. Made-up people, fixed dates.
 import { chromium } from 'playwright';
+import { personal, shop } from '../fixtures/tips-people.mjs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
 const b = await chromium.launch();
-let n = 0;
-const tx = (date, type, category, account, amount, extra = {}) => ({ id: 'x' + ++n, date, type, category, account, toAccount: null, amount, note: '', updatedAt: n, createdAt: n, ...extra });
-const cats = (list) => list.map(([name, budget = 0]) => ({ name, budget }));
-
 async function open(doc, day, lang = 'en') {
   const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
@@ -27,32 +24,6 @@ async function open(doc, day, lang = 'en') {
 const tipsText = (p) => p.$$eval('.pt-tip p', (e) => e.map((x) => x.textContent.trim()));
 
 // ---------------------------------------------------------------- 1. Nusrat, a job holder (Sunday 11 Oct 2026)
-const personal = {
-  version: 2,
-  accounts: Object.fromEntries([
-    { id: 'cash', name: 'Cash in Hand', type: 'Liquid', opening: 3000, order: 1 },
-    { id: 'bkash', name: 'bKash', type: 'Liquid', opening: 4000, order: 2 },
-    { id: 'karim', name: 'Loan from Karim', type: 'Debt', opening: 3000, order: 3, dueDate: '2026-10-14' },
-  ].map((a) => [a.id, { ...a, updatedAt: 1 }])),
-  transactions: {},
-  settings: {
-    savingsGoal: 5000,
-    incomeCategories: ['Salary', 'Other Income'],
-    expenseCategories: cats([['Food', 3000], ['Transport'], ['House Rent'], ['Mobile & Internet'], ['Other']]),
-    recurring: [{ id: 'rent', type: 'Expense', amount: 8000, category: 'House Rent', account: 'cash', note: 'House rent', every: 'month', start: '2026-08-12', lastDone: '2026-09-12' }],
-    onboarding: { persona: 'job', hidden: true, done: {} },
-  },
-  settingsUpdatedAt: 1,
-};
-const T = [];
-T.push(tx('2026-09-01', 'Income', 'Salary', 'bkash', 30000));
-for (const d of ['02', '03', '04', '05', '06', '07', '08', '09', '10', '11']) T.push(tx(`2026-09-${d}`, 'Expense', 'Food', 'cash', 120));
-T.push(tx('2026-09-15', 'Expense', 'House Rent', 'cash', 8000));
-// this month: food is up, and a cash-out with a charge
-for (const [d, a] of [['01', 500], ['02', 600], ['04', 400], ['05', 700], ['07', 450]]) T.push(tx(`2026-10-${d}`, 'Expense', 'Food', 'bkash', a));
-T.push(tx('2026-10-03', 'Transfer', null, 'bkash', 5000, { toAccount: 'cash', fee: 125 }));
-T.push(tx('2026-10-06', 'Expense', 'Transport', 'cash', 300));
-personal.transactions = Object.fromEntries(T.map((x) => [x.id, x]));
 {
   const { ctx, p } = await open(personal, '2026-10-11');
   const tips = await tipsText(p);
@@ -61,7 +32,7 @@ personal.transactions = Object.fromEntries(T.map((x) => [x.id, x]));
   const all = await tipsText(p);
   const has = (s) => all.some((x) => x.includes(s));
   ok(has('House rent ৳8,000 is due tomorrow, but Cash in Hand has only'), 'rent due tomorrow, and the account is short');
-  ok(has('You owe Karim ৳3,000, due in 3 days'), 'loan due soon');
+  ok(has('Loan from Karim: you owe ৳3,000, due in 3 days') || has('Karim: you owe ৳3,000, due in 3 days'), 'loan due soon');
   ok(has('Food budget: 88% used, 20 days left'), 'budget pace: Food 88% used');
   ok(has('Food so far this month: ৳2,650') && has('more than by this day last month'), 'Food up versus last month');
   ok(has('Charges for cash-out and sending money cost you ৳125'), 'charges this month');
@@ -107,32 +78,6 @@ personal.transactions = Object.fromEntries(T.map((x) => [x.id, x]));
   await ctx.close();
 }
 // ---------------------------------------------------------------- 2. a shop (Thursday 15 Oct 2026)
-const shop = {
-  version: 2,
-  accounts: Object.fromEntries([
-    { id: 'cash', name: 'Cash Box', type: 'Liquid', opening: 5000, order: 1 },
-    { id: 'rafiq', name: 'Rafiq', type: 'Lend', opening: 2500, order: 2, customer: { phone: '' } },
-  ].map((a) => [a.id, { ...a, updatedAt: 1 }])),
-  transactions: {},
-  settings: {
-    mode: 'shop', savingsGoal: 0, incomeCategories: ['Sales'], expenseCategories: cats([['Stock Purchase'], ['Shop Rent'], ['Electricity']]),
-    productGroups: ['Rice & Grains'], stockCategory: 'Stock Purchase', onboarding: { persona: 'shop', hidden: true, done: {} },
-  },
-  settingsUpdatedAt: 1,
-};
-const S = [];
-// 8 weeks of sales: Fridays are busy, Tuesdays slow
-for (let d = new Date('2026-08-20T12:00:00'); d < new Date('2026-10-15T12:00:00'); d.setDate(d.getDate() + 1)) {
-  const iso = d.toISOString().slice(0, 10);
-  const wd = d.getDay();
-  S.push(tx(iso, 'Income', 'Sales', 'cash', wd === 5 ? 3000 : wd === 2 ? 800 : 1500));
-}
-// costs: last month small, this month stock jumped
-S.push(tx('2026-09-05', 'Expense', 'Stock Purchase', 'cash', 5000));
-S.push(tx('2026-10-05', 'Expense', 'Stock Purchase', 'cash', 15000));
-S.push(tx('2026-08-25', 'Income', 'Sales', 'rafiq', 2500 * 0)); // nothing new for Rafiq: his baki is old
-shop.transactions = Object.fromEntries(S.map((x) => [x.id, x]));
-shop.accounts.rafiq.opening = 2500;
 {
   const { ctx, p } = await open(shop, '2026-10-15');
   await p.click('[data-tips-more]').catch(() => {});
@@ -141,6 +86,7 @@ shop.accounts.rafiq.opening = 2500;
   ok(has('Your best sales day is Friday') && has('than Tuesday'), 'best sales day Friday, slowest Tuesday');
   ok(has('Profit margin so far this month') && has('Stock Purchase'), 'profit margin down, stock purchase rose most');
   ok(has('Rafiq owes ৳2,500 baki'), 'old baki: Rafiq');
+  ok(!has('Stock Purchase so far this month'), 'no separate “stock purchase grew” tip next to the margin tip');
   await p.click('.pt-tip:has-text("Rafiq") [data-tip-act=customer]');
   ok(!!(await p.$('#custv-dialog[open]')), 'the baki tip opens Rafiq');
   ok(p.errs.length === 0, 'no errors ' + p.errs.join('|'));
