@@ -245,6 +245,8 @@ input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--brand) 5
 .btn {
   border: 1px solid var(--line); background: var(--surface); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;
 }
+a.btn { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+a.btn.primary { color: var(--brand-ink); }
 .btn:hover { border-color: var(--brand); }
 .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
 .btn.danger { color: var(--bad); }

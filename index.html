@@ -1,13 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-title-en="AmrPotli · Know where every taka goes" data-title-bn="আমার পোটলি · প্রতিটি টাকার হিসাব">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AmrPotli · Know where every taka goes</title>
-  <meta name="description" content="AmrPotli is a private money tracker for life in Bangladesh: bank, cash, bKash, loans, service charges, budgets and printable statements. Your data stays in your own Google Drive." />
+  <meta name="description" content="AmrPotli is a private money tracker for life and small business in Bangladesh: cash, bank, bKash, loans, baki khata, receipts and budgets. Speak or paste an SMS to add. Your data stays in your own Google Drive." />
   <meta name="theme-color" content="#0f766e" />
-  <meta property="og:title" content="AmrPotli · আমার পোটলি" />
-  <meta property="og:description" content="A private money tracker for life in Bangladesh." />
+  <link rel="canonical" href="https://vgfintrack.github.io/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://vgfintrack.github.io/" />
+  <meta property="og:title" content="AmrPotli · Know where every taka goes" />
+  <meta property="og:description" content="AmrPotli is a private money tracker for life and small business in Bangladesh: cash, bank, bKash, loans, baki khata, receipts and budgets. Speak or paste an SMS to add. Your data stays in your own Google Drive." />
+  <meta property="og:image" content="https://vgfintrack.github.io/AmrPotli/icons/icon-512.png" />
   <link rel="icon" href="AmrPotli/icons/icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,502 +26,167 @@
       document.documentElement.lang = l === 'bn' ? 'bn' : 'en';
     } catch {}
   </script>
-  <style>
-    :root {
-      --bg: #f4f6f5; --surface: #fff; --surface-2: #eef2f1; --text: #13201d; --muted: #5d6b67; --line: #dde4e2;
-      --brand: #0f766e; --brand-text: #0f766e; --accent: #f59e0b; --bad: #dc2626; --ok: #15803d;
-      --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 6px 24px rgb(0 0 0 / .05);
-      color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0d1412; --surface: #151f1c; --surface-2: #1d2a26; --text: #e6eeeb; --muted: #93a39e; --line: #2a3833;
-        --brand-text: #5eead4; --bad: #f87171; --ok: #4ade80; --shadow: none; color-scheme: dark;
-      }
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", sans-serif;
-    }
-    html[lang="bn"] body { font-size: 16.5px; }
-    html[lang="en"] [lang="bn"], html[lang="bn"] [lang="en"]:not(html) { display: none !important; }
-    a { color: var(--brand-text); }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
-
-    /* nav */
-    nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-    nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 60px; }
-    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-    .logo img { width: 32px; height: 32px; border-radius: 9px; }
-    .nav-right { display: flex; align-items: center; gap: 8px; }
-    .seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; }
-    .seg button { border: 0; background: none; padding: 5px 11px; border-radius: 8px; font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; }
-    .seg button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-weight: 600;
-      padding: 12px 20px; border-radius: 12px; border: 1px solid var(--line); color: var(--text); background: var(--surface); }
-    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
-    .btn.sm { padding: 8px 14px; font-size: 14px; border-radius: 10px; }
-    @media (max-width: 520px) { nav .btn.sm { display: none; } }
-
-    /* hero */
-    .hero { padding: 56px 0 40px; }
-    .hero .wrap { display: grid; gap: 40px; align-items: center; }
-    @media (min-width: 900px) { .hero .wrap { grid-template-columns: 1.1fr 0.9fr; } }
-    .eyebrow { display: inline-block; font-size: 13px; font-weight: 600; color: var(--brand-text); background: color-mix(in srgb, var(--brand) 10%, transparent); padding: 4px 10px; border-radius: 99px; }
-    h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.12; margin: 14px 0 14px; letter-spacing: -0.02em; }
-    html[lang="bn"] h1 { line-height: 1.3; letter-spacing: 0; }
-    .lead { font-size: 18px; color: var(--muted); margin: 0 0 24px; max-width: 560px; }
-    .cta { display: flex; gap: 10px; flex-wrap: wrap; }
-    .trust { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 20px; color: var(--muted); font-size: 14px; }
-    .trust span::before { content: '✓ '; color: var(--ok); font-weight: 700; }
-
-    /* sample dashboard */
-    .phone { justify-self: center; width: min(340px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 16px; box-shadow: 0 20px 60px rgb(15 118 110 / .18); }
-    .phone .top { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 12px; }
-    .phone .top img { width: 26px; height: 26px; border-radius: 7px; }
-    .phone .chip { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--ok); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; }
-    .kp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .kp div { background: var(--surface-2); border-radius: 12px; padding: 9px 11px; }
-    .kp small { display: block; color: var(--muted); font-size: 11px; }
-    .kp b { font-size: 18px; font-variant-numeric: tabular-nums; }
-    .bar { margin: 10px 0 4px; font-size: 12px; display: flex; justify-content: space-between; color: var(--muted); }
-    .track { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
-    .track i { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
-    .track i.warn { background: #d97706; }
-    .loanrow { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding: 8px 0 0; margin-top: 12px; font-size: 13px; }
-    .loanrow em { font-style: normal; color: #d97706; font-size: 11px; font-weight: 600; display: block; }
-    .loanrow span.tag { font-size: 11px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; }
-    .sample { text-align: center; color: var(--muted); font-size: 11px; margin-top: 10px; }
-
-    /* sections */
-    section.block { padding: 56px 0; }
-    section.alt { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    h2 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; margin: 6px 0 10px; letter-spacing: -0.01em; }
-    html[lang="bn"] h2 { line-height: 1.35; letter-spacing: 0; }
-    .kicker { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--brand-text); }
-    html[lang="bn"] .kicker { text-transform: none; letter-spacing: 0; font-size: 14px; }
-    .sub { color: var(--muted); max-width: 680px; margin: 0 0 28px; font-size: 17px; }
-    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-    .grid.five { grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); }
-    .grid.three { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
-    .needs { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important; }
-    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
-    section.alt .card { background: var(--bg); box-shadow: none; }
-    .card h3 { margin: 10px 0 6px; font-size: 17px; line-height: 1.35; }
-    .card p { margin: 0; color: var(--muted); font-size: 15px; }
-    .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: color-mix(in srgb, var(--brand) 12%, transparent); }
-    .ic.red { background: color-mix(in srgb, var(--bad) 12%, transparent); }
-
-    .needs { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); list-style: none; padding: 0; margin: 0; }
-    .needs li { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
-    .needs li b { display: block; }
-    .needs li span { color: var(--muted); font-size: 15px; }
-    .needs .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
-
-    .solution { display: grid; gap: 28px; align-items: center; }
-    @media (min-width: 860px) { .solution { grid-template-columns: 0.8fr 1.2fr; } }
-    .potli { text-align: center; }
-    .potli img { width: 160px; height: 160px; border-radius: 40px; box-shadow: 0 20px 50px rgb(245 158 11 / .25); }
-    .potli p { color: var(--muted); font-size: 15px; max-width: 320px; margin: 14px auto 0; }
-
-    .map { display: grid; gap: 12px; }
-    .map .row { display: grid; gap: 6px 16px; grid-template-columns: 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
-    @media (min-width: 720px) { .map .row { grid-template-columns: 0.85fr auto 1.15fr; align-items: center; } }
-    .map .pr { color: var(--muted); font-size: 15px; }
-    .map .pr b { color: var(--text); display: block; font-size: 15px; }
-    .map .arrow { color: var(--brand-text); font-weight: 700; font-size: 20px; }
-    @media (max-width: 719px) { .map .arrow { transform: rotate(90deg); justify-self: start; } }
-    .map .fx b { display: block; color: var(--brand-text); }
-    .map .fx span { color: var(--muted); font-size: 15px; }
-
-    .steps { display: grid; gap: 22px 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); counter-reset: s; padding-top: 14px; }
-    .steps .card { position: relative; padding-top: 22px; }
-    .steps .card::before { counter-increment: s; content: counter(s); position: absolute; top: -14px; left: 18px; width: 30px; height: 30px; border-radius: 50%;
-      background: var(--accent); color: #3b1d06; font-weight: 800; display: grid; place-items: center; }
-
-    .who { display: flex; flex-wrap: wrap; gap: 10px; }
-    .who span { background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 8px 14px; font-size: 15px; }
-
-    .privacy { display: grid; gap: 20px; align-items: center; }
-    @media (min-width: 860px) { .privacy { grid-template-columns: 1fr 1fr; } }
-    .flow { display: grid; gap: 10px; }
-    .flow div { display: flex; align-items: center; gap: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 15px; }
-    .flow .x { color: var(--bad); font-weight: 700; }
-    .flow .y { color: var(--ok); font-weight: 700; }
-
-    /* tour */
-    .tour { display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-    .shot { margin: 0; }
-    .shot .frame { background: #13201d; border-radius: 30px; padding: 7px; box-shadow: 0 14px 40px rgb(0 0 0 / .18); }
-    .shot img { display: block; width: 100%; height: auto; border-radius: 24px; background: var(--surface-2); aspect-ratio: 390 / 780; object-fit: cover; object-position: top; }
-    .shot figcaption { margin-top: 12px; }
-    .shot figcaption b, .doc figcaption b { display: block; font-size: 16px; }
-    .shot figcaption span, .doc figcaption span { color: var(--muted); font-size: 14px; }
-    .doc { margin: 34px 0 0; display: grid; gap: 18px; align-items: center; }
-    @media (min-width: 820px) { .doc { grid-template-columns: 1.1fr 0.9fr; } }
-    .doc img { width: 100%; height: auto; max-height: 520px; object-fit: cover; object-position: top; border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--shadow); background: #fff; }
-    @media (max-width: 700px) {
-      .tour { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; padding-bottom: 10px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
-      .shot { flex: 0 0 70%; scroll-snap-align: center; }
-    }
-    details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; }
-    details + details { margin-top: 10px; }
-    summary { cursor: pointer; font-weight: 600; }
-    details p { color: var(--muted); margin: 8px 0 0; }
-
-    .final { text-align: center; }
-    .final .cta { justify-content: center; }
-    footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 14px; }
-    footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
-  </style>
+  <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
 
-<nav>
+<nav class="site-nav" aria-label="Main">
   <div class="wrap">
-    <a class="logo" href="./"><img src="AmrPotli/icons/icon.svg" alt="" width="32" height="32"> AmrPotli</a>
+    <a class="logo" href="./"><img src="AmrPotli/icons/icon.svg" alt="" width="32" height="32"><span class="word">AmrPotli</span></a>
+    <div class="nav-links"><a href="features.html"><span lang="en">Features</span><span lang="bn">ফিচার</span></a><a href="guides/"><span lang="en">Guides</span><span lang="bn">গাইড</span></a><a href="faq.html"><span lang="en">FAQ</span><span lang="bn">প্রশ্নোত্তর</span></a><a href="about.html"><span lang="en">About</span><span lang="bn">আমাদের কথা</span></a></div>
     <div class="nav-right">
       <div class="seg" role="group" aria-label="Language">
-        <button type="button" data-l="en">English</button>
-        <button type="button" data-l="bn">বাংলা</button>
+        <button type="button" data-l="en">EN</button>
+        <button type="button" data-l="bn">বাং</button>
       </div>
-      <a class="btn sm install-link" href="AmrPotli/?install"><span lang="en">📲 Install</span><span lang="bn">📲 ইনস্টল</span></a>
       <a class="btn primary sm" href="AmrPotli/"><span lang="en">Open app</span><span lang="bn">অ্যাপ খুলুন</span></a>
+      <button type="button" class="menu-btn" aria-label="Menu" aria-expanded="false">☰</button>
     </div>
   </div>
 </nav>
-
 <!-- ============================================================ HERO -->
 <header class="hero">
   <div class="wrap">
     <div>
       <span class="eyebrow"><span lang="en">Private · Simple · Made for Bangladesh</span><span lang="bn">প্রাইভেট · সহজ · বাংলাদেশের জন্য তৈরি</span></span>
       <h1><span lang="en">Know where every taka goes.</span><span lang="bn">প্রতিটি টাকার হিসাব, এক জায়গায়।</span></h1>
-      <p class="lead" lang="en">AmrPotli is a simple money tracker for everyday life in Bangladesh: bank, cash, bKash, tuition income,
-        loans between friends, service charges and all. Your records stay in your own Google Drive.</p>
-      <p class="lead" lang="bn">AmrPotli হলো বাংলাদেশের দৈনন্দিন জীবনের জন্য সহজ একটি টাকার হিসাবের অ্যাপ: ব্যাংক, ক্যাশ, bKash, টিউশনের আয়,
-        বন্ধুদের সাথে ধার-দেনা, সার্ভিস চার্জ — সব। আপনার হিসাব থাকে আপনার নিজের Google Drive-এ।</p>
+      <p class="lead" lang="en">One money pouch for cash, bank, bKash, loans and your shop's baki khata. Speak, type or paste an SMS:
+        AmrPotli writes it down and adds it up. Your records stay in your own Google Drive.</p>
+      <p class="lead" lang="bn">ক্যাশ, ব্যাংক, বিকাশ, ধার-দেনা আর দোকানের বাকির খাতা, সব এক পোটলিতে। মুখে বলুন, লিখুন বা SMS পেস্ট করুন:
+        আমার পোটলি লিখে রাখবে, যোগ-বিয়োগ করে দেবে। আপনার হিসাব থাকে আপনার নিজের Google Drive-এ।</p>
       <div class="cta">
         <a class="btn primary" href="AmrPotli/"><span lang="en">Get started</span><span lang="bn">শুরু করুন</span></a>
         <a class="btn" href="AmrPotli/?install"><span lang="en">📲 Install the app</span><span lang="bn">📲 অ্যাপ ইনস্টল করুন</span></a>
-        <a class="btn" href="#tour"><span lang="en">Take a tour</span><span lang="bn">ঘুরে দেখুন</span></a>
+        <a class="btn" href="guides/"><span lang="en">Find your guide</span><span lang="bn">আপনার গাইড</span></a>
       </div>
-      <div class="trust" lang="en"><span>No new password</span><span>Data in your own Drive</span><span>Works on any phone</span><span>English &amp; বাংলা</span></div>
-      <div class="trust" lang="bn"><span>নতুন পাসওয়ার্ড লাগে না</span><span>ডেটা আপনার নিজের Drive-এ</span><span>যেকোনো ফোনে চলে</span><span>বাংলা ও English</span></div>
+      <div class="trust" lang="en"><span>No new password</span><span>Data in your own Drive</span><span>Works offline</span><span>English &amp; বাংলা</span></div>
+      <div class="trust" lang="bn"><span>নতুন পাসওয়ার্ড লাগে না</span><span>ডেটা আপনার নিজের Drive-এ</span><span>ইন্টারনেট ছাড়াও চলে</span><span>বাংলা ও English</span></div>
     </div>
-
-    <div class="phone" aria-label="Sample dashboard">
-      <div class="top"><img src="AmrPotli/icons/icon.svg" alt="" width="26" height="26"> AmrPotli <span class="chip"><span lang="en">✓ Saved to Drive</span><span lang="bn">✓ Drive-এ সেভ</span></span></div>
-      <div class="kp">
-        <div><small lang="en">Income</small><small lang="bn">আয়</small><b style="color:var(--ok)">28,500</b></div>
-        <div><small lang="en">Expenses</small><small lang="bn">খরচ</small><b style="color:#c2410c">9,840</b></div>
-        <div><small lang="en">Spendable now</small><small lang="bn">এখন খরচযোগ্য</small><b>41,260</b></div>
-        <div><small lang="en">Net saved</small><small lang="bn">নিট সঞ্চয়</small><b>18,660</b></div>
-      </div>
-      <div class="bar"><span lang="en">Food budget</span><span lang="bn">খাবারের বাজেট</span><span>1,680 / 2,000</span></div>
-      <div class="track"><i class="warn" style="width:84%"></i></div>
-      <div class="bar"><span lang="en">Savings goal</span><span lang="bn">সঞ্চয়ের লক্ষ্য</span><span>18,660 / 20,000</span></div>
-      <div class="track"><i style="width:93%"></i></div>
-      <div class="loanrow">
-        <div><b lang="en">bKash loan</b><b lang="bn">bKash লোন</b><em lang="en">Installment 2 of 3 · due in 4 days</em><em lang="bn">৩টির মধ্যে ২ নম্বর কিস্তি · ৪ দিন বাকি</em></div>
-        <span class="tag"><span lang="en">Repay</span><span lang="bn">শোধ করুন</span></span>
-      </div>
-      <div class="sample" lang="en">Sample numbers</div>
-      <div class="sample" lang="bn">উদাহরণের সংখ্যা</div>
+    <div class="hero-shots">
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-dash.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-dash.jpg" alt="" loading="lazy" width="390" height="780"></div></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-baki.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-baki.jpg" alt="" loading="lazy" width="390" height="780"></div></figure>
     </div>
   </div>
 </header>
 
-<!-- ============================================================ PROBLEM -->
+<!-- ============================================================ WHO -->
+<section class="block alt" id="who">
+  <div class="wrap">
+    <div class="kicker"><span lang="en">Find your guide</span><span lang="bn">আপনার জন্য গাইড</span></div>
+    <h2><span lang="en">Who are you? AmrPotli sets itself up for you.</span><span lang="bn">আপনি কে? আমার পোটলি আপনার মতো করে সাজবে।</span></h2>
+    <p class="sub"><span lang="en">Tell the app what you do when you start. It picks the right categories, wallets and screens, and each guide below shows the rest step by step.</span><span lang="bn">শুরুতে বলুন আপনি কী করেন। অ্যাপ নিজেই ঠিক ক্যাটাগরি, ওয়ালেট আর স্ক্রিন বেছে নেবে। নিচের গাইডে বাকিটা ধাপে ধাপে দেখানো আছে।</span></p>
+    <div class="guide-cards">
+      <a class="gcard" href="guides/student.html"><span class="e">🎓</span><b><span lang="en">Students</span><span lang="bn">শিক্ষার্থী</span></b><span><span lang="en">Allowance, tuition income, hostel and mess, money lent to friends.</span><span lang="bn">হাতখরচ, টিউশনির আয়, হল-মেস, বন্ধুকে ধার।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+      <a class="gcard" href="guides/job.html"><span class="e">💼</span><b><span lang="en">Job holders</span><span lang="bn">চাকরিজীবী</span></b><span><span lang="en">Salary day, rent and bills every month, DPS and savings goals.</span><span lang="bn">বেতনের দিন, প্রতি মাসের ভাড়া-বিল, ডিপিএস আর সঞ্চয়।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+      <a class="gcard" href="guides/freelancer.html"><span class="e">🧑‍💻</span><b><span lang="en">Freelancers</span><span lang="bn">ফ্রিল্যান্সার</span></b><span><span lang="en">Payments that come and go, bank to bKash charges, tools and tax.</span><span lang="bn">অনিয়মিত আয়, ব্যাংক থেকে বিকাশের চার্জ, টুলস আর ট্যাক্স।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+      <a class="gcard" href="guides/home.html"><span class="e">🏠</span><b><span lang="en">Running a home</span><span lang="bn">সংসার চালান যারা</span></b><span><span lang="en">Big buttons, speak to add, bazar and bills. Made for our mothers.</span><span lang="bn">বড় বোতাম, মুখে বলে হিসাব, বাজার আর বিল। মায়েদের জন্য বানানো।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+      <a class="gcard" href="guides/shop.html"><span class="e">🛒</span><b><span lang="en">Shop owners</span><span lang="bn">দোকানদার</span></b><span><span lang="en">Sales, baki khata, suppliers, stock purchases and WhatsApp reminders.</span><span lang="bn">বিক্রি, বাকির খাতা, সাপ্লায়ার, মাল কেনা আর WhatsApp-এ তাগাদা।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+      <a class="gcard" href="guides/business.html"><span class="e">💊</span><b><span lang="en">Pharmacy, farm &amp; other business</span><span lang="bn">ফার্মেসি, খামার ও অন্য ব্যবসা</span></b><span><span lang="en">Pharmacy, poultry and fish farms, computer &amp; photocopy shops and more.</span><span lang="bn">ফার্মেসি, মুরগি-মাছের খামার, কম্পিউটার ও ফটোকপির দোকান আরও অনেক।</span></span><em><span lang="en">Read the guide →</span><span lang="bn">গাইড পড়ুন →</span></em></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FAST -->
+<section class="block" id="fast">
+  <div class="wrap">
+    <div class="kicker"><span lang="en">Writing it down takes seconds</span><span lang="bn">লিখতে লাগে কয়েক সেকেন্ড</span></div>
+    <h2><span lang="en">The quickest way to keep a khata.</span><span lang="bn">খাতা রাখার সবচেয়ে সহজ উপায়।</span></h2>
+    <p class="sub"><span lang="en">Most people stop tracking because writing everything down is a chore. AmrPotli gives you four ways to add an entry, so it never is.</span><span lang="bn">সব লিখে রাখা ঝামেলা, তাই বেশিরভাগ মানুষ হিসাব রাখা ছেড়ে দেন। আমার পোটলিতে এন্ট্রি দেওয়ার চারটি উপায় আছে, তাই ঝামেলা নেই।</span></p>
+    <div class="grid">
+      <div class="card"><div class="ic">🎤</div><h3><span lang="en">Just say it</span><span lang="bn">মুখে বলুন</span></h3><p><span lang="en">“ডিম দেড়শো, মাছ সাড়ে চারশো” becomes ৳600 with both items in the note.</span><span lang="bn">“ডিম দেড়শো, মাছ সাড়ে চারশো” বললেই ৳৬০০, নোটে দুটো জিনিসই লেখা।</span></p></div>
+      <div class="card"><div class="ic">📋</div><h3><span lang="en">Paste the SMS</span><span lang="bn">SMS পেস্ট করুন</span></h3><p><span lang="en">bKash, Nagad or bank SMS fills the amount, date, account and category, and remembers the shop next time.</span><span lang="bn">বিকাশ, নগদ বা ব্যাংকের SMS থেকে টাকা, তারিখ, অ্যাকাউন্ট আর ক্যাটাগরি বসে যায়; পরের বার দোকানটাও মনে রাখে।</span></p></div>
+      <div class="card"><div class="ic">🧮</div><h3><span lang="en">Built-in calculator</span><span lang="bn">ক্যালকুলেটর সাথেই</span></h3><p><span lang="en">Type 60+80+150 and save one entry of ৳290. The parts stay in the note.</span><span lang="bn">৬০+৮০+১৫০ লিখুন, একটি এন্ট্রিতে ৳২৯০। ভাগগুলো নোটে থেকে যায়।</span></p></div>
+      <div class="card"><div class="ic">📷</div><h3><span lang="en">Photo of the memo</span><span lang="bn">মেমোর ছবি</span></h3><p><span lang="en">Snap the receipt or supplier memo and keep it with the entry, in your own Drive.</span><span lang="bn">রসিদ বা সাপ্লায়ারের মেমোর ছবি তুলে এন্ট্রির সাথে রাখুন, আপনার নিজের Drive-এ।</span></p></div>
+    </div>
+    <div class="shots" style="margin-top:28px">
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-voice.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-voice.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Speak in Bangla</span><span lang="bn">বাংলায় বলুন</span></figcaption></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-sms.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-sms.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Paste a bKash SMS</span><span lang="bn">বিকাশের SMS পেস্ট</span></figcaption></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-calc.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-calc.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Add up as you type</span><span lang="bn">লিখতে লিখতে যোগ</span></figcaption></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-receipt.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-receipt.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Keep the memo</span><span lang="bn">মেমো রেখে দিন</span></figcaption></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-simple.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-simple.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Simple screen for home</span><span lang="bn">সংসারের সহজ স্ক্রিন</span></figcaption></figure>
+      <figure class="shot"><div class="frame"><img lang="en" src="assets/guide/en-customer.jpg" alt="" loading="lazy" width="390" height="780"><img lang="bn" src="assets/guide/bn-customer.jpg" alt="" loading="lazy" width="390" height="780"></div><figcaption><span lang="en">Baki khata with reminders</span><span lang="bn">তাগাদাসহ বাকির খাতা</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ PROBLEMS -->
 <section class="block alt" id="problem">
   <div class="wrap">
-    <div class="kicker"><span lang="en">The problem</span><span lang="bn">সমস্যাটা কী</span></div>
-    <h2><span lang="en">Our money is everywhere, so we lose track of it.</span><span lang="bn">টাকা ছড়িয়ে থাকে নানা জায়গায়, তাই হিসাব হারিয়ে যায়।</span></h2>
-    <p class="sub" lang="en">Most of us earn, spend, lend and borrow across many places at once. By the end of the month it is hard to say where the money went.</p>
-    <p class="sub" lang="bn">আমরা একসাথে অনেক জায়গায় আয়, খরচ, ধার দেওয়া-নেওয়া করি। মাস শেষে বলা কঠিন হয়ে যায় টাকাগুলো কোথায় গেল।</p>
-    <div class="grid five">
-      <div class="card"><div class="ic red">🧩</div>
-        <h3 lang="en">Scattered across accounts</h3><h3 lang="bn">টাকা নানা অ্যাকাউন্টে ছড়ানো</h3>
-        <p lang="en">Bank, cash in hand, bKash, Nagad. There is no single view of how much you actually have right now.</p>
-        <p lang="bn">ব্যাংক, হাতের ক্যাশ, bKash, Nagad। এই মুহূর্তে আসলে কত টাকা আছে, এক জায়গায় দেখার উপায় নেই।</p></div>
-      <div class="card"><div class="ic red">💸</div>
-        <h3 lang="en">Hidden costs add up</h3><h3 lang="bn">লুকানো খরচ জমে যায়</h3>
-        <p lang="en">Cash-out charges, transfer fees and loan interest quietly eat your money, and they rarely get written down.</p>
-        <p lang="bn">ক্যাশ-আউট চার্জ, ট্রান্সফার ফি আর লোনের সুদ চুপচাপ টাকা কমিয়ে দেয়, অথচ সেগুলো খুব কমই লেখা হয়।</p></div>
-      <div class="card"><div class="ic red">🤝</div>
-        <h3 lang="en">Loans between people get forgotten</h3><h3 lang="bn">মানুষের মধ্যে ধার-দেনা ভুলে যাওয়া হয়</h3>
-        <p lang="en">Money lent to a friend or borrowed from family is kept in memory. Months later nobody remembers the exact amount.</p>
-        <p lang="bn">বন্ধুকে দেওয়া বা পরিবার থেকে নেওয়া টাকা শুধু মনে রাখা হয়। কয়েক মাস পর ঠিক কত, কারো মনে থাকে না।</p></div>
-      <div class="card"><div class="ic red">📄</div>
-        <h3 lang="en">Paperwork at the last minute</h3><h3 lang="bn">শেষ মুহূর্তে কাগজপত্রের ঝামেলা</h3>
-        <p lang="en">Scholarships, tax returns, visa and loan applications ask for income, expenses and assets, and we scramble to put them together.</p>
-        <p lang="bn">বৃত্তি, আয়কর রিটার্ন, ভিসা বা লোনের আবেদনে আয়, খরচ আর সম্পদের হিসাব লাগে, আর আমরা তাড়াহুড়ো করে জোগাড় করি।</p></div>
-      <div class="card"><div class="ic red">📱</div>
-        <h3 lang="en">Tools that don't fit</h3><h3 lang="bn">যে টুলগুলো মানানসই নয়</h3>
-        <p lang="en">Spreadsheets are clumsy on a phone. Most apps are English-only, built for credit cards, or keep your money data on their own servers.</p>
-        <p lang="bn">ফোনে স্প্রেডশিট চালানো ঝামেলার। বেশিরভাগ অ্যাপ শুধু ইংরেজিতে, ক্রেডিট কার্ডের জন্য বানানো, বা আপনার টাকার তথ্য নিজেদের সার্ভারে রাখে।</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================ NEEDS -->
-<section class="block">
-  <div class="wrap">
-    <div class="kicker"><span lang="en">What needs to change</span><span lang="bn">কী দরকার</span></div>
-    <h2><span lang="en">A good money tool for us should…</span><span lang="bn">আমাদের জন্য ভালো একটি হিসাবের অ্যাপের থাকা উচিত…</span></h2>
-    <ul class="needs">
-      <li><span class="n">1</span><div><b lang="en">Show all money in one place</b><b lang="bn">সব টাকা এক জায়গায় দেখানো</b>
-        <span lang="en">Bank, cash, mobile wallets, investments, and what you owe or are owed.</span><span lang="bn">ব্যাংক, ক্যাশ, মোবাইল ওয়ালেট, বিনিয়োগ, আর দেনা-পাওনা।</span></div></li>
-      <li><span class="n">2</span><div><b lang="en">Take seconds to record</b><b lang="bn">কয়েক সেকেন্ডে লেখা যায়</b>
-        <span lang="en">On a phone, even without internet.</span><span lang="bn">ফোনে, ইন্টারনেট না থাকলেও।</span></div></li>
-      <li><span class="n">3</span><div><b lang="en">Count fees and interest honestly</b><b lang="bn">ফি আর সুদ ঠিকঠাক হিসাব করা</b>
-        <span lang="en">So the balance on screen matches reality.</span><span lang="bn">যাতে স্ক্রিনের ব্যালেন্স আসলের সাথে মেলে।</span></div></li>
-      <li><span class="n">4</span><div><b lang="en">Track loans until they are paid</b><b lang="bn">লোন শোধ হওয়া পর্যন্ত মনে রাখা</b>
-        <span lang="en">Including installments and due dates.</span><span lang="bn">কিস্তি আর শেষ তারিখসহ।</span></div></li>
-      <li><span class="n">5</span><div><b lang="en">Have documents ready</b><b lang="bn">কাগজপত্র তৈরি রাখা</b>
-        <span lang="en">Statements and summaries in a minute, when life asks for them.</span><span lang="bn">দরকার হলে এক মিনিটে স্টেটমেন্ট আর সারাংশ।</span></div></li>
-      <li><span class="n">6</span><div><b lang="en">Keep your data yours</b><b lang="bn">আপনার তথ্য আপনারই থাকা</b>
-        <span lang="en">Not on a company's server, not shown to anyone else.</span><span lang="bn">কোনো কোম্পানির সার্ভারে নয়, আর কেউ দেখবে না।</span></div></li>
-      <li><span class="n">7</span><div><b lang="en">Speak your language</b><b lang="bn">আপনার ভাষায় কথা বলা</b>
-        <span lang="en">Bangla or English, with the words people actually use.</span><span lang="bn">বাংলা বা English, মানুষ যে শব্দগুলো আসলে ব্যবহার করে।</span></div></li>
-    </ul>
-  </div>
-</section>
-
-<!-- ============================================================ SOLUTION -->
-<section class="block alt" id="solution">
-  <div class="wrap">
-    <div class="solution">
-      <div class="potli">
-        <img src="AmrPotli/icons/icon.svg" alt="AmrPotli logo, a cloth money pouch" width="160" height="160">
-        <p lang="en"><b>AmrPotli · আমার পোটলি</b> means "my pouch", after the cloth potli Bengali families kept their savings in.</p>
-        <p lang="bn"><b>AmrPotli · আমার পোটলি</b> — নামটা এসেছে সেই কাপড়ের পোটলি থেকে, যেখানে বাঙালি পরিবার সঞ্চয় রাখত।</p>
-      </div>
-      <div>
-        <div class="kicker"><span lang="en">Our solution</span><span lang="bn">আমাদের সমাধান</span></div>
-        <h2><span lang="en">One private pouch for all your money.</span><span lang="bn">আপনার সব টাকার জন্য একটি প্রাইভেট পোটলি।</span></h2>
-        <p class="sub" lang="en">AmrPotli is a web app that works like a phone app. Open it, sign in with Google, and keep a clear record of everything: what you have, what you spend, what you owe and what is owed to you.</p>
-        <p class="sub" lang="bn">AmrPotli একটি ওয়েব অ্যাপ, যা ফোনের অ্যাপের মতোই চলে। খুলুন, Google দিয়ে সাইন ইন করুন, আর সবকিছুর পরিষ্কার হিসাব রাখুন: কী আছে, কী খরচ হলো, কার কাছে দেনা, কার কাছে পাওনা।</p>
-        <div class="cta"><a class="btn primary" href="AmrPotli/"><span lang="en">Open AmrPotli</span><span lang="bn">AmrPotli খুলুন</span></a></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================ TOUR -->
-<section class="block" id="tour">
-  <div class="wrap">
-    <div class="kicker"><span lang="en">Take a quick tour</span><span lang="bn">এক নজরে ঘুরে দেখুন</span></div>
-    <h2><span lang="en">See what AmrPotli looks like</span><span lang="bn">দেখুন AmrPotli দেখতে কেমন</span></h2>
-    <p class="sub" lang="en">Real screens from the app, filled with a made-up example person. Swipe to see more on a phone.</p>
-    <p class="sub" lang="bn">অ্যাপের আসল স্ক্রিন, একজন কাল্পনিক ব্যবহারকারীর উদাহরণ দিয়ে। ফোনে সরিয়ে আরও দেখুন।</p>
-    <div class="tour">
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-dashboard.jpg" alt="Everything at a glance" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-dashboard.jpg" alt="এক নজরে সব" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Everything at a glance</b><b lang="bn">এক নজরে সব</b><span lang="en">Income, expenses, savings rate, your goal and net worth for the month.</span><span lang="bn">মাসের আয়, খরচ, সঞ্চয়ের হার, লক্ষ্য আর মোট সম্পদ।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-add.jpg" alt="Add in seconds" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-add.jpg" alt="কয়েক সেকেন্ডে যোগ" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Add in seconds</b><b lang="bn">কয়েক সেকেন্ডে যোগ</b><span lang="en">Expense, income, transfer or loan. Service charges are suggested at your last rate.</span><span lang="bn">খরচ, আয়, ট্রান্সফার বা লোন। সার্ভিস চার্জ আগের হারে নিজেই বসে যায়।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-budgets.jpg" alt="Budgets that warn you" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-budgets.jpg" alt="বাজেট যা সতর্ক করে" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Budgets that warn you</b><b lang="bn">বাজেট যা সতর্ক করে</b><span lang="en">Each category turns amber near its limit and red when it goes over.</span><span lang="bn">সীমার কাছে গেলে হলুদ, পেরোলে লাল।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-loans.jpg" alt="Loans and installments" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-loans.jpg" alt="লোন আর কিস্তি" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Loans and installments</b><b lang="bn">লোন আর কিস্তি</b><span lang="en">Who owes whom, due dates and one-tap Repay or Got back.</span><span lang="bn">কে কার কাছে কত, শেষ তারিখ, আর এক চাপে শোধ বা ফেরত।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-transactions.jpg" alt="Every taka, searchable" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-transactions.jpg" alt="প্রতিটি টাকা খুঁজে পান" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Every taka, searchable</b><b lang="bn">প্রতিটি টাকা খুঁজে পান</b><span lang="en">Filter by month, type or account, and search your notes.</span><span lang="bn">মাস, ধরন বা অ্যাকাউন্ট দিয়ে ফিল্টার করুন, নোটে খুঁজুন।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-reports.jpg" alt="Statements on demand" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-reports.jpg" alt="দরকারমতো স্টেটমেন্ট" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Statements on demand</b><b lang="bn">দরকারমতো স্টেটমেন্ট</b><span lang="en">Five ready-made documents for forms, tax and loans.</span><span lang="bn">ফর্ম, ট্যাক্স আর লোনের জন্য পাঁচটি তৈরি ডকুমেন্ট।</span></figcaption>
-      </figure>
-      <figure class="shot">
-        <div class="frame"><img lang="en" src="assets/tour/en-night.jpg" alt="Night mode and বাংলা" loading="lazy" width="390" height="780"><img lang="bn" src="assets/tour/bn-night.jpg" alt="রাতের মোড আর English" loading="lazy" width="390" height="780"></div>
-        <figcaption><b lang="en">Night mode and বাংলা</b><b lang="bn">রাতের মোড আর English</b><span lang="en">Easy on the eyes at night, in the language you prefer.</span><span lang="bn">রাতে চোখের আরাম, আপনার পছন্দের ভাষায়।</span></figcaption>
-      </figure>
-    </div>
-    <figure class="doc">
-      <img src="assets/tour/en-statement.jpg" alt="Sample account statement printed from AmrPotli" loading="lazy" width="860" height="1100">
-      <figcaption><b lang="en">A real statement, ready to print or save as PDF</b><b lang="bn">প্রিন্ট বা PDF করার মতো আসল স্টেটমেন্ট</b>
-        <span lang="en">Opening and closing balance, every transaction with a running balance, your name and an optional signature line. Documents are in English.</span>
-        <span lang="bn">শুরু ও শেষের ব্যালেন্স, প্রতিটি লেনদেনের পর ব্যালেন্স, আপনার নাম আর চাইলে স্বাক্ষরের জায়গা। ডকুমেন্টগুলো ইংরেজিতে থাকে।</span></figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- ============================================================ HOW IT SOLVES -->
-<section class="block" id="how">
-  <div class="wrap">
-    <div class="kicker"><span lang="en">How it solves each problem</span><span lang="bn">কীভাবে প্রতিটি সমস্যার সমাধান করে</span></div>
-    <h2><span lang="en">From problem to feature</span><span lang="bn">সমস্যা থেকে সমাধান</span></h2>
-    <p class="sub" lang="en">Every feature in AmrPotli exists because of a real, everyday money problem.</p>
-    <p class="sub" lang="bn">AmrPotli-র প্রতিটি ফিচার এসেছে দৈনন্দিন টাকার কোনো বাস্তব সমস্যা থেকে।</p>
-    <div class="map">
-      <div class="row">
-        <div class="pr"><b lang="en">"How much do I actually have?"</b><b lang="bn">"আসলে আমার কাছে কত আছে?"</b><span lang="en">Money split across bank, cash and wallets.</span><span lang="bn">টাকা ব্যাংক, ক্যাশ আর ওয়ালেটে ভাগ হয়ে আছে।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">One Dashboard</b><b lang="bn">একটি Dashboard</b><span lang="en">Spendable money, money lent out, investments, what you owe and your net worth, always up to date.</span><span lang="bn">খরচযোগ্য টাকা, ধার দেওয়া টাকা, বিনিয়োগ, দেনা আর মোট সম্পদ — সবসময় হালনাগাদ।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"I forget to write it down."</b><b lang="bn">"লিখে রাখতে ভুলে যাই।"</b><span lang="en">Recording feels like work.</span><span lang="bn">লিখে রাখাটা কাজের মতো লাগে।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Add in seconds, even offline</b><b lang="bn">কয়েক সেকেন্ডে যোগ, অফলাইনেও</b><span lang="en">Tap +, choose Expense, Income, Transfer or Loan, done. It syncs when you are back online.</span><span lang="bn">+ চাপুন, খরচ, আয়, ট্রান্সফার বা লোন বাছুন, ব্যস। ইন্টারনেট এলে নিজে থেকেই Sync হয়।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"Where did the extra go?"</b><b lang="bn">"বাড়তি টাকা কোথায় গেল?"</b><span lang="en">Cash-out and transfer charges.</span><span lang="bn">ক্যাশ-আউট আর ট্রান্সফার চার্জ।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Service charges counted</b><b lang="bn">সার্ভিস চার্জের হিসাব</b><span lang="en">Add the charge once; next time it suggests the same rate. Fees show as their own spending line.</span><span lang="bn">একবার চার্জ লিখলে পরের বার একই হারে নিজেই বসিয়ে দেয়। ফি আলাদা খরচ হিসেবে দেখায়।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"Who owes whom, and how much?"</b><b lang="bn">"কে কার কাছে কত পাবে?"</b><span lang="en">Informal loans and installments.</span><span lang="bn">ঘরোয়া ধার-দেনা আর কিস্তি।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Loans with due dates and installments</b><b lang="bn">শেষ তারিখ ও কিস্তিসহ লোন</b><span lang="en">Borrowed, lent, repaid and collected, with overdue alerts. Installments fill themselves in; only interest counts as spending.</span><span lang="bn">ধার নেওয়া, দেওয়া, শোধ আর ফেরত — তারিখ পেরোলে সতর্কতা। কিস্তি নিজে থেকে বসে যায়; শুধু সুদ খরচ হিসেবে ধরা হয়।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"I overspend without noticing."</b><b lang="bn">"না বুঝেই বেশি খরচ হয়ে যায়।"</b><span lang="en">No limits, no goal.</span><span lang="bn">কোনো সীমা নেই, লক্ষ্য নেই।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Budgets and a savings goal</b><b lang="bn">বাজেট আর সঞ্চয়ের লক্ষ্য</b><span lang="en">Each category turns amber near its limit and red when it is over. See your savings rate every month.</span><span lang="bn">সীমার কাছে গেলে ক্যাটাগরি হলুদ, পেরোলে লাল হয়। প্রতি মাসে সঞ্চয়ের হার দেখুন।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"I need a statement by tomorrow."</b><b lang="bn">"কালকের মধ্যে স্টেটমেন্ট লাগবে।"</b><span lang="en">Forms ask for income, expenses and assets.</span><span lang="bn">ফর্মে আয়, খরচ আর সম্পদের হিসাব চায়।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Reports as PDF</b><b lang="bn">PDF রিপোর্ট</b><span lang="en">Account statement, income &amp; expense statement, assets &amp; liabilities, annual tax summary (July–June) and loan statements.</span><span lang="bn">অ্যাকাউন্ট স্টেটমেন্ট, আয়-ব্যয়, সম্পদ ও দায়, বার্ষিক ট্যাক্স সারাংশ (জুলাই–জুন) আর লোন স্টেটমেন্ট।</span></div>
-      </div>
-      <div class="row">
-        <div class="pr"><b lang="en">"I don't want my money data on someone's server."</b><b lang="bn">"টাকার তথ্য অন্যের সার্ভারে রাখতে চাই না।"</b><span lang="en">Privacy worries.</span><span lang="bn">গোপনীয়তার চিন্তা।</span></div>
-        <div class="arrow">→</div>
-        <div class="fx"><b lang="en">Stored in your own Google Drive</b><b lang="bn">আপনার নিজের Google Drive-এ রাখা</b><span lang="en">In a private app folder only AmrPotli can open. We have no database and cannot see your records.</span><span lang="bn">একটি প্রাইভেট অ্যাপ ফোল্ডারে, যা শুধু AmrPotli খুলতে পারে। আমাদের কোনো ডেটাবেস নেই, আপনার হিসাব আমরা দেখতে পারি না।</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================ HOW IT WORKS -->
-<section class="block alt">
-  <div class="wrap">
-    <div class="kicker"><span lang="en">How it works</span><span lang="bn">কীভাবে চলে</span></div>
-    <h2><span lang="en">Start in three steps</span><span lang="bn">তিন ধাপে শুরু</span></h2>
-    <p class="sub" lang="en">No download needed. Open it in your phone's browser and add it to your home screen.</p>
-    <p class="sub" lang="bn">কিছু ডাউনলোড করতে হবে না। ফোনের ব্রাউজারে খুলুন, তারপর হোম স্ক্রিনে যোগ করুন।</p>
-    <div class="steps">
-      <div class="card"><h3 lang="en">Sign in with Google</h3><h3 lang="bn">Google দিয়ে সাইন ইন</h3>
-        <p lang="en">Open AmrPotli and sign in. Allow it to keep its own data in your Drive.</p>
-        <p lang="bn">AmrPotli খুলে সাইন ইন করুন। আপনার Drive-এ নিজের ডেটা রাখার অনুমতি দিন।</p></div>
-      <div class="card"><h3 lang="en">Add your accounts</h3><h3 lang="bn">অ্যাকাউন্টগুলো যোগ করুন</h3>
-        <p lang="en">Bank, cash in hand, bKash and anything else, with today's balance. Set budgets if you like.</p>
-        <p lang="bn">ব্যাংক, হাতের ক্যাশ, bKash যা আছে, আজকের ব্যালেন্সসহ। চাইলে বাজেটও ঠিক করুন।</p></div>
-      <div class="card"><h3 lang="en">Record as you go</h3><h3 lang="bn">যখন যা হয়, লিখে রাখুন</h3>
-        <p lang="en">Tap + after each payment, transfer or loan. Check the Dashboard; download reports when needed.</p>
-        <p lang="bn">প্রতিটি খরচ, ট্রান্সফার বা লোনের পর + চাপুন। Dashboard দেখুন; দরকার হলে রিপোর্ট নামান।</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================ BENEFITS -->
-<section class="block">
-  <div class="wrap">
-    <div class="kicker"><span lang="en">Benefits</span><span lang="bn">আপনার লাভ</span></div>
-    <h2><span lang="en">What you get</span><span lang="bn">আপনি যা পাবেন</span></h2>
+    <div class="kicker"><span lang="en">Why AmrPotli</span><span lang="bn">কেন আমার পোটলি</span></div>
+    <h2><span lang="en">Made for how money really moves here.</span><span lang="bn">এখানে টাকা যেভাবে চলে, সেভাবেই বানানো।</span></h2>
     <div class="grid three">
-      <div class="card"><div class="ic">😌</div><h3 lang="en">Peace of mind</h3><h3 lang="bn">মানসিক শান্তি</h3>
-        <p lang="en">Always know how much you have and where it is.</p><p lang="bn">সবসময় জানুন কত টাকা আছে আর কোথায় আছে।</p></div>
-      <div class="card"><div class="ic">📈</div><h3 lang="en">Save more</h3><h3 lang="bn">বেশি সঞ্চয়</h3>
-        <p lang="en">See where money leaks, set limits, and watch your savings grow.</p><p lang="bn">দেখুন টাকা কোথায় বেরিয়ে যায়, সীমা ঠিক করুন, সঞ্চয় বাড়তে দেখুন।</p></div>
-      <div class="card"><div class="ic">🤝</div><h3 lang="en">No awkward money talks</h3><h3 lang="bn">টাকা নিয়ে বিব্রতকর আলাপ নয়</h3>
-        <p lang="en">A clear record of every loan, with a statement both sides can sign.</p><p lang="bn">প্রতিটি ধার-দেনার পরিষ্কার হিসাব, দুপক্ষ সই করতে পারে এমন স্টেটমেন্টসহ।</p></div>
-      <div class="card"><div class="ic">🗂️</div><h3 lang="en">Ready for paperwork</h3><h3 lang="bn">কাগজপত্রের জন্য তৈরি</h3>
-        <p lang="en">Statements and a tax-year summary in a minute, as PDF.</p><p lang="bn">এক মিনিটে স্টেটমেন্ট আর আয়বর্ষের সারাংশ, PDF হিসেবে।</p></div>
-      <div class="card"><div class="ic">🔒</div><h3 lang="en">Your data, your control</h3><h3 lang="bn">আপনার তথ্য, আপনার নিয়ন্ত্রণে</h3>
-        <p lang="en">Your records are never sold or shared. Delete them from your Drive any time.</p><p lang="bn">আপনার হিসাব কখনো বিক্রি বা শেয়ার করা হয় না। যখন খুশি Drive থেকে মুছে ফেলুন।</p></div>
-      <div class="card"><div class="ic">📲</div><h3 lang="en">Works anywhere</h3><h3 lang="bn">যেকোনো জায়গায়</h3>
-        <p lang="en">Phone or computer, day or night mode, online or offline. Lose your phone and nothing is lost.</p><p lang="bn">ফোন বা কম্পিউটার, দিন বা রাতের মোড, অনলাইন বা অফলাইন। ফোন হারালেও হিসাব হারায় না।</p></div>
+      <div class="card"><div class="ic">👛</div><h3><span lang="en">Cash, bank and bKash in one place</span><span lang="bn">ক্যাশ, ব্যাংক আর বিকাশ এক জায়গায়</span></h3><p><span lang="en">See what you can spend right now, and move money between them without counting it as spending.</span><span lang="bn">এখন কত খরচ করা যায় দেখুন; এক অ্যাকাউন্ট থেকে অন্যটায় নেওয়াকে খরচ ধরে না।</span></p></div>
+      <div class="card"><div class="ic red">🧾</div><h3><span lang="en">Hidden charges counted</span><span lang="bn">লুকানো চার্জও হিসাবে</span></h3><p><span lang="en">Cash-out and transfer charges count as spending. Add one once and AmrPotli suggests it next time, so the small amounts don't vanish.</span><span lang="bn">ক্যাশ আউট আর ট্রান্সফারের চার্জ খরচ হিসেবে ধরা হয়। একবার লিখলে পরের বার অ্যাপ নিজেই দেখায়, ছোট টাকাগুলো হারায় না।</span></p></div>
+      <div class="card"><div class="ic amber">🤝</div><h3><span lang="en">Loans and baki never forgotten</span><span lang="bn">ধার আর বাকি ভুলবেন না</span></h3><p><span lang="en">Who owes you, whom you owe, installments and due dates, and a WhatsApp reminder in one tap.</span><span lang="bn">কে পাবে, কাকে দেবেন, কিস্তি আর তারিখ, আর এক চাপে WhatsApp-এ তাগাদা।</span></p></div>
+      <div class="card"><div class="ic">🗓️</div><h3><span lang="en">Rent and bills remembered</span><span lang="bn">ভাড়া আর বিল মনে থাকে</span></h3><p><span lang="en">Set it to repeat once; AmrPotli reminds you each month and adds it with one tap.</span><span lang="bn">একবার রিপিট করে দিন; প্রতি মাসে মনে করিয়ে দেবে, এক চাপে যোগ হবে।</span></p></div>
+      <div class="card"><div class="ic">📄</div><h3><span lang="en">Papers when you need them</span><span lang="bn">দরকারে কাগজ তৈরি</span></h3><p><span lang="en">Account statements, income and expense, assets, tax summary and loan statements, ready to print.</span><span lang="bn">অ্যাকাউন্ট স্টেটমেন্ট, আয়-ব্যয়, সম্পদ, ট্যাক্স সারাংশ আর ধারের স্টেটমেন্ট, প্রিন্টের জন্য তৈরি।</span></p></div>
+      <div class="card"><div class="ic">🛟</div><h3><span lang="en">Mistakes are easy to undo</span><span lang="bn">ভুল ঠিক করা সহজ</span></h3><p><span lang="en">Deleted by mistake? Tap Undo. Typed one zero too many? The app asks before saving.</span><span lang="bn">ভুল করে মুছেছেন? “ফিরিয়ে আনুন” চাপুন। একটা শূন্য বেশি দিলেন? সেভের আগে অ্যাপ জিজ্ঞেস করবে।</span></p></div>
     </div>
+    <p style="margin-top:22px"><a class="btn" href="features.html"><span lang="en">See all features →</span><span lang="bn">সব ফিচার দেখুন →</span></a></p>
   </div>
 </section>
 
 <!-- ============================================================ PRIVACY -->
-<section class="block alt" id="privacy">
+<section class="block" id="privacy">
   <div class="wrap privacy">
     <div>
-      <div class="kicker"><span lang="en">Privacy by design</span><span lang="bn">শুরু থেকেই প্রাইভেসি</span></div>
+      <div class="kicker"><span lang="en">Privacy</span><span lang="bn">প্রাইভেসি</span></div>
       <h2><span lang="en">Nobody else can see your money. Not even us.</span><span lang="bn">আপনার টাকার হিসাব আর কেউ দেখতে পারে না। আমরাও না।</span></h2>
-      <p class="sub" lang="en">Most finance apps send your records to their servers. AmrPotli has no server and no database: everything is saved in a hidden app folder in your own Google Drive, plus a copy on your device for speed.</p>
-      <p class="sub" lang="bn">বেশিরভাগ অ্যাপ আপনার হিসাব নিজেদের সার্ভারে পাঠায়। AmrPotli-র কোনো সার্ভার বা ডেটাবেস নেই: সবকিছু থাকে আপনার নিজের Google Drive-এর একটি লুকানো অ্যাপ ফোল্ডারে, আর দ্রুততার জন্য একটি কপি আপনার ডিভাইসে।</p>
-      <a href="AmrPotli/privacy.html"><span lang="en">Read the privacy policy →</span><span lang="bn">প্রাইভেসি পলিসি পড়ুন →</span></a>
+      <p class="sub" lang="en">AmrPotli has no server or database of its own. Your records, and your receipt photos, are saved in a private folder in
+        your own Google Drive that only this app can open. We will never ask for your bank details, bKash PIN or OTP.</p>
+      <p class="sub" lang="bn">আমার পোটলির নিজের কোনো সার্ভার বা ডেটাবেস নেই। আপনার হিসাব আর রসিদের ছবি থাকে আপনার নিজের Google Drive-এর
+        একটি গোপন ফোল্ডারে, যা শুধু এই অ্যাপ খুলতে পারে। আমরা কখনো আপনার ব্যাংকের তথ্য, বিকাশের পিন বা OTP চাইব না।</p>
+      <p><a href="AmrPotli/privacy.html"><span lang="en">Read the privacy policy →</span><span lang="bn">প্রাইভেসি পলিসি পড়ুন →</span></a> · <a href="AmrPotli/terms.html"><span lang="en">Terms of use</span><span lang="bn">ব্যবহারের শর্তাবলি</span></a></p>
     </div>
     <div class="flow">
-      <div><span class="x">✕</span><span lang="en">Your records on a company server</span><span lang="bn">আপনার হিসাব কোনো কোম্পানির সার্ভারে</span></div>
-      <div><span class="x">✕</span><span lang="en">Your spending data sold or shared</span><span lang="bn">আপনার খরচের তথ্য বিক্রি বা শেয়ার</span></div>
-      <div><span class="y">✓</span><span lang="en">Your phone ⇄ your own Google Drive</span><span lang="bn">আপনার ফোন ⇄ আপনার নিজের Google Drive</span></div>
-      <div><span class="y">✓</span><span lang="en">No AmrPotli server or database holding your records</span><span lang="bn">আপনার হিসাব রাখার মতো AmrPotli-র কোনো সার্ভার বা ডেটাবেস নেই</span></div>
+      <div><span class="y">✓</span><span lang="en">Your phone → your own Google Drive</span><span lang="bn">আপনার ফোন → আপনার নিজের Google Drive</span></div>
+      <div><span class="y">✓</span><span lang="en">Works offline, syncs when you're back online</span><span lang="bn">ইন্টারনেট ছাড়াও চলে, নেট এলে Sync হয়</span></div>
+      <div><span class="y">✓</span><span lang="en">PIN or fingerprint lock, if you share your phone</span><span lang="bn">ফোন অন্যরা ধরলে পিন বা আঙুলের ছাপের লক</span></div>
+      <div><span class="x">✗</span><span lang="en">No AmrPotli server, no ads, no selling data</span><span lang="bn">AmrPotli-র সার্ভার নেই, বিজ্ঞাপন নেই, তথ্য বিক্রি নেই</span></div>
     </div>
   </div>
 </section>
 
-<!-- ============================================================ WHO + FAQ -->
-<section class="block">
+<!-- ============================================================ START -->
+<section class="block alt">
   <div class="wrap">
-    <div class="kicker"><span lang="en">Who it's for</span><span lang="bn">কাদের জন্য</span></div>
-    <h2><span lang="en">Made for everyday people</span><span lang="bn">সাধারণ মানুষের জন্য তৈরি</span></h2>
-    <div class="who" lang="en"><span>🎓 Students</span><span>📚 Tuition teachers</span><span>💼 Young professionals</span><span>🏠 Families</span><span>💻 Freelancers</span><span>🛍️ Small traders</span></div>
-    <div class="who" lang="bn"><span>🎓 শিক্ষার্থী</span><span>📚 টিউশন শিক্ষক</span><span>💼 তরুণ চাকরিজীবী</span><span>🏠 পরিবার</span><span>💻 ফ্রিল্যান্সার</span><span>🛍️ ছোট ব্যবসায়ী</span></div>
-
-    <h2 style="margin-top:44px"><span lang="en">Questions</span><span lang="bn">প্রশ্ন ও উত্তর</span></h2>
-    <div lang="en">
-      <details><summary>How much does it cost?</summary><p>You can start using AmrPotli today at no cost. Optional paid features may come later; we will always tell you clearly before anything costs money.</p></details>
-      <details><summary>Can you see my data?</summary><p>No. Your records are saved in your own Google Drive in a folder only the app can open. There is no AmrPotli server or database.</p></details>
-      <details><summary>Do I need to install anything?</summary><p>No, it works in any browser. To have it on your home screen like any other app, tap <a href="AmrPotli/?install">📲 Install the app</a>: it takes a few seconds, needs no Play Store, and works offline.</p></details>
-      <details><summary>What if I lose my phone?</summary><p>Sign in on the new phone with the same Google account and everything comes back from your Drive.</p></details>
-      <details><summary>Does it work without internet?</summary><p>Yes. Entries are saved on your device and sync to Drive when you are back online.</p></details>
-      <details><summary>Are the reports official documents?</summary><p>They are your own records, neatly formatted. Banks and embassies may still ask for a bank-stamped statement, so use AmrPotli reports as a summary or supporting document.</p></details>
+    <div class="kicker"><span lang="en">Get started</span><span lang="bn">শুরু করুন</span></div>
+    <h2><span lang="en">Ready in two minutes.</span><span lang="bn">দুই মিনিটেই তৈরি।</span></h2>
+    <div class="grid three">
+      <div class="card"><div class="ic">1</div><h3><span lang="en">Sign in with Google</span><span lang="bn">Google দিয়ে সাইন ইন</span></h3><p><span lang="en">No new password. Your data goes to your own Drive.</span><span lang="bn">নতুন পাসওয়ার্ড লাগে না। ডেটা যায় আপনার নিজের Drive-এ।</span></p></div>
+      <div class="card"><div class="ic">2</div><h3><span lang="en">Answer a few questions</span><span lang="bn">কয়েকটা প্রশ্নের উত্তর দিন</span></h3><p><span lang="en">What you do, where your money is, what you spend on. The app sets itself up.</span><span lang="bn">আপনি কী করেন, টাকা কোথায় থাকে, কীসে খরচ হয়। অ্যাপ নিজেই সেজে যাবে।</span></p></div>
+      <div class="card"><div class="ic">3</div><h3><span lang="en">Add as you go</span><span lang="bn">যখন যা হয়, লিখে রাখুন</span></h3><p><span lang="en">Speak, type or paste. Your daily streak shows the habit forming.</span><span lang="bn">বলুন, লিখুন বা পেস্ট করুন। প্রতিদিনের ধারাবাহিকতা অভ্যাস গড়ে দেয়।</span></p></div>
     </div>
-    <div lang="bn">
-      <details><summary>খরচ কত?</summary><p>আজ থেকেই কোনো খরচ ছাড়া AmrPotli ব্যবহার শুরু করতে পারেন। ভবিষ্যতে কিছু ঐচ্ছিক পেইড ফিচার আসতে পারে; কোনো কিছুর জন্য টাকা লাগলে আমরা আগেই পরিষ্কার করে জানাব।</p></details>
-      <details><summary>আপনারা কি আমার তথ্য দেখতে পারেন?</summary><p>না। আপনার হিসাব থাকে আপনার নিজের Google Drive-এ, এমন ফোল্ডারে যা শুধু অ্যাপ খুলতে পারে। AmrPotli-র কোনো সার্ভার বা ডেটাবেস নেই।</p></details>
-      <details><summary>কিছু ইনস্টল করতে হবে?</summary><p>না, যেকোনো ব্রাউজারে চলে। অন্য অ্যাপের মতো হোম স্ক্রিনে রাখতে <a href="AmrPotli/?install">📲 অ্যাপ ইনস্টল করুন</a> চাপুন: কয়েক সেকেন্ড লাগে, Play Store লাগে না, ইন্টারনেট ছাড়াও চলে।</p></details>
-      <details><summary>ফোন হারিয়ে গেলে?</summary><p>নতুন ফোনে একই Google অ্যাকাউন্ট দিয়ে সাইন ইন করুন, Drive থেকে সব ফিরে আসবে।</p></details>
-      <details><summary>ইন্টারনেট ছাড়া চলে?</summary><p>হ্যাঁ। এন্ট্রি আপনার ডিভাইসে সেভ থাকে, ইন্টারনেট এলে Drive-এ Sync হয়।</p></details>
-      <details><summary>রিপোর্টগুলো কি অফিসিয়াল কাগজ?</summary><p>এগুলো আপনার নিজের হিসাব, সুন্দর করে সাজানো। ব্যাংক বা দূতাবাস তবুও ব্যাংকের সিল দেওয়া স্টেটমেন্ট চাইতে পারে, তাই AmrPotli-র রিপোর্ট সারাংশ বা সহায়ক কাগজ হিসেবে ব্যবহার করুন।</p></details>
-    </div>
+    <p style="margin-top:22px"><a href="guides/start.html"><span lang="en">Step-by-step: getting started →</span><span lang="bn">ধাপে ধাপে: শুরু করার গাইড →</span></a></p>
   </div>
 </section>
 
 <!-- ============================================================ FINAL CTA -->
-<section class="block alt final">
+<section class="block final">
   <div class="wrap">
     <h2><span lang="en">Start keeping your potli in order.</span><span lang="bn">আজই আপনার পোটলি গুছিয়ে নিন।</span></h2>
-    <p class="sub" style="margin:0 auto 24px" lang="en">It takes two minutes to set up.</p>
-    <p class="sub" style="margin:0 auto 24px" lang="bn">শুরু করতে দুই মিনিট লাগে।</p>
-    <div class="cta"><a class="btn primary" href="AmrPotli/"><span lang="en">Open AmrPotli</span><span lang="bn">AmrPotli খুলুন</span></a></div>
+    <p class="sub" style="margin:0 auto 24px"><span lang="en">It works in any browser, and installs on your phone in seconds, no Play Store needed.</span><span lang="bn">যেকোনো ব্রাউজারে চলে, কয়েক সেকেন্ডে ফোনে ইনস্টল হয়, Play Store লাগে না।</span></p>
+    <div class="cta"><a class="btn primary" href="AmrPotli/"><span lang="en">Open AmrPotli</span><span lang="bn">আমার পোটলি খুলুন</span></a><a class="btn" href="AmrPotli/?install"><span lang="en">📲 Install</span><span lang="bn">📲 ইনস্টল</span></a></div>
   </div>
 </section>
 
-<footer>
+<footer class="site-foot">
   <div class="wrap">
-    <span>© vgfintrack · AmrPotli</span>
-    <span><a href="AmrPotli/privacy.html"><span lang="en">Privacy</span><span lang="bn">প্রাইভেসি</span></a> ·
-      <a href="AmrPotli/terms.html"><span lang="en">Terms</span><span lang="bn">শর্তাবলি</span></a> ·
-      <a href="mailto:vgfintrack@gmail.com"><span lang="en">Contact</span><span lang="bn">যোগাযোগ</span></a></span>
+    <div class="foot-cols">
+      <div class="foot-brand">
+        <a class="logo" href="./"><img src="AmrPotli/icons/icon.svg" alt="" width="32" height="32">AmrPotli</a>
+        <p><span lang="en">A private money tracker for life and small business in Bangladesh.</span><span lang="bn">বাংলাদেশের জীবন আর ছোট ব্যবসার জন্য প্রাইভেট টাকার হিসাব।</span></p>
+      </div>
+      <div><b><span lang="en">App</span><span lang="bn">অ্যাপ</span></b><a href="AmrPotli/"><span lang="en">Open AmrPotli</span><span lang="bn">AmrPotli খুলুন</span></a><a href="AmrPotli/?install"><span lang="en">📲 Install</span><span lang="bn">📲 ইনস্টল</span></a><a href="features.html"><span lang="en">All features</span><span lang="bn">সব ফিচার</span></a></div>
+      <div><b><span lang="en">Guides</span><span lang="bn">গাইড</span></b><a href="guides/start.html"><span lang="en">Get started</span><span lang="bn">শুরু করুন</span></a><a href="guides/"><span lang="en">Guide for you</span><span lang="bn">আপনার গাইড</span></a><a href="guides/how-to.html"><span lang="en">How to…</span><span lang="bn">কীভাবে করবেন</span></a><a href="faq.html"><span lang="en">Questions</span><span lang="bn">প্রশ্নোত্তর</span></a></div>
+      <div><b><span lang="en">AmrPotli</span><span lang="bn">AmrPotli</span></b><a href="about.html"><span lang="en">About us</span><span lang="bn">আমাদের কথা</span></a><a href="https://docs.google.com/forms/d/e/1FAIpQLSdvSfgm0FSD-HoNBByTHWaTj-Kl_0-zTXREGdng5tHuB1Xkcg/viewform?usp=pp_url&entry.247074758=website" target="_blank" rel="noopener"><span lang="en">Send feedback</span><span lang="bn">মতামত পাঠান</span></a><a href="AmrPotli/privacy.html"><span lang="en">Privacy</span><span lang="bn">প্রাইভেসি</span></a><a href="AmrPotli/terms.html"><span lang="en">Terms of use</span><span lang="bn">ব্যবহারের শর্তাবলি</span></a></div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 vgfintrack · AmrPotli</span>
+      <a href="mailto:vgfintrack@gmail.com">vgfintrack@gmail.com</a>
+    </div>
   </div>
 </footer>
-
-<script>
-  // English / বাংলা switch; the choice is shared with the app.
-  const buttons = document.querySelectorAll('[data-l]');
-  function setLang(l) {
-    document.documentElement.lang = l;
-    buttons.forEach((b) => b.classList.toggle('on', b.dataset.l === l));
-    try { localStorage.setItem('mt:lang', l); } catch {}
-  }
-  buttons.forEach((b) => (b.onclick = () => setLang(b.dataset.l)));
-  setLang(document.documentElement.lang === 'bn' ? 'bn' : 'en');
-</script>
+<script src="assets/site.js"></script>
 </body>
 </html>
