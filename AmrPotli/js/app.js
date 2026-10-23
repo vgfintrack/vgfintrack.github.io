@@ -820,6 +820,7 @@ let editing = null;
 let txnType = 'Expense';
 let smsRef = ''; // transaction ID from a pasted SMS, saved with the entry
 let occ = null; // { rule, date } when adding a due regular payment with changes
+let feeOpen = false; // the service charge box, folded away until it is needed
 
 function setupTxnDialog() {
   $$('#txn-type button').forEach((b) => (b.onclick = () => setTxnType(b.dataset.type)));
@@ -829,6 +830,11 @@ function setupTxnDialog() {
   };
   $('#txn-save-another').onclick = () => saveTxn(true);
   $('#txn-repeat').onchange = updateRepeatHint;
+  $('#txn-fee-add').onclick = () => {
+    feeOpen = true;
+    showFee();
+    $('#txn-fee').focus();
+  };
   $('#txn-dialog').addEventListener('close', () => (occ = null));
   $('#txn-date').addEventListener('change', updateRepeatHint);
   $('#txn-delete').onclick = async () => {
@@ -846,7 +852,10 @@ function setupTxnDialog() {
     delete $('#txn-amount').dataset.auto;
     updateFeeSuggestion();
   };
-  $('#txn-fee').oninput = updateTxnHint;
+  $('#txn-fee').oninput = () => {
+    feeOpen = true; // keep the box while the user edits it, even when emptied
+    updateTxnHint();
+  };
   $('#txn-plan-count').oninput = updateTxnHint;
   $('#txn-plan-interest').oninput = updateTxnHint;
   $('#sms-btn').onclick = openSmsPanel;
@@ -966,6 +975,7 @@ function fillLoanFields(x = null, preset = null) {
   $('#txn-person-label').textContent = t(cfg.person);
   $('#txn-account-label').textContent = t(cfg.money);
   $('#txn-fee-field').hidden = !cfg.interest;
+  $('#txn-fee-add').hidden = true;
   $('#txn-fee-label').innerHTML = cfg.interest ? t('Interest or extra paid <span class="muted">(optional)</span>') : t(FEE_LABEL);
   $('#txn-due-field').hidden = !cfg.due;
   $('#txn-plan-field').hidden = action !== 'borrow';
@@ -1047,7 +1057,7 @@ function setTxnType(type, x = null, preset = null) {
   }
   $('#txn-category-field').hidden = isT;
   $('#txn-to-field').hidden = !isT;
-  $('#txn-fee-field').hidden = type === 'Income';
+  $('#txn-plan-field').hidden = true; // installments belong to "I borrowed money" only
   $('#txn-account-label').textContent = t(type === 'Income' ? 'Received in' : type === 'Expense' ? 'Paid from' : 'From');
 
   const cats = type === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
@@ -1080,7 +1090,8 @@ function updateFeeSuggestion() {
   const from = $('#txn-account').value;
   const to = txnType === 'Transfer' ? $('#txn-to').value : null;
   btn.hidden = true;
-  if (txnType === 'Income' || txnType === 'Loan' || !(amount > 0) || Number($('#txn-fee').value) > 0) return;
+  if (txnType === 'Loan') return;
+  if (txnType === 'Income' || !(amount > 0) || Number($('#txn-fee').value) > 0) return showFee();
   const past = state.data.transactions
     .filter((t) => t.type === txnType && t.account === from && Number(t.fee) > 0 && Number(t.amount) > 0 && t.id !== editing?.id)
     .sort((a, b) => (b.toAccount === to) - (a.toAccount === to) || txnSort(a, b));
@@ -1090,6 +1101,17 @@ function updateFeeSuggestion() {
   btn.dataset.fee = fee;
   btn.textContent = t('Use {amount} · same rate as last time ({rate}%)', { amount: money2(fee), rate: (rate * 100).toFixed(2) });
   btn.hidden = false;
+  showFee();
+}
+
+// Expenses and transfers can carry a charge, but most don't: the box shows
+// when asked for, when it has a value, or when this account had charges before
+// (a bKash cash-out). Income never has one.
+function showFee() {
+  const can = txnType === 'Expense' || txnType === 'Transfer';
+  const show = can && (feeOpen || Number($('#txn-fee').value) > 0 || !$('#txn-fee-suggest').hidden);
+  $('#txn-fee-field').hidden = !show;
+  $('#txn-fee-add').hidden = !can || show;
 }
 
 function updateTxnHint() {
@@ -1169,6 +1191,7 @@ function openTxn(x = null, preset = null) {
   $('#txn-due').value = '';
   $('#txn-plan-count').value = '';
   $('#txn-plan-interest').value = '';
+  feeOpen = Number(x?.fee) > 0;
   $('#txn-repeat').value = '';
   $('#txn-repeat-hint').hidden = true;
   delete $('#txn-amount').dataset.auto;
@@ -1295,6 +1318,8 @@ function afterSave(another) {
     $('#txn-amount').value = '';
     $('#txn-fee').value = '';
     $('#txn-fee-suggest').hidden = true;
+    feeOpen = false;
+    showFee();
     $('#txn-note').value = '';
     $('#txn-error').hidden = true;
     $('#txn-amount').focus();

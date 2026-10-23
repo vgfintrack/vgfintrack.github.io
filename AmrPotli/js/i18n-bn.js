@@ -435,4 +435,5 @@ export const BN = {
   'Stop "{name}" from repeating? Transactions already added stay.': '"{name}" আর পুনরাবৃত্তি হবে না? আগে যোগ করা লেনদেনগুলো থাকবে।',
   'regular': 'নিয়মিত',
   'Saved': 'সেভ হয়েছে',
+  '+ Add a service charge (bKash cash-out, bank fee)': '+ সার্ভিস চার্জ যোগ করুন (bKash ক্যাশ আউট, ব্যাংক ফি)',
 };
