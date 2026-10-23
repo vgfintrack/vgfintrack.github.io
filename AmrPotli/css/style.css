@@ -653,6 +653,11 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .team-bar .btn { flex: none; }
 .helper-hello h3 { margin: 0 0 4px; }
 #team-card .li .name small { font-weight: 400; }
+/* Transfer: money to or from someone else */
+.other-person { margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--line); font-size: 13px; }
+.other-person[hidden] { display: none; }
+.other-person p { margin: 0 0 8px; color: var(--muted); }
+.other-person div { display: flex; gap: 8px; flex-wrap: wrap; }
 /* Potli tips */
 .potli-tips { display: grid; gap: 10px; border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
 .pt-head { display: flex; gap: 10px; align-items: center; }

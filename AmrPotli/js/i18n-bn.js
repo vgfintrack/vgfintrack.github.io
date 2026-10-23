@@ -805,4 +805,11 @@ export const BN = {
   'Nothing found. Try other words, or tell us what you were looking for.': 'কিছু পাওয়া যায়নি। অন্য শব্দে খুঁজুন, বা কী খুঁজছিলেন আমাদের জানান।',
   'e.g. loan, SMS, backup, বাকি': 'যেমন লোন, SMS, ব্যাকআপ, বাকি',
   'Search help': 'সাহায্য খুঁজুন',
+  // ---- Transfer: money to or from someone else
+  'Money to or from someone else, like your mother? That is not a transfer:': 'অন্য কাউকে (যেমন মাকে) টাকা দিলেন বা কারও কাছ থেকে পেলেন? সেটা ট্রান্সফার নয়:',
+  'I sent it → Expense': 'আমি পাঠিয়েছি → খরচ',
+  'I received it → Income': 'আমি পেয়েছি → আয়',
+  '+ New category…': '+ নতুন ক্যাটাগরি…',
+  'Name of the new income source, for example Money from Family': 'নতুন আয়ের উৎসের নাম, যেমন Money from Family',
+  'Name of the new category, for example Gym': 'নতুন ক্যাটাগরির নাম, যেমন Gym',
 };

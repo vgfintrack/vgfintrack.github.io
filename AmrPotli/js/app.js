@@ -2435,6 +2435,19 @@ function linkedTxns(x) {
 
 function setupTxnDialog() {
   $$('#txn-type button').forEach((b) => (b.onclick = () => setTxnType(b.dataset.type)));
+  // From Transfer: money sent to someone else is spending, money from someone is income.
+  $$('#txn-other [data-other]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        const type = b.dataset.other;
+        setTxnType(type);
+        const cats = type === 'Expense' ? settings().expenseCategories.map((c) => c.name) : settings().incomeCategories;
+        const pick = (type === 'Expense' ? ['Family Support', 'Money Sent Home'] : ['Money from Family', 'Family Allowance', 'Household Money', 'Gift Received']).find((c) => cats.includes(c));
+        if (pick) $('#txn-category').value = pick;
+        $('#txn-error').hidden = true;
+        updateTxnHint();
+      }),
+  );
   $('#txn-form').onsubmit = (e) => {
     e.preventDefault();
     saveTxn(false);
@@ -2461,7 +2474,7 @@ function setupTxnDialog() {
   $('#txn-to').onchange = updateTxnHint;
   $('#txn-loan').onchange = () => fillLoanFields();
   $('#txn-person').onchange = () => ($('#txn-person').value === '__new' ? addLoanPerson() : fillLoanFields());
-  $('#txn-category').onchange = updateTxnHint;
+  $('#txn-category').onchange = () => ($('#txn-category').value === '__newcat' ? addCategoryFromForm() : updateTxnHint());
   $('#txn-amount').oninput = () => {
     delete $('#txn-amount').dataset.auto;
     updateFeeSuggestion();
@@ -2631,7 +2644,7 @@ function syncCatGrid() {
   const key = `${opts.map((o) => o.value).join('|')}#${state.data.transactions.length}`;
   if (grid.dataset.key !== key) {
     grid.dataset.key = key;
-    grid.innerHTML = tileCats(opts.map((o) => o.value))
+    grid.innerHTML = tileCats(opts.map((o) => o.value).filter((v) => v !== '__newcat'))
       .map((c) => `<button type="button" role="radio" data-cat="${esc(c)}"><span aria-hidden="true">${catIcon(c)}</span><small>${esc(c)}</small></button>`)
       .join('');
     $$('[data-cat]', grid).forEach(
@@ -2742,6 +2755,32 @@ function planInfo(acc) {
 }
 
 // Creates a lender/borrower account from inside the form.
+// "+ New category…" in the entry form, within the plan's category limit.
+async function addCategoryFromForm() {
+  const sel = $('#txn-category');
+  const back = () => {
+    sel.value = sel.options[0]?.value !== '__newcat' ? sel.options[0].value : '';
+    updateTxnHint();
+  };
+  if (categoryCount() >= categoryLimit()) {
+    toast(limitMsg());
+    return back();
+  }
+  const name = prompt(t(txnType === 'Income' ? 'Name of the new income source, for example Money from Family' : 'Name of the new category, for example Gym'))?.trim().replace(/\s+/g, ' ').slice(0, 30);
+  if (!name) return back();
+  const s = settings();
+  const list = txnType === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
+  const same = list.find((c) => c.toLowerCase() === name.toLowerCase());
+  if (!same)
+    await state.store.saveSettings(
+      txnType === 'Income' ? { ...s, incomeCategories: [...s.incomeCategories, name] } : { ...s, expenseCategories: [...s.expenseCategories, { name, budget: 0 }] },
+    );
+  const value = same || name;
+  if (![...sel.options].some((o) => o.value === value)) sel.querySelector('option[value="__newcat"]').insertAdjacentHTML('beforebegin', `<option value="${esc(value)}">${esc(`${catIcon(value)} ${value}`)}</option>`);
+  sel.value = value;
+  updateTxnHint();
+}
+
 async function addLoanPerson() {
   const cfg = LOAN[$('#txn-loan').value];
   const name = prompt(cfg.personType === 'Debt' ? t('Who did you borrow from? (a person, bank, bKash…)') : t('Who did you lend to?'))?.trim();
@@ -2782,7 +2821,7 @@ function setTxnType(type, x = null, preset = null) {
   const cats = type === 'Income' ? s.incomeCategories : s.expenseCategories.map((c) => c.name);
   const catList = [...cats];
   if (x?.category && !isT && !catList.includes(x.category)) catList.push(x.category);
-  fillSelect($('#txn-category'), catList.map((c) => [c, `${catIcon(c)} ${c}`]), x?.category);
+  fillSelect($('#txn-category'), [...catList.map((c) => [c, `${catIcon(c)} ${c}`]), ...(isHelper() ? [] : [['__newcat', t('+ New category…')]])], x?.category);
 
   // Income/Expense normally touch spendable accounts; show those first.
   const order = (a) => (isT ? 0 : a.type === 'Liquid' ? 0 : 1);
@@ -2880,6 +2919,8 @@ function updateTxnHint() {
   } else if (txnType === 'Expense' && $('#txn-category').value === 'Family Support') {
     hint = t('Money you give to family is spending. If someone is only holding it for you, use Transfer to their account instead.');
   }
+  // Transfer is only between the user's own accounts; family money is spending or income.
+  $('#txn-other').hidden = txnType !== 'Transfer';
   const fee = Number($('#txn-fee').value);
   if (txnType !== 'Income' && fee > 0) {
     hint = `${hint} ${t('The {amount} charge is taken from {account} and counted as spending (Service Charges).', {
@@ -2987,6 +3028,7 @@ async function saveTxn(another) {
   if (txnType === 'Loan') return saveLoan(amount, another, err);
   const isT = txnType === 'Transfer';
   if (isT && $('#txn-account').value === $('#txn-to').value) return err(t('From and To must be different accounts.'));
+  if (!isT && $('#txn-category').value === '__newcat') return err(t('Pick a category.'));
   const fee = txnType === 'Income' ? 0 : Number($('#txn-fee').value) || 0;
   if (fee < 0) return err(t('The service charge cannot be negative.'));
   const x = {

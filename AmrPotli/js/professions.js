@@ -13,16 +13,16 @@ export const PERSONAL = {
   worker: { expense: ['Food', 'Transport', 'House Rent', 'Family Support', 'Mobile & Internet', 'Medical', 'Savings (DPS)', 'Other'], income: ['Salary', 'Overtime', 'Other Income'] },
   driver: { expense: ['Vehicle Rent (Joma)', 'Fuel & Charging', 'Vehicle Repairs', 'Food', 'Family Support', 'Mobile & Internet', 'Medical', 'Other'], income: ['Daily Earnings', 'Other Income'] },
   labour: { expense: ['Food', 'Transport', 'House Rent', 'Family Support', 'Mobile & Internet', 'Medical', 'Other'], income: ['Daily Wages', 'Other Income'] },
-  retired: { expense: ['Food', 'Bazar & Groceries', 'Utility Bills', 'Medical', 'Family Support', 'Gifts & Dawat', 'Other'], income: ['Pension', 'Savings Profit', 'Rent Received', 'Other Income'] },
+  retired: { expense: ['Food', 'Bazar & Groceries', 'Utility Bills', 'Medical', 'Family Support', 'Gifts & Dawat', 'Other'], income: ['Pension', 'Money from Family', 'Savings Profit', 'Rent Received', 'Other Income'] },
   probashi: { expense: ['Money Sent Home', 'Food', 'House Rent', 'Mobile & Internet', 'Transport', 'Medical', 'Savings', 'Other'], income: ['Salary', 'Overtime', 'Other Income'] },
-  home: { expense: ['Bazar & Groceries', 'Utility Bills', 'House Rent', "Children's Education", 'Transport', 'Medical', 'Family Support', 'Other'], income: ['Household Money', 'Salary', 'Other Income'] },
+  home: { expense: ['Bazar & Groceries', 'Utility Bills', 'House Rent', "Children's Education", 'Transport', 'Medical', 'Family Support', 'Other'], income: ['Household Money', 'Money from Family', 'Salary', 'Other Income'] },
   business: { expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', "Children's Education", 'Medical', 'Other'], income: ['Business Profit', 'Rent Received', 'Other Income'] },
   other: { expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', 'Medical', 'Shopping', 'Other'], income: ['Main Income', 'Other Income'] },
 };
 
 export const PERSONAL_EXTRA = {
   expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', 'Medical', 'Shopping', 'Entertainment', 'Gifts & Dawat', 'Clothing', 'Personal Care', 'Savings (DPS)', "Children's Education", 'Other'],
-  income: ['Salary', 'Bonus', 'Tuition', 'Business Profit', 'Rent Received', 'Gift Received', 'Other Income'],
+  income: ['Salary', 'Bonus', 'Tuition', 'Business Profit', 'Rent Received', 'Money from Family', 'Gift Received', 'Other Income'],
 };
 
 // ---- a business's own money: what it buys, spends on and earns from
