@@ -457,6 +457,8 @@ const COUNT_LABELS = {
 };
 const WHY = { support: 'Wants help', updates: 'Wants news', tester: 'Wants to test', business: 'Business enquiry' };
 
+const perDay = (n) => (n < 1 ? 'Less than 1 phone a day' : Math.round(n) === 1 ? 'About 1 phone a day' : `About ${nf.format(Math.round(n))} phones a day`);
+
 // Kinds of work: phone-days per profession in the range, most first.
 function professions(range) {
   const from = addDays(today(), -(range - 1));
@@ -470,12 +472,12 @@ function professions(range) {
   if (!total) return empty('No counts yet. Each phone that has chosen its work adds 1 a day.');
   const name = (id) => {
     const p = PROFESSIONS.find((x) => x.id === id);
-    return id === 'custom' ? 'Own profession (typed)' : p ? `${p.icon} ${p.en}` : id;
+    return id === 'custom' ? '✏️ Own profession (typed)' : p ? `${p.icon} ${p.en}` : id;
   };
   return `<div class="split wide">${rows
     .map(([id, n]) => `<div class="ln"><span>${esc(name(id))}</span><span class="tr"><i style="width:${(n / rows[0][1]) * 100}%"></i></span><b data-tip="${nf.format(n)} phone-days">${Math.round((n / total) * 100)}%</b></div>`)
     .join('')}</div>
-    <p class="small muted" style="margin:8px 0 0">About ${nf.format(Math.max(1, Math.round(total / range)))} phones a day told their work. Shares are of phone-days.</p>`;
+    <p class="small muted" style="margin:8px 0 0">${perDay(total / range)} told their work. Shares are of phone-days.</p>`;
 }
 
 function users() {
