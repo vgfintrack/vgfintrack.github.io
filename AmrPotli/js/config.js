@@ -10,4 +10,4 @@ export const googleClientId = '500818833749-s37cmbrjlrdeon2a44idf5ibhi70d5sl.app
 // The app only reads the public notice and the scrambled list of people who
 // get more categories, and sends anonymous daily counts, plus contact details
 // or feedback when the user chooses to send them. null = not connected yet.
-export const firebaseProject = null; // { projectId: '…', apiKey: '…' }
+export const firebaseProject = { projectId: 'vgfintrack-11a9c', apiKey: 'AIzaSyA72Snb52RhFTMfcwm5Me3GJ6WMf0GEsrA' };
