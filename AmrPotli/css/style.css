@@ -576,3 +576,15 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .voice-btn.listening { border-color: var(--bad); color: var(--bad); animation: mic-pulse 1.2s ease-in-out infinite; }
 @keyframes mic-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--bad) 18%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .voice-btn.listening { animation: none; } }
+
+/* simple home screen */
+.hand { text-align: center; display: grid; gap: 4px; padding: 20px 16px; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.hand-k { font-size: 15px; color: var(--muted); font-weight: 600; }
+.hand-v { font-size: 40px; font-weight: 800; color: var(--brand-text); line-height: 1.1; }
+.hand-month { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 14px; margin-top: 6px; }
+.hand-month span:first-child { color: var(--muted); }
+.big-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.big-actions button { display: grid; justify-items: center; gap: 6px; padding: 18px 8px; border-radius: 18px; border: 2px solid var(--line); background: var(--surface); font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 0 var(--line); color: var(--text); }
+.big-actions button span { font-size: 38px; line-height: 1; }
+.big-actions button:active { transform: translateY(2px); box-shadow: none; }
+.big-mic { padding: 16px; font-size: 18px; border-radius: 16px; box-shadow: 0 3px 0 color-mix(in srgb, var(--brand) 60%, #000); }

@@ -509,6 +509,7 @@ async function finish(root, ctx) {
     expenseCategories: draft.expense.map((name) => ({ name, budget: 0 })),
     onboarding: { persona: isShop() ? 'shop' : draft.persona, hidden: false, done: {} },
     ...(isShop() && { mode: 'shop' }),
+    ...(draft.persona === 'home' && { simple: true }), // the simple home screen
   };
   // Show the celebration before the save finishes, so the screen does not jump.
   celebrating = true;

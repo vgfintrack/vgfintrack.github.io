@@ -393,6 +393,7 @@ function renderLoading() {
 }
 
 function switchView(v) {
+  if (v !== 'dashboard') detailsOnce = false; // back to the simple screen next time
   state.view = v;
   $$('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.view === v));
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${v}`));
@@ -408,7 +409,7 @@ function render() {
   if (onboarding) return renderWelcome();
   G.noticeProgress(state.data, guideFlags(), toast);
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
-  if (state.view === 'dashboard') renderDashboard();
+  if (state.view === 'dashboard') (simpleOn() ? renderSimple() : renderDashboard());
   if (state.view === 'transactions') renderTransactions();
   if (state.view === 'reports') renderReports();
   if (state.view === 'setup') renderSetup();
@@ -937,6 +938,83 @@ function paySupplier(id) {
   updateTxnHint();
 }
 
+// ---------------------------------------------------------------- simple home screen
+// For people who find apps hard (often the one running the home): what is in
+// hand, four big buttons, speak to add, and the last few entries. Nothing else.
+
+let detailsOnce = false; // "More details" shows the full Dashboard until the next visit
+const simpleOn = () => !!settings().simple && !detailsOnce;
+const SAVINGS_ID = 'savings';
+
+function renderSimple() {
+  const accs = accounts();
+  const txns = state.data.transactions;
+  const w = C.worth(accs, txns);
+  const month = C.monthRange(C.today());
+  const st = C.periodStats(month, txns, accs);
+  const recent = [...txns].sort(txnSort).slice(0, 6);
+  const savings = accById(SAVINGS_ID);
+  $('#view-dashboard').innerHTML = `
+    ${G.streakPill(txns, C.today())}
+    ${dueCard()}
+    <div class="card hand">
+      <div class="hand-k">👛 ${t('Money in hand')}</div>
+      <div class="hand-v num">৳ ${moneyExact(w.liquid)}</div>
+      <div class="hand-month">
+        <span>${t('This month')}</span>
+        <span class="income">${t('got')} ${money(st.income)}</span>
+        <span class="expense">${t('spent')} ${money(st.expenses)}</span>
+        ${savings ? `<span>🐷 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
+      </div>
+    </div>
+    <div class="big-actions">
+      <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
+      <button data-simple-act="Expense"><span>🛒</span>${t('Spent')}</button>
+      <button data-simple-act="save"><span>🐷</span>${t('Saved')}</button>
+      <button data-simple-act="Loan"><span>🤝</span>${t('Loan')}</button>
+    </div>
+    ${
+      window.SpeechRecognition || window.webkitSpeechRecognition
+        ? `<button class="btn primary wide big-mic" data-simple-act="speak">🎤 ${t('Say it, I will write it')}</button>`
+        : ''
+    }
+    <div class="card">
+      <h3>${t('Recent')} <button class="linkish" id="see-all">${t('See all')}</button></h3>
+      <div class="txn-list">${recent.map(txnRow).join('') || `<p class="muted" style="margin:0">${t('Nothing yet. Tap a button above to add the first one.')}</p>`}</div>
+    </div>
+    <button class="btn wide" id="more-details">📊 ${t('More details')}</button>`;
+  const v = $('#view-dashboard');
+  bindRecurring(v);
+  bindTxnRows(v);
+  $('#see-all', v).onclick = () => switchView('transactions');
+  $('#more-details', v).onclick = () => {
+    detailsOnce = true;
+    renderDashboard();
+    window.scrollTo({ top: 0 });
+  };
+  $$('[data-simple-act]', v).forEach((b) => (b.onclick = () => simpleAction(b.dataset.simpleAct)));
+}
+
+async function simpleAction(id) {
+  if (id === 'speak') {
+    txnType = 'Expense';
+    openTxn();
+    return speakEntry();
+  }
+  if (id === 'save') {
+    // Savings sit apart from money in hand; the account is made on first use.
+    if (!accById(SAVINGS_ID)) await state.store.saveAccount({ id: SAVINGS_ID, name: 'Savings', type: 'Investment', opening: 0, order: 40 });
+    txnType = 'Transfer';
+    openTxn();
+    $('#txn-to').value = SAVINGS_ID;
+    if ($('#txn-account').value === SAVINGS_ID) $('#txn-account').value = accounts().find((a) => a.type === 'Liquid')?.id || '';
+    $('#txn-note').value = '';
+    return updateTxnHint();
+  }
+  txnType = id;
+  openTxn();
+}
+
 // ---------------------------------------------------------------- quick actions
 // The Dashboard's grid of one-tap actions, an icon and a word each.
 
@@ -1372,6 +1450,8 @@ function describeTxn(x, L = t) {
       ? `${L('Purchase')} · ${accName(x.account)}`
       : toSupplier
         ? L('Paid {name}', { name: accName(x.toAccount) })
+        : isT && x.toAccount === SAVINGS_ID
+          ? L('Saved')
         : isT
           ? `${accName(x.account)} → ${accName(x.toAccount)}`
           : x.category;
@@ -1400,7 +1480,9 @@ function txnRow(t) {
       : t.type === 'Transfer'
         ? accById(t.toAccount)?.supplier
           ? '💵'
-          : '🔁'
+          : t.toAccount === SAVINGS_ID
+            ? '🐷'
+            : '🔁'
         : catIcon(t.category);
   return `<button class="txn" data-id="${esc(t.id)}">
     <span class="ic ${cls}">${icon}</span>
@@ -2491,6 +2573,12 @@ function renderSetup() {
             .join('')}
         </div>
         <p class="muted" style="font-size:12px;margin:8px 0 0">${t('Auto follows your phone or computer setting.')}</p>
+        <h3 style="margin-top:16px">${t('Home screen')}</h3>
+        <div class="segmented" style="display:flex">
+          <button data-simple="1" style="flex:1" class="${settings().simple ? 'active' : ''}">🏠 ${t('Simple')}</button>
+          <button data-simple="0" style="flex:1" class="${settings().simple ? '' : 'active'}">📊 ${t('Detailed')}</button>
+        </div>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">${t('Simple: money in hand, big buttons, and speak to add.')}</p>
         ${G.guideOn(state.data) ? '' : `<h3 style="margin-top:16px">${t('Getting started')}</h3>
         <button class="btn" id="guide-show">${t('Show the getting-started guide')}</button>`}
       </div>
@@ -2577,6 +2665,13 @@ function renderSetup() {
   };
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
+  $$('[data-simple]', v).forEach(
+    (b) =>
+      (b.onclick = () => {
+        detailsOnce = false;
+        state.store.saveSettings({ ...settings(), simple: b.dataset.simple === '1' });
+      }),
+  );
   bindInstall(v);
   bindRecurring(v);
   bindLock(v);
