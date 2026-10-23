@@ -29,9 +29,9 @@ addBangla({
   'today': 'আজ',
   'tomorrow': 'আগামীকাল',
   'in {n} days': '{n} দিন পর',
-  'You owe {name} ৳{a}, due {when}.': '{name}-কে ৳{a} দিতে হবে, {when}।',
+  '{name}: you owe ৳{a}, due {when}.': '{name}: আপনাকে ৳{a} দিতে হবে, {when}।',
   '{name} owes you ৳{a}, due {when}.': '{name} আপনাকে ৳{a} দেবেন, {when}।',
-  'You owe {name} ৳{a}; it was due {n} days ago.': '{name}-কে ৳{a} দেওয়ার কথা ছিল {n} দিন আগে।',
+  '{name}: you owe ৳{a}; it was due {n} days ago.': '{name}: ৳{a} দেওয়ার কথা ছিল {n} দিন আগে।',
   '{name} owes you ৳{a}; it was due {n} days ago.': '{name} আপনাকে ৳{a} দেওয়ার কথা ছিল {n} দিন আগে।',
   'No entries for {n} days. Add what you spent, even roughly, to keep the picture right.': '{n} দিন কোনো এন্ট্রি নেই। আনুমানিক হলেও খরচগুলো লিখে রাখুন, তাহলে হিসাব ঠিক থাকবে।',
   '{name} owes ৳{a} baki; no payment for {n} days.': '{name}-এর বাকি ৳{a}; {n} দিন কোনো টাকা দেননি।',
@@ -118,25 +118,29 @@ export function potliTips(ctx) {
     const mine = a.type === 'Debt';
     const text =
       d < 0
-        ? t(mine ? 'You owe {name} ৳{a}; it was due {n} days ago.' : '{name} owes you ৳{a}; it was due {n} days ago.', { name, a: money(owed), n: -d })
-        : t(mine ? 'You owe {name} ৳{a}, due {when}.' : '{name} owes you ৳{a}, due {when}.', { name, a: money(owed), when: when(d) });
+        ? t(mine ? '{name}: you owe ৳{a}; it was due {n} days ago.' : '{name} owes you ৳{a}; it was due {n} days ago.', { name, a: money(owed), n: -d })
+        : t(mine ? '{name}: you owe ৳{a}, due {when}.' : '{name} owes you ৳{a}, due {when}.', { name, a: money(owed), when: when(d) });
     add('loan', `${a.id}:${a.dueDate}`, '🤝', text, d < 0 ? 88 : 78);
   }
 
   // ---- budgets (personal) and categories that grew
   const now = exp(soFar);
   const daysLeft = C.daysUntil(month.end, today);
+  // Rent or a mobile pack is paid once, in full: only spending that builds up
+  // over several entries gets a "nearly used" tip, and "over" needs 5% more.
+  const entries = (cat) => txns.filter((x) => x.type === 'Expense' && x.category === cat && x.date >= soFar.start && x.date <= soFar.end).length;
   for (const c of s.expenseCategories || []) {
     const budget = Number(c.budget) || 0;
     const used = now[c.name] || 0;
     if (!budget || !used) continue;
-    if (used > budget) add('budget', `${c.name}:${month.start}:over`, '🎯', t('{cat} is over its budget by ৳{a}.', { cat: c.name, a: money(used - budget) }), 86);
-    else if (used / budget >= 0.8 && daysLeft >= 5) add('budget', `${c.name}:${month.start}`, '🎯', t('{cat} budget: {p}% used, {d} days left in the month.', { cat: c.name, p: Math.round((used / budget) * 100), d: daysLeft }), 74);
+    if (used > budget * 1.05) add('budget', `${c.name}:${month.start}:over`, '🎯', t('{cat} is over its budget by ৳{a}.', { cat: c.name, a: money(used - budget) }), 86);
+    else if (used / budget >= 0.8 && used < budget && daysLeft >= 5 && entries(c.name) >= 3) add('budget', `${c.name}:${month.start}`, '🎯', t('{cat} budget: {p}% used, {d} days left in the month.', { cat: c.name, p: Math.round((used / budget) * 100), d: daysLeft }), 74);
   }
   if (dayN >= 5 && count(lastMonth) >= 10) {
     const before = exp(lastSoFar);
     const changes = Object.keys({ ...now, ...before })
-      .filter((cat) => cat !== fees && (now[cat] || 0) >= 300 && (before[cat] || 0) >= 300)
+      // A shop's stock buying comes in lumps; the profit margin tip covers it.
+      .filter((cat) => cat !== fees && !(shop && cat === s.stockCategory) && (now[cat] || 0) >= 300 && (before[cat] || 0) >= 300)
       .map((cat) => [cat, now[cat], before[cat], now[cat] - before[cat]]);
     const up = changes.filter(([, a, b]) => a >= b * 1.3 && a - b >= 300).sort((x, y) => y[3] - x[3])[0];
     const down = changes.filter(([, a, b]) => a <= b * 0.7 && b - a >= 300).sort((x, y) => x[3] - y[3])[0];
