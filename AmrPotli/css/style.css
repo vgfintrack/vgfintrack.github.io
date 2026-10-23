@@ -601,3 +601,4 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .prof-results .prof-other { color: var(--brand-text); border-style: dashed; }
 .ob-label { margin: 4px 0 -6px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .ob-sub .ob-chips { margin-top: 2px; }
+.back-simple { border-color: var(--brand); color: var(--brand-text); font-size: 15px; }

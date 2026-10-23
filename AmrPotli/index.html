@@ -297,6 +297,89 @@
     </div>
   </dialog>
 
+  <dialog id="baki-dialog" class="sheet">
+    <form id="baki-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 data-i18n="📒 Baki sale">📒 Baki sale</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div class="field">
+        <label for="baki-customer" data-i18n="Customer">Customer</label>
+        <div class="row-add">
+          <select id="baki-customer"></select>
+          <button type="button" class="btn" id="baki-new-customer" data-i18n="+ New">+ New</button>
+        </div>
+      </div>
+      <label class="amount-field">
+        <span>৳</span>
+        <input id="baki-total" type="text" inputmode="none" autocomplete="off" placeholder="0" aria-label="Total" data-i18n-label="Total" />
+        <span id="baki-calc-result" class="calc-result" hidden></span>
+      </label>
+      <div id="baki-calc-pad" class="calc-pad"></div>
+      <div class="field">
+        <label for="baki-items" data-i18n="What did they take?">What did they take?</label>
+        <input id="baki-items" type="text" maxlength="80" placeholder="Optional, e.g. rice 5 kg, oil 1 L" data-i18n-ph="Optional, e.g. rice 5 kg, oil 1 L" />
+      </div>
+      <div class="field">
+        <label for="baki-paid" data-i18n="Paid now">Paid now</label>
+        <div class="row2">
+          <input id="baki-paid" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+          <select id="baki-into" aria-label="Received in" data-i18n-label="Received in"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="baki-date" data-i18n="Date">Date</label>
+        <input id="baki-date" type="date" />
+      </div>
+      <p id="baki-hint" class="hint"></p>
+      <p id="baki-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cust-dialog" class="sheet">
+    <form id="cust-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="cust-title" data-i18n="New customer">New customer</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div class="field">
+        <label for="cust-name" data-i18n="Name">Name</label>
+        <input id="cust-name" type="text" maxlength="40" required placeholder="e.g. Rahim bhai, Karim (tea stall)" data-i18n-ph="e.g. Rahim bhai, Karim (tea stall)" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="cust-phone" data-i18n="Phone">Phone</label>
+          <input id="cust-phone" type="tel" inputmode="tel" maxlength="20" placeholder="01XXXXXXXXX" />
+        </div>
+        <div class="field">
+          <label for="cust-area" data-i18n="Area">Area</label>
+          <input id="cust-area" type="text" maxlength="40" placeholder="Optional" data-i18n-ph="Optional" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="cust-due" data-i18n="Baki they owe now">Baki they owe now</label>
+        <input id="cust-due" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+      </div>
+      <p id="cust-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="custv-dialog" class="sheet">
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <h2 id="custv-title"></h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div id="custv-body"></div>
+    </div>
+  </dialog>
+
   <dialog id="delete-dialog" class="sheet">
     <form id="delete-form" method="dialog" novalidate>
       <div class="sheet-head">

@@ -49,6 +49,7 @@ export function catIcon(name = '') {
 
 export function accIcon(a) {
   if (!a) return '💰';
+  if (a.customer) return '🙋';
   if (a.supplier) return { company: '🏭', distributor: '🚚', sr: '🧑‍💼', wholesale: '🏬' }[a.supplier.kind] || '🏭';
   if (a.type === 'Debt') return '🤝';
   if (a.type === 'Lend') return '🫴';

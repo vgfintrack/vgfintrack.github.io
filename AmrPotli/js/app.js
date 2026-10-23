@@ -332,6 +332,7 @@ async function boot() {
   setupAccountDialog();
   setupDeleteDialog();
   setupShopDialogs();
+  setupBakiDialogs();
 }
 
 function renderAvatar() {
@@ -993,11 +994,26 @@ function renderSimple() {
   $('#see-all', v).onclick = () => switchView('transactions');
   $('#more-details', v).onclick = () => {
     detailsOnce = true;
+    history.pushState({ details: true }, ''); // the phone's back button returns to the simple view
     renderDashboard();
     window.scrollTo({ top: 0 });
   };
   $$('[data-simple-act]', v).forEach((b) => (b.onclick = () => simpleAction(b.dataset.simpleAct)));
 }
+
+function backToSimple() {
+  if (history.state?.details) return history.back(); // popstate below redraws
+  detailsOnce = false;
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+addEventListener('popstate', () => {
+  if (!detailsOnce) return;
+  detailsOnce = false;
+  render();
+  window.scrollTo({ top: 0 });
+});
 
 async function simpleAction(id) {
   if (id === 'speak') {
@@ -1019,6 +1035,219 @@ async function simpleAction(id) {
   openTxn();
 }
 
+// ---------------------------------------------------------------- shop: customer baki khata
+// A customer is a Lend account with a `customer` record. A baki sale is a
+// sale (income) received into the customer's account, so the shop's sales
+// count and the customer owes it; a payment is a transfer from the customer
+// into the cash box or bKash.
+
+const customers = () => accounts().filter((a) => a.customer);
+const BAKI_SALE = 'Sales';
+let bakiPad = null;
+let custEdit = null;
+let custAfter = null;
+
+// Last time this customer took baki or paid, for "since" and reminders.
+function customerDates(id) {
+  let sale = null;
+  let paid = null;
+  for (const x of state.data.transactions) {
+    if (x.type === 'Income' && x.account === id && (!sale || x.date > sale)) sale = x.date;
+    if (x.type === 'Transfer' && x.account === id && (!paid || x.date > paid)) paid = x.date;
+  }
+  return { sale, paid };
+}
+
+function bakiCard(w) {
+  const list = customers()
+    .filter((a) => w.balances[a.id].value > 0.004)
+    .sort((a, b) => w.balances[b.id].value - w.balances[a.id].value);
+  const total = list.reduce((s, a) => s + w.balances[a.id].value, 0);
+  const all = customers().length;
+  const day = (d) => niceDate(d, { day: 'numeric', month: 'short' });
+  return `<div class="card" id="baki-card">
+    <h3>📒 ${t('Baki khata')} <span><button class="btn sm" data-cust-add>${t('+ Customer')}</button> <button class="btn sm primary" data-baki>📒 ${t('Baki sale')}</button></span></h3>
+    ${
+      list.length
+        ? `<div class="loan-head"><span>${t('Customers owe')}</span><span class="num">${moneyExact(total)}</span></div>
+           <div class="list">${list
+             .map((a) => {
+               const { sale, paid } = customerDates(a.id);
+               const sub = [a.customer.area, sale && t('last baki {date}', { date: day(sale) }), paid && t('paid {date}', { date: day(paid) })].filter(Boolean).join(' · ');
+               return `<button class="li sup-row" data-cust="${esc(a.id)}">
+                 <span class="mid"><div class="name">🙋 ${esc(a.name)}</div><div class="sub">${esc(sub)}</div></span>
+                 <span class="num income">${moneyExact(w.balances[a.id].value)}</span></button>`;
+             })
+             .join('')}</div>`
+        : `<p class="muted" style="margin:0;font-size:13px">${all ? t('No one owes the shop right now. 🎉') : t('Customers who buy now and pay later: add them here, and the app keeps the khata.')}</p>`
+    }
+    ${all > list.length && list.length ? `<p class="muted" style="margin:8px 0 0;font-size:12px">${t('{n} more customers with nothing due', { n: all - list.length })}</p>` : ''}
+  </div>`;
+}
+
+function bindBaki(root) {
+  $$('[data-baki]', root).forEach((b) => (b.onclick = () => openBakiSale(b.dataset.baki || null)));
+  $$('[data-cust-add]', root).forEach((b) => (b.onclick = () => openCustomer()));
+  $$('[data-cust]', root).forEach((b) => (b.onclick = () => openCustomerView(b.dataset.cust)));
+}
+
+function openBakiSale(customerId = null) {
+  if (!customers().length) return openCustomer(null, (id) => openBakiSale(id));
+  fillSelect($('#baki-customer'), customers().map((a) => [a.id, a.name]), customerId || customers()[0].id);
+  const liquid = accounts().filter((a) => a.type === 'Liquid');
+  fillSelect($('#baki-into'), liquid.map((a) => [a.id, a.name]), liquid.find((a) => /cash/i.test(a.name))?.id);
+  $('#baki-total').value = '';
+  $('#baki-items').value = '';
+  $('#baki-paid').value = '';
+  $('#baki-date').value = C.today();
+  $('#baki-error').hidden = true;
+  bakiPad.refresh();
+  updateBakiHint();
+  $('#baki-dialog').showModal();
+  $('#baki-total').focus();
+}
+
+function updateBakiHint() {
+  const c = accById($('#baki-customer').value);
+  const total = evalExpr($('#baki-total').value).value;
+  const paid = Number($('#baki-paid').value) || 0;
+  $('#baki-hint').textContent =
+    c && total > 0
+      ? paid >= total
+        ? t('Paid in full, nothing goes on baki.')
+        : t('{amount} goes on baki. {name} will owe {due} in total.', { amount: moneyExact(total - paid), name: c.name, due: moneyExact(owed(c.id) + total - paid) })
+      : '';
+}
+
+function setupBakiDialogs() {
+  bakiPad = attachKeypad($('#baki-total'), $('#baki-calc-pad'), $('#baki-calc-result'), { onChange: updateBakiHint });
+  $('#baki-total').addEventListener('input', updateBakiHint);
+  $('#baki-customer').onchange = updateBakiHint;
+  $('#baki-paid').oninput = updateBakiHint;
+  $('#baki-new-customer').onclick = () => {
+    $('#baki-dialog').close();
+    openCustomer(null, (id) => openBakiSale(id));
+  };
+  $('#baki-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => {
+      $('#baki-error').textContent = m;
+      $('#baki-error').hidden = false;
+    };
+    const cust = $('#baki-customer').value;
+    const raw = $('#baki-total').value;
+    const total = evalExpr(raw).value;
+    const paid = Number($('#baki-paid').value) || 0;
+    if (!(total > 0)) return err(t('Enter an amount greater than 0.'));
+    if (paid < 0 || paid > total + 0.004) return err(t('Paid now cannot be more than the total.'));
+    const date = $('#baki-date').value || C.today();
+    const sale = newId();
+    const items = $('#baki-items').value.trim();
+    const sum = evalExpr(raw).isSum ? prettyExpr(raw) : '';
+    const s = settings();
+    const category = s.incomeCategories.find((c) => /sale/i.test(c)) || BAKI_SALE;
+    if (!s.incomeCategories.includes(category)) await state.store.saveSettings({ ...s, incomeCategories: [category, ...s.incomeCategories] });
+    await state.store.saveTxn({ type: 'Income', amount: total, date, category, account: cust, note: [items, sum].filter(Boolean).join(' · '), baki: sale });
+    if (paid > 0) await state.store.saveTxn({ type: 'Transfer', amount: paid, date, category: 'Transfer', account: cust, toAccount: $('#baki-into').value, note: '', baki: sale });
+    $('#baki-dialog').close();
+    toast(paid >= total ? t('Sale saved, paid in full') : t('Baki saved · {name} owes {amount}', { name: accName(cust), amount: money(owed(cust)) }));
+  };
+
+  $('#cust-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => {
+      $('#cust-error').textContent = m;
+      $('#cust-error').hidden = false;
+    };
+    const name = $('#cust-name').value.trim().replace(/\s+/g, ' ');
+    if (!name) return err(t('Enter a name.'));
+    if (state.data.accounts.some((a) => a.id !== custEdit?.id && a.name.toLowerCase() === name.toLowerCase())) return err(t('You already have an account with this name.'));
+    const due = Number($('#cust-due').value) || 0;
+    if (due < 0) return err(t('Baki cannot be negative.'));
+    const id = custEdit?.id || newId();
+    const opening = custEdit ? (custEdit.opening || 0) + (due - owed(custEdit.id)) : due;
+    const customer = { phone: $('#cust-phone').value.trim() || undefined, area: $('#cust-area').value.trim() || undefined };
+    await state.store.saveAccount({ ...(custEdit || {}), id, name, type: 'Lend', opening: Math.round(opening * 100) / 100, customer, order: custEdit?.order ?? 60 });
+    $('#cust-dialog').close();
+    toast(custEdit ? t('Updated') : t('Customer added'));
+    const after = custAfter;
+    custAfter = null;
+    after?.(id);
+  };
+}
+
+function openCustomer(a = null, after = null) {
+  custEdit = a;
+  custAfter = after;
+  $('#cust-title').textContent = a ? t('Edit customer') : t('New customer');
+  $('#cust-name').value = a?.name || '';
+  $('#cust-phone').value = a?.customer?.phone || '';
+  $('#cust-area').value = a?.customer?.area || '';
+  $('#cust-due').value = a ? Math.round(owed(a.id) * 100) / 100 || '' : '';
+  $('#cust-error').hidden = true;
+  $('#cust-dialog').showModal();
+  $('#cust-name').focus();
+}
+
+// A polite reminder on WhatsApp, in the app's language. Nothing is sent
+// until the shopkeeper presses send in WhatsApp.
+function whatsappLink(a) {
+  const due = moneyExact(owed(a.id));
+  const shop = settings().holderName;
+  const text =
+    lang === 'bn'
+      ? `আসসালামু আলাইকুম ${a.name}, ${shop ? `${shop}-এ ` : ''}আপনার বাকি ৳${due}। সুবিধামতো পরিশোধ করবেন। ধন্যবাদ।`
+      : `Assalamu alaikum ${a.name}, your baki ${shop ? `at ${shop} ` : ''}is ৳${due}. Please pay when convenient. Thank you.`;
+  let phone = String(a.customer?.phone || '').replace(/[^\d]/g, '');
+  if (phone.startsWith('01')) phone = `88${phone}`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+}
+
+function openCustomerView(id) {
+  const a = accById(id);
+  if (!a) return;
+  const txns = state.data.transactions.filter((x) => x.account === id || x.toAccount === id).sort(txnSort);
+  const due = owed(id);
+  $('#custv-title').textContent = `🙋 ${a.name}`;
+  $('#custv-body').innerHTML = `
+    <p class="muted" style="margin:0 0 12px">${[a.customer.area, a.customer.phone && `<a href="tel:${esc(a.customer.phone)}">📞 ${esc(a.customer.phone)}</a>`].filter(Boolean).join(' · ') || ''}</p>
+    <div class="sup-stats">
+      <div><span>${t('Owes the shop')}</span><strong class="num income">${moneyExact(due)}</strong></div>
+      <div><span>${t('Last baki')}</span><strong>${customerDates(id).sale ? niceDate(customerDates(id).sale, { day: 'numeric', month: 'short' }) : '—'}</strong></div>
+    </div>
+    <div class="sup-actions">
+      <button class="btn primary" data-custv="sale">📒 ${t('Baki sale')}</button>
+      <button class="btn" data-custv="paid" ${due > 0.004 ? '' : 'disabled'}>💵 ${t('Got payment')}</button>
+      ${due > 0.004 ? `<a class="btn" data-custv="wa" target="_blank" rel="noopener" href="${esc(whatsappLink(a))}">📲 ${t('Remind')}</a>` : ''}
+      <button class="btn" data-custv="edit">✏️ ${t('Edit')}</button>
+    </div>
+    ${due > 0.004 && !a.customer.phone ? `<p class="muted" style="font-size:12px;margin:6px 0 0">${t('Add a phone number (Edit) to send the reminder straight to them.')}</p>` : ''}
+    <h3 style="margin:16px 0 4px">${t('History')}</h3>
+    <div class="txn-list">${txns.slice(0, 30).map(txnRow).join('') || `<p class="muted">${t('Nothing yet.')}</p>`}</div>`;
+  const body = $('#custv-body');
+  const go = (fn) => () => {
+    $('#custv-dialog').close();
+    fn();
+  };
+  $('[data-custv=sale]', body).onclick = go(() => openBakiSale(id));
+  $('[data-custv=paid]', body).onclick = go(() => collectBaki(id));
+  $('[data-custv=edit]', body).onclick = go(() => openCustomer(a));
+  $$('.txn', body).forEach((el) => (el.onclick = go(() => openTxn(state.data.transactions.find((x) => x.id === el.dataset.id)))));
+  $('#custv-dialog').showModal();
+}
+
+// Payment from a customer: the form, filled with what they owe.
+function collectBaki(id) {
+  txnType = 'Transfer';
+  openTxn();
+  $('#txn-account').value = id;
+  const into = accounts().find((a) => a.type === 'Liquid' && /cash/i.test(a.name)) || accounts().find((a) => a.type === 'Liquid');
+  if (into) $('#txn-to').value = into.id;
+  const due = owed(id);
+  if (due > 0) $('#txn-amount').value = Math.round(due * 100) / 100;
+  updateTxnHint();
+}
+
 // ---------------------------------------------------------------- quick actions
 // The Dashboard's grid of one-tap actions, an icon and a word each.
 
@@ -1036,12 +1265,12 @@ const QUICK = [
 // A shop's grid: sell, buy stock, pay costs and suppliers.
 const QUICK_SHOP = [
   ['Income', '🛍️', 'Sale'],
+  ['baki', '📒', 'Baki sale'],
+  ['getbaki', '💵', 'Got baki'],
   ['buy', '📦', 'Purchase'],
   ['Expense', '💸', 'Cost'],
-  ['paysup', '💵', 'Pay supplier'],
-  ['suppliers', '🏭', 'Suppliers'],
+  ['paysup', '🧾', 'Pay supplier'],
   ['sms', '📋', 'Paste SMS'],
-  ['Transfer', '🔁', 'Transfer'],
   ['report', '📄', 'Statement'],
 ];
 
@@ -1058,6 +1287,12 @@ function quickAction(id) {
     return openTxn();
   }
   if (id === 'buy') return openPurchase();
+  if (id === 'baki') return openBakiSale();
+  if (id === 'getbaki') {
+    const w = C.worth(accounts(), state.data.transactions);
+    const top = customers().sort((a, b) => w.balances[b.id].value - w.balances[a.id].value)[0];
+    return top ? openCustomerView(top.id) : openCustomer();
+  }
   if (id === 'paysup') {
     const w = C.worth(accounts(), state.data.transactions);
     const top = suppliers().sort((a, b) => w.balances[b.id].value - w.balances[a.id].value)[0];
@@ -1176,6 +1411,7 @@ function renderDashboard() {
       </div>`;
 
   $('#view-dashboard').innerHTML = `
+    ${settings().simple && detailsOnce ? `<button class="btn wide back-simple" id="back-simple">🏠 ${t('Back to simple view')}</button>` : ''}
     ${G.streakPill(txns, C.today())}
     ${quickActions()}
     ${dueCard()}
@@ -1252,7 +1488,7 @@ function renderDashboard() {
           .join('') || `<p class="muted">${t('Set monthly budgets in Setup.')}</p>`}
       </div>
 
-      ${isShopMode() ? suppliersCard(w) + purchasesCard(month) : ''}
+      ${isShopMode() ? bakiCard(w) + suppliersCard(w) + purchasesCard(month) : ''}
       ${loansCard(accs, w)}
       ${comingUpCard()}
 
@@ -1294,7 +1530,9 @@ function renderDashboard() {
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
   bindRecurring($('#view-dashboard'));
+  $('#back-simple')?.addEventListener('click', backToSimple);
   bindShop($('#view-dashboard'));
+  bindBaki($('#view-dashboard'));
   $$('[data-quick]').forEach((b) => (b.onclick = () => quickAction(b.dataset.quick)));
   $$('[data-guide]').forEach((b) => (b.onclick = () => guideAction(b.dataset.guide)));
   $$('[data-guide-hide]').forEach(
@@ -1321,7 +1559,7 @@ function dueText(a) {
 
 // Who I owe and who owes me, with one-tap repay / got-back buttons.
 function loansCard(accs, w) {
-  const open = (type) => accs.filter((a) => a.type === type && !a.supplier && w.balances[a.id].value > 0.004);
+  const open = (type) => accs.filter((a) => a.type === type && !a.supplier && !a.customer && w.balances[a.id].value > 0.004);
   const debts = open('Debt');
   const lends = open('Lend');
   const planText = (a) => {
@@ -1426,7 +1664,8 @@ function txnSort(a, b) {
 function loanActionOf(t) {
   if (t.type !== 'Transfer') return null;
   if (t.loan) return t.loan;
-  if (accById(t.account)?.supplier || accById(t.toAccount)?.supplier) return null; // paying a supplier is not a loan
+  // Suppliers and baki customers are not loans between people.
+  if ([t.account, t.toAccount].some((id) => accById(id)?.supplier || accById(id)?.customer)) return null;
   const from = accById(t.account)?.type;
   const to = accById(t.toAccount)?.type;
   if (from === 'Debt') return 'borrow';
@@ -1448,11 +1687,17 @@ function describeTxn(x, L = t) {
     collect: () => L('{name} paid back', { name: personName(x.account) }),
   }[loan];
   const toSupplier = isT && accById(x.toAccount)?.supplier;
+  const fromCustomer = isT && accById(x.account)?.customer;
+  const bakiSale = x.type === 'Income' && accById(x.account)?.customer;
   const title = loanTitle
     ? loanTitle()
     : x.purchase && x.type === 'Expense'
       ? `${L('Purchase')} · ${accName(x.account)}`
-      : toSupplier
+      : bakiSale
+        ? `${L('Baki sale')} · ${accName(x.account)}`
+        : fromCustomer
+          ? L('Got baki from {name}', { name: accName(x.account) })
+          : toSupplier
         ? L('Paid {name}', { name: accName(x.toAccount) })
         : isT && x.toAccount === SAVINGS_ID
           ? L('Saved')
@@ -1479,6 +1724,10 @@ function txnRow(t) {
   const sign = t.type === 'Income' ? '+' : t.type === 'Expense' ? '−' : '';
   const icon = loanActionOf(t)
     ? '🤝'
+    : t.type === 'Income' && accById(t.account)?.customer
+      ? '📒'
+      : t.type === 'Transfer' && accById(t.account)?.customer
+        ? '💵'
     : t.purchase && t.type === 'Expense'
       ? '📦'
       : t.type === 'Transfer'
@@ -1793,7 +2042,7 @@ function fillLoanFields(x = null, preset = null) {
   const action = $('#txn-loan').value;
   const cfg = LOAN[action];
   const accs = accounts();
-  const people = accs.filter((a) => a.type === cfg.personType && !a.supplier);
+  const people = accs.filter((a) => a.type === cfg.personType && !a.supplier && !a.customer);
   const prevPerson = $('#txn-person').value;
   const person = x ? (cfg.personIsFrom ? x.account : x.toAccount) : preset?.person ?? prevPerson;
   fillSelect(
