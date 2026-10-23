@@ -5,10 +5,9 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut,
-  connectAuthEmulator, signInWithCredential,
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
-  getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc,
+  getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc,
   serverTimestamp, Timestamp, query, orderBy, limit,
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 import { firebaseConfig, OWNER } from './config.js';
@@ -56,22 +55,12 @@ export async function emailHash(salt, email) {
 
 // ---------------------------------------------------------------- Firebase
 
-// ?emu on this computer uses the local Firebase emulators (for testing).
-const EMU = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('emu');
-const config = EMU ? { apiKey: 'demo', projectId: 'demo-amrpotli', authDomain: 'localhost' } : firebaseConfig;
 let auth = null;
 let db = null;
-if (config) {
-  const fb = initializeApp(config);
+if (firebaseConfig) {
+  const fb = initializeApp(firebaseConfig);
   auth = getAuth(fb);
   db = getFirestore(fb);
-  if (EMU) {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(db, '127.0.0.1', 8085);
-    // tests sign in as anyone: await __login('rina@gmail.com')
-    window.__login = (email, name = email.split('@')[0]) =>
-      signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, email_verified: true, name })));
-  }
 }
 
 // ---------------------------------------------------------------- who am I
@@ -127,7 +116,7 @@ function showGate(msg = '') {
   $('#gate').hidden = false;
   $('#gate-error').textContent = msg;
   $('#gate-error').hidden = !msg;
-  if (!config) {
+  if (!firebaseConfig) {
     $('#signin').disabled = true;
     $('#gate-error').textContent = 'The dashboard is not connected to Firebase yet.';
     $('#gate-error').hidden = false;

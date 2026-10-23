@@ -7,7 +7,7 @@ own Google Drive.
 
 - `firestore.rules`: who may read or change what (owner `vgfintrack@gmail.com`,
   founders, employees, guests, and the app without sign-in).
-- `firebase.json`: points the Firebase CLI at the rules (and the local emulators).
+- `firebase.json`: points the Firebase CLI at the rules (`firebase deploy --only firestore`).
 
 ## Switching it on (once)
 
@@ -31,12 +31,3 @@ Use the project the app already uses: **vgfintrack-11a9c**, signed in as
    - `AmrPotli/js/config.js`: `export const firebaseProject = { projectId: '…', apiKey: '…' };`
 
 Then open <https://vgfintrack.github.io/team/> and sign in with vgfintrack@gmail.com.
-
-## Testing the rules locally
-
-```
-cd firebase
-npx firebase emulators:exec --only firestore,auth --project demo-amrpotli "node your-test.mjs"
-```
-
-The dashboard talks to the local emulators when opened as `http://localhost:…/team/?emu`.
