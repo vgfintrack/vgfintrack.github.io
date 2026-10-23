@@ -7,6 +7,7 @@ import { catIcon, accIcon, productIcon } from './icons.js';
 import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
 import { createStore, DEFAULT_SETTINGS, FREE_CATEGORIES, categoryLimit, setCategoryLimit, FREE_PRODUCTS, productLimit, setProductLimit, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
+import { DISTRICTS, DIVISIONS } from './districts.js';
 
 // ---------------------------------------------------------------- helpers
 
@@ -333,6 +334,7 @@ async function syncCompany() {
     team: !!settings().team || !!shopLink(),
     // Only the id from the app's list; a profession the user typed is just "custom".
     prof: settings().profession ? settings().profession.id || 'custom' : '',
+    district: settings().district || '',
   });
 }
 
@@ -1915,6 +1917,7 @@ function renderDashboard() {
     ${quickActions()}
     ${dueCard()}
     ${guide}
+    ${districtCard()}
     ${guide ? '' : installTip()}
     ${guide ? '' : backupCard()}
     ${importCard}
@@ -2031,6 +2034,7 @@ function renderDashboard() {
   bindInstall($('#view-dashboard'));
   bindRecurring($('#view-dashboard'));
   bindBackup($('#view-dashboard'));
+  bindDistrict($('#view-dashboard'));
   $('#back-simple')?.addEventListener('click', backToSimple);
   bindShop($('#view-dashboard'));
   bindBaki($('#view-dashboard'));
@@ -3523,13 +3527,19 @@ function renderSetup() {
 
       ${installCard()}
 
+      <div class="card" ${own}>
+        <h3>📍 ${t('Your district')}</h3>
+        <p class="muted" style="margin:0 0 10px;font-size:13px">${t('Optional. It helps us bring AmrPotli to more places. Only the district is counted, never your name or money.')}</p>
+        ${districtSelect('setup-district', settings().district || '')}
+      </div>
+
       <div class="card">
         <h3>${t('Help &amp; feedback')}</h3>
         <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
         <button class="btn" id="stay-in-touch">🤝 ${t('Stay in touch')}</button></div>
         <label class="switch-row" style="margin-top:14px"><input type="checkbox" id="counts-on" ${countsOn() ? 'checked' : ''}>
-          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('Once a day the app sends an anonymous count: that it was used, the language, your kind of work from the list, and which features (like voice). Never your name, email or money.')}</span></span></label>
+          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('The app sends anonymous counts: once a day that it was used, the language, your kind of work from the list and which features (like voice); once a month your country (from the phone’s time zone) and your district if you chose one. Never your name, email or money.')}</span></span></label>
         <p class="muted" style="margin:10px 0 0;font-size:13px"><a href="privacy.html">${t('Privacy')}</a> · <a href="terms.html">${t('Terms of use')}</a></p>
       </div>
 
@@ -3676,6 +3686,7 @@ function renderSetup() {
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
   bindTeam(v);
+  bindDistrict(v);
   $('#delete-account', v).onclick = openDelete;
 }
 
@@ -3869,6 +3880,64 @@ function bindBackup(root) {
     backupMark({ later: Date.now() + 7 * 86400000 });
     render();
   };
+}
+
+// ---- optional district, for the anonymous monthly count (company.js)
+
+function districtSelect(id, value = '') {
+  const name = (d) => (lang === 'bn' ? d.bn : d.en);
+  return `<select id="${id}" class="district-select" aria-label="${esc(t('Your district'))}">
+    <option value="">${t('Choose your district')}</option>
+    ${Object.entries(DIVISIONS)
+      .map(
+        ([div, bn]) => `<optgroup label="${esc(t('{name} division', { name: lang === 'bn' ? bn : div }))}">${DISTRICTS.filter((d) => d.division === div)
+          .sort((a, b) => name(a).localeCompare(name(b), lang === 'bn' ? 'bn' : 'en'))
+          .map((d) => `<option value="${d.id}" ${d.id === value ? 'selected' : ''}>${esc(name(d))}</option>`)
+          .join('')}</optgroup>`,
+      )
+      .join('')}
+  </select>`;
+}
+
+const DISTRICT_LATER_KEY = 'mt:district-later';
+function districtCard() {
+  if (isHelper() || settings().district || !state.data.transactions.length) return '';
+  try {
+    if (Date.now() < Number(localStorage.getItem(DISTRICT_LATER_KEY) || 0)) return '';
+  } catch {}
+  return `<div class="card district-tip">
+    <span class="big-ic" aria-hidden="true">📍</span>
+    <div><strong>${t(isShopMode() ? 'Which district is the shop in?' : 'Which district do you live in?')}</strong>
+      <div class="muted" style="font-size:13px">${t('Optional. It helps us bring AmrPotli to more places. Only the district is counted, never your name or money.')}</div>
+      ${districtSelect('district-pick')}</div>
+    <div class="tip-actions">
+      <button class="btn primary sm" id="district-save">${t('Save')}</button>
+      <button class="btn sm" id="district-later">${t('Not now')}</button>
+    </div>
+  </div>`;
+}
+
+function bindDistrict(root) {
+  const save = $('#district-save', root);
+  if (save)
+    save.onclick = async () => {
+      const id = $('#district-pick', root).value;
+      if (!id) return toast(t('Choose your district first.'));
+      await state.store.saveSettings({ ...settings(), district: id });
+      toast(t('Thank you!'));
+    };
+  const later = $('#district-later', root);
+  if (later)
+    later.onclick = () => {
+      try {
+        localStorage.setItem(DISTRICT_LATER_KEY, Date.now() + 30 * 86400000);
+      } catch {}
+      render();
+    };
+  const pick = $('#setup-district', root);
+  if (pick)
+    pick.onchange = () =>
+      state.store.saveSettings({ ...settings(), district: pick.value || undefined }).then(() => toast(pick.value ? t('District saved') : t('District removed')));
 }
 
 function exportCsv() {

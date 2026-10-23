@@ -540,6 +540,9 @@ async function createDriveStore() {
       setStatus('syncing');
       try {
         if (!teamChecked) await checkTeam();
+        // If the data file changes meanwhile (leaving or joining a shop),
+        // this sync stops, so one book's data never lands in another.
+        const eng = engine;
         const base = engine.doc;
         const startRev = engine.rev;
         const remote = await readRemote();
@@ -547,7 +550,10 @@ async function createDriveStore() {
         const remoteJson = remote ? JSON.stringify(remote) : null;
         // A brand-new user with nothing yet: don't create an empty file.
         const nothingYet = !remote && !engine.dirty && JSON.stringify(merged) === JSON.stringify(emptyDoc());
+        const moved = () => engine !== eng && (again = true); // sync the new book next
+        if (moved()) return;
         if (!nothingYet && JSON.stringify(merged) !== remoteJson) await writeRemote(merged);
+        if (moved()) return;
         // Keep edits made while we were syncing.
         const changedMeanwhile = engine.rev !== startRev;
         engine.replace(changedMeanwhile ? mergeDocs(engine.doc, merged) : merged, changedMeanwhile);
@@ -622,6 +628,12 @@ async function createDriveStore() {
     }
   }
 
+  // Wait for a running sync before switching books (see sync()).
+  async function quiet() {
+    clearTimeout(syncTimer);
+    await syncing?.catch(() => {});
+  }
+
   function switchTeam(next, carry = false) {
     const old = engine;
     team = next;
@@ -671,6 +683,7 @@ async function createDriveStore() {
     });
     const note = { fileId: (await res.json()).id, role: 'owner', name, owner: { email: user.email, name: user.displayName } };
     await writeNote(note);
+    await quiet();
     teamChecked = true;
     switchTeam(note, true);
     await sync();
@@ -686,6 +699,7 @@ async function createDriveStore() {
     const o = meta.owners?.[0] || {};
     const note = { fileId: id, role: 'helper', name: meta.name.replace(/^AmrPotli shop book - |\.json$/g, ''), owner: { email: o.emailAddress || '', name: o.displayName || '' } };
     await writeNote(note);
+    await quiet();
     teamChecked = true;
     switchTeam(note);
     await sync();
@@ -694,8 +708,10 @@ async function createDriveStore() {
   // Helper: back to their own data. The shop book is not touched.
   async function leaveShop() {
     await writeNote(null).catch(() => {});
-    save(`mt:data:${user.uid}:shop:${team.fileId}`, null);
+    await quiet();
+    const key = `mt:data:${user.uid}:shop:${team.fileId}`;
     switchTeam(null);
+    save(key, null);
     await sync();
   }
 

@@ -12,6 +12,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 import { firebaseConfig, OWNER } from './config.js';
 import { PROFESSIONS } from '../AmrPotli/js/professions.js';
+import { DISTRICTS, DIVISIONS } from '../AmrPotli/js/districts.js';
 import { icon } from './icons.js';
 
 // ---------------------------------------------------------------- helpers
@@ -197,6 +198,9 @@ function start(role, sections) {
     listen('stats', collection(db, 'stats'));
     // One document per day and kind of work; the last 90 days are enough.
     listen('profs', query(collection(db, 'profs'), where(documentId(), '>=', addDays(today(), -89))));
+    listen('actives', collection(db, 'actives'));
+    // where/<month>~c-<country> or ~d-<district>, the last 12 months
+    listen('places', query(collection(db, 'where'), where(documentId(), '>=', addDays(today(), -366).slice(0, 7))));
     listen('optins', query(collection(db, 'optins'), orderBy('at', 'desc'), limit(500)));
   }
   if (canRead('leads')) listen('leads', collection(db, 'leads'));
@@ -356,6 +360,7 @@ function overview() {
     const d7 = statsRange(7);
     const todayRow = list('stats').find((d) => d.id === today());
     k.push(['Phones active today', nf.format(todayRow?.active || 0), 'anonymous count']);
+    k.push(['Phones this month', nf.format(activesN(`m-${thisMonth()}`)), `${nf.format(activesN(`w-${isoWeek(new Date())}`))} this week`]);
     k.push(['New phones, 7 days', nf.format(d7.reduce((s, d) => s + (d.new || 0), 0)), 'first time opened']);
     k.push(['Shared their contact', nf.format(list('optins').length), `${list('optins').filter((o) => !o.status || o.status === 'new').length} new`]);
   }
@@ -459,6 +464,74 @@ const WHY = { support: 'Wants help', updates: 'Wants news', tester: 'Wants to te
 
 const perDay = (n) => (n < 1 ? 'Less than 1 phone a day' : Math.round(n) === 1 ? 'About 1 phone a day' : `About ${nf.format(Math.round(n))} phones a day`);
 
+// ---- weekly and monthly users, and where they are
+// Each phone adds 1 once a week (actives/w-2026-43) and once a month (m-2026-10).
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const y = t.getUTCFullYear();
+  return `${y}-${String(Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0')}`;
+}
+const thisMonth = () => today().slice(0, 7);
+const activesN = (id) => list('actives').find((d) => d.id === id)?.n || 0;
+const monthsBack = (n) =>
+  [...Array(n)].map((_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (n - 1 - i));
+    return d.toISOString().slice(0, 7);
+  });
+const monthLabel = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+
+function monthlyBars() {
+  const months = monthsBack(12);
+  const max = Math.max(1, ...months.map((m) => activesN(`m-${m}`)));
+  return `<div class="bars">${months.map((m) => `<div style="height:${(activesN(`m-${m}`) / max) * 100}%" data-tip="${monthLabel(m)}: ${nf.format(activesN(`m-${m}`))} phones"></div>`).join('')}</div>
+    <p class="small muted" style="margin:8px 0 0">The last 12 months. Each phone counts once a month.</p>`;
+}
+
+const regionName = (() => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+const flag = (cc) => String.fromCodePoint(...cc.toUpperCase().split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+function placesFor(month) {
+  const rows = list('places').filter((d) => d.id.startsWith(`${month}~`)).map((d) => [d.id.split('~')[1], d.n || 0]);
+  const of = (prefix) => rows.filter(([k]) => k.startsWith(prefix)).map(([k, n]) => [k.slice(2), n]).sort((a, b) => b[1] - a[1]);
+  return { countries: of('c-'), districts: of('d-') };
+}
+function barList(rows, name, total) {
+  const top = rows[0]?.[1] || 1;
+  return `<div class="split wide">${rows
+    .map(([id, n]) => `<div class="ln"><span>${esc(name(id))}</span><span class="tr"><i style="width:${(n / top) * 100}%"></i></span><b data-tip="${nf.format(n)} phones">${Math.round((n / total) * 100)}%</b></div>`)
+    .join('')}</div>`;
+}
+function countriesCard(month) {
+  const { countries } = placesFor(month);
+  const total = countries.reduce((s, [, n]) => s + n, 0);
+  if (!total) return empty('No phones counted in this month yet.');
+  const abroad = countries.filter(([cc]) => cc !== 'bd').reduce((s, [, n]) => s + n, 0);
+  return `${barList(countries.slice(0, 12), (cc) => `${flag(cc)} ${regionName?.of(cc.toUpperCase()) || cc.toUpperCase()}`, total)}
+    <p class="small muted" style="margin:8px 0 0">${nf.format(total)} phones, from each phone's time zone. Outside Bangladesh: ${nf.format(abroad)}.</p>`;
+}
+function districtsCard(month) {
+  const { districts } = placesFor(month);
+  const told = districts.reduce((s, [, n]) => s + n, 0);
+  if (!told) return empty('Nobody has chosen a district in this month yet. The app asks after the first entry, and in Setup.');
+  const byId = Object.fromEntries(DISTRICTS.map((d) => [d.id, d]));
+  const divs = Object.keys(DIVISIONS)
+    .map((div) => [div, districts.filter(([id]) => byId[id]?.division === div).reduce((s, [, n]) => s + n, 0)])
+    .filter(([, n]) => n)
+    .sort((a, b) => b[1] - a[1]);
+  const all = activesN(`m-${month}`);
+  return `<p class="small muted" style="margin:0 0 6px"><b>By division</b></p>${barList(divs, (div) => `${div} division`, told)}
+    <p class="small muted" style="margin:12px 0 6px"><b>Top districts</b></p>${barList(districts.slice(0, 15), (id) => byId[id]?.en || id, told)}
+    <p class="small muted" style="margin:8px 0 0">${nf.format(told)} phones chose a district${all ? ` (${Math.round((told / all) * 100)}% of ${nf.format(all)} that month)` : ''}. Only what people chose themselves.</p>`;
+}
+
 // Kinds of work: phone-days per profession in the range, most first.
 function professions(range) {
   const from = addDays(today(), -(range - 1));
@@ -493,6 +566,9 @@ function users() {
   return `${head('App users', 'Counts are anonymous: each phone adds 1 a day, with no name, email or money. People below chose to share their contact from the app.',
     `<select id="range">${[[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']].map(([k, l]) => `<option value="${k}" ${range === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
     <div class="kpis">
+      <div class="kpi"><small>Phones this week</small><b>${nf.format(activesN(`w-${isoWeek(new Date())}`))}</b><span>weekly users, each phone once</span></div>
+      <div class="kpi"><small>Phones this month</small><b>${nf.format(activesN(`m-${thisMonth()}`))}</b><span>monthly users · last month ${nf.format(activesN(`m-${monthsBack(2)[0]}`))}</span></div>
+      <div class="kpi"><small>All phones</small><b>${nf.format(list('stats').reduce((s, r) => s + (r.new || 0), 0))}</b><span>ever opened AmrPotli (counted)</span></div>
       <div class="kpi"><small>Phone-days active</small><b>${nf.format(act)}</b><span>${avg >= 1 ? `about ${nf.format(avg)} a day` : act ? 'less than 1 a day' : 'none yet'}</span></div>
       <div class="kpi"><small>New phones</small><b>${nf.format(sum('new'))}</b><span>opened for the first time</span></div>
       <div class="kpi"><small>Signed in with Google</small><b>${act ? Math.round((sum('drive') / act) * 100) : 0}%</b><span>of active phone-days</span></div>
@@ -503,6 +579,17 @@ function users() {
       <div class="card"><h3>${icon('users')} Who uses it</h3>${split(['bn', 'en', 'shop', 'team', 'personal', 'simple', 'lock', 'drive'])}</div>
       <div class="card"><h3>${icon('briefcase')} Kinds of work</h3>${professions(range)}</div>
       <div class="card"><h3>${icon('sparkles')} What they use</h3>${split(['voice', 'sms', 'calc', 'photo', 'baki', 'buy', 'repeat', 'report'])}</div>
+      <div class="card"><h3>${icon('calendar')} Monthly users</h3>${monthlyBars()}</div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>${icon('map-pin')} Where they are
+      <span class="tools" style="margin-left:auto"><select id="place-month">${monthsBack(12)
+        .reverse()
+        .map((m) => `<option value="${m}" ${(S.filters.placeMonth || thisMonth()) === m ? 'selected' : ''}>${monthLabel(m)}</option>`)
+        .join('')}</select></span></h3>
+      <div class="grid">
+        <div><h4 style="margin:4px 0 8px">Countries</h4>${countriesCard(S.filters.placeMonth || thisMonth())}</div>
+        <div><h4 style="margin:4px 0 8px">Districts in Bangladesh</h4>${districtsCard(S.filters.placeMonth || thisMonth())}</div>
+      </div>
     </div>
     <div class="card" style="margin-top:14px"><h3>${icon('mail')} People who shared their contact
       <span class="tools" style="margin-left:auto"><select id="opt-status">${[['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['done', 'Done']].map(([k, l]) => `<option value="${k}" ${status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -983,7 +1070,7 @@ $('#main').addEventListener('click', async (e) => {
 });
 
 $('#main').addEventListener('change', (e) => {
-  const map = { 'task-who': 'taskWho', range: 'range', 'opt-status': 'optStatus', 'lead-status': 'leadStatus', 'fb-status': 'fbStatus', 'fb-kind': 'fbKind', 'cost-month': 'costMonth' };
+  const map = { 'task-who': 'taskWho', range: 'range', 'place-month': 'placeMonth', 'opt-status': 'optStatus', 'lead-status': 'leadStatus', 'fb-status': 'fbStatus', 'fb-kind': 'fbKind', 'cost-month': 'costMonth' };
   if (map[e.target.id]) {
     S.filters[map[e.target.id]] = e.target.value;
     render();

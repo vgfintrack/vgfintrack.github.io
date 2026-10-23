@@ -707,7 +707,7 @@ export const BN = {
   'Stay in touch': 'যোগাযোগে থাকুন',
   '🤝 Stay in touch': '🤝 যোগাযোগে থাকুন',
   'Help improve AmrPotli': 'আমার পোটলি আরও ভালো করতে সাহায্য করুন',
-  'Once a day the app sends an anonymous count: that it was used, the language, your kind of work from the list, and which features (like voice). Never your name, email or money.': 'দিনে একবার অ্যাপ একটা নাম-পরিচয়হীন গণনা পাঠায়: অ্যাপ ব্যবহার হয়েছে কি না, ভাষা, তালিকা থেকে আপনার পেশার ধরন, আর কোন ফিচার (যেমন ভয়েস)। কখনো আপনার নাম, ইমেইল বা টাকার হিসাব নয়।',
+  'The app sends anonymous counts: once a day that it was used, the language, your kind of work from the list and which features (like voice); once a month your country (from the phone’s time zone) and your district if you chose one. Never your name, email or money.': 'অ্যাপ নাম-পরিচয়হীন গণনা পাঠায়: দিনে একবার অ্যাপ ব্যবহার হয়েছে কি না, ভাষা, তালিকা থেকে আপনার পেশার ধরন আর কোন ফিচার (যেমন ভয়েস); মাসে একবার আপনার দেশ (ফোনের টাইম জোন থেকে) আর বেছে নিলে আপনার জেলা। কখনো আপনার নাম, ইমেইল বা টাকার হিসাব নয়।',
   'Thank you!': 'ধন্যবাদ!',
   'Turned off. Nothing will be counted from this phone.': 'বন্ধ করা হয়েছে। এই ফোন থেকে কিছুই গোনা হবে না।',
   '💬 Send feedback': '💬 মতামত পাঠান',
@@ -783,4 +783,14 @@ export const BN = {
   'The owner shared this shop book without letting you add to it. Ask them to add you again in AmrPotli.': 'মালিক খাতাটি শেয়ার করেছেন, কিন্তু আপনাকে লেখার অনুমতি দেননি। তাঁকে আমার পোটলি থেকে আপনাকে আবার যোগ করতে বলুন।',
   'Team shops are not set up on this copy of AmrPotli.': 'আমার পোটলির এই কপিতে টিম দোকান চালু নেই।',
   'Choose the shop book': 'দোকানের খাতা বেছে নিন',
+  // ---- optional district
+  'Your district': 'আপনার জেলা',
+  'Choose your district': 'আপনার জেলা বেছে নিন',
+  '{name} division': '{name} বিভাগ',
+  'Which district is the shop in?': 'দোকানটি কোন জেলায়?',
+  'Which district do you live in?': 'আপনি কোন জেলায় থাকেন?',
+  'Optional. It helps us bring AmrPotli to more places. Only the district is counted, never your name or money.': 'ঐচ্ছিক। এতে আমার পোটলি আরও নানা জায়গায় পৌঁছাতে আমাদের সুবিধা হয়। শুধু জেলাটি গোনা হয়, কখনো আপনার নাম বা টাকার হিসাব নয়।',
+  'Choose your district first.': 'আগে আপনার জেলা বেছে নিন।',
+  'District saved': 'জেলা সেভ হয়েছে',
+  'District removed': 'জেলা সরানো হয়েছে',
 };

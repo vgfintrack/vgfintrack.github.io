@@ -9,8 +9,8 @@ rules_version = '2';
 //   guest     reads the sections they were given, until their end date.
 //
 // The app (no sign-in) may only: read the public notice and limits list,
-// add anonymous daily counts (also per kind of work), and add an opt-in or
-// a feedback message.
+// add anonymous counts (daily, weekly, monthly, per kind of work and place),
+// and add an opt-in or a feedback message.
 // It can never read anything else. Users' money stays in their own Drive.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -119,6 +119,25 @@ service cloud.firestore {
     match /profs/{id} {
       allow read: if canRead('users');
       allow create: if id.matches('20[0-9][0-9]-[01][0-9]-[0-3][0-9]~[a-z]{2,20}')
+        && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
+      allow update: if changed().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+    }
+
+    // Weekly and monthly users: each phone adds 1 once a week ("w-2026-43")
+    // and once a month ("m-2026-10").
+    match /actives/{id} {
+      allow read: if canRead('users');
+      allow create: if id.matches('(w-20[0-9][0-9]-[0-5][0-9]|m-20[0-9][0-9]-[01][0-9])')
+        && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
+      allow update: if changed().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+    }
+
+    // Where users are, once a month: the country of the phone's time zone
+    // ("2026-10~c-bd"), and the district only if the user chose one
+    // ("2026-10~d-sylhet"). Never a place the user typed.
+    match /where/{id} {
+      allow read: if canRead('users');
+      allow create: if id.matches('20[0-9][0-9]-[01][0-9]~(c-[a-z]{2}|d-[a-z]{3,20})')
         && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
       allow update: if changed().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
     }

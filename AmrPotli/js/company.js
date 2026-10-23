@@ -10,6 +10,10 @@
 //                  no email, no amounts. Can be turned off in Setup.
 //   profs/<day>~<profession>  the same day, +1 for the user's kind of work
 //                  (an id from the app's list, or "custom" if they typed it).
+//   actives/w-<year>-<week>, actives/m-<year>-<month>  +1 once a week and once
+//                  a month, so the team can count weekly and monthly users.
+//   where/<month>~c-<country>  once a month, the country of the phone's time
+//                  zone; where/<month>~d-<district> only if the user chose one.
 //   optins, feedback  only what the user types and sends themself.
 
 // A namespace import: an older config.js without firebaseProject just means "not connected".
@@ -121,7 +125,18 @@ export function markUsed(feature) {
 export const countsOn = () => !get(COUNTS_OFF_KEY);
 export const setCountsOn = (on) => put(COUNTS_OFF_KEY, on ? null : 1);
 
-// facts: { lang, shop, simple, lock, drive, team, prof }
+// ISO week, like 2026-43.
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const y = t.getUTCFullYear();
+  return `${y}-${String(Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0')}`;
+}
+const WEEK_KEY = 'mt:counted-week';
+const MONTH_KEY = 'mt:counted-month';
+const PLACE_KEY = 'mt:counted-district'; // '<month>~<district>' last sent
+
+// facts: { lang, shop, simple, lock, drive, team, prof, district }
 export async function sendDailyCount(facts) {
   if (!connected() || !countsOn() || !navigator.onLine) return;
   const day = today();
@@ -137,9 +152,25 @@ export async function sendDailyCount(facts) {
   } catch {
     return;
   }
-  // Separate, so the day's count above never depends on it.
-  if (/^[a-z]{2,20}$/.test(facts.prof || ''))
-    await commit([{ transform: { document: docName(`profs/${day}~${facts.prof}`), fieldTransforms: [{ fieldPath: 'n', increment: { integerValue: '1' } }] } }]).catch(() => {});
+  // The rest is separate, so the day's count above never depends on it.
+  const bump = (path) => commit([{ transform: { document: docName(path), fieldTransforms: [{ fieldPath: 'n', increment: { integerValue: '1' } }] } }]);
+  if (/^[a-z]{2,20}$/.test(facts.prof || '')) await bump(`profs/${day}~${facts.prof}`).catch(() => {});
+  const week = isoWeek(new Date());
+  if (get(WEEK_KEY) !== week) await bump(`actives/w-${week}`).then(() => put(WEEK_KEY, week), () => {});
+  const month = day.slice(0, 7);
+  if (get(MONTH_KEY) !== month) {
+    try {
+      await bump(`actives/m-${month}`);
+      put(MONTH_KEY, month);
+      const { countryOfPhone } = await import('./tzcountry.js');
+      const country = countryOfPhone();
+      if (country) await bump(`where/${month}~c-${country}`).catch(() => {});
+    } catch {}
+  }
+  // The district only if the user chose one; once a month (or when they choose it).
+  const place = `${month}~${facts.district || ''}`;
+  if (/^[a-z]{3,20}$/.test(facts.district || '') && get(PLACE_KEY) !== place)
+    await bump(`where/${month}~d-${facts.district}`).then(() => put(PLACE_KEY, place), () => {});
 }
 
 // ---------------------------------------------------------------- contact and feedback (only what the user sends)
