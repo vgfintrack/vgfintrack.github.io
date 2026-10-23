@@ -64,11 +64,11 @@ async function commit(writes) {
 
 const PUBLIC_KEY = 'mt:public';
 
-// Fresh copy at most every 10 minutes; the last copy works offline.
+// A fresh copy each time the app opens (it is tiny); the last copy works offline.
 export async function loadPublic(force = false) {
   const cached = get(PUBLIC_KEY);
   if (!connected()) return cached?.data || {};
-  if (!force && cached && Date.now() - cached.at < 10 * 60_000) return cached.data;
+  if (!force && cached && Date.now() - cached.at < 30_000) return cached.data;
   try {
     const res = await fetch(`${base()}/public?key=${P.apiKey}`);
     if (!res.ok) throw new Error(res.status);
