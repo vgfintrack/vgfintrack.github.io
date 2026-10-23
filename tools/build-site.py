@@ -14,6 +14,7 @@ The script adds the shared <head>, menu and footer, and writes the page to
 Shortcuts inside a page:
     [[English text || বাংলা লেখা]]       -> the right one shows for each language
     [[shot:sms|Caption || ক্যাপশন]]      -> a phone screenshot from assets/guide/
+    [[i:mic]]                             -> a hand-drawn line icon from tools/icons/ (Lucide shapes)
     {{root}}                              -> "" or "../", so links work from any folder
 """
 import html
@@ -37,6 +38,30 @@ def bi(en, bn):
     return f'<span lang="en">{en}</span><span lang="bn">{bn}</span>'
 
 
+ICONS = ROOT / 'tools' / 'icons'
+
+
+def icon(name, cls='sk'):
+    """A clean outline icon (one colour, rounded lines) in place of colourful emoji."""
+    if not (ICONS / f'{name}.svg').exists():
+        raise SystemExit(f'unknown icon: {name}')
+    return f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-{name}"/></svg>'
+
+
+def sprite(names):
+    """The icons a page uses, once."""
+    symbols = []
+    for name in sorted(names):
+        body = (ICONS / f'{name}.svg').read_text(encoding='utf-8')
+        inner = re.search(r'<svg[^>]*>(.*)</svg>', body, re.S).group(1)
+        inner = re.sub(r'\s+', ' ', inner).strip()
+        symbols.append(f'<symbol id="i-{name}" viewBox="0 0 24 24">{inner}</symbol>')
+    return (
+        '<svg width="0" height="0" style="position:absolute" aria-hidden="true">'
+        + ''.join(symbols) + '</svg>\n'
+    )
+
+
 def shot(m, root):
     name, _, caption = m.group(1).partition('|')
     cap = ''
@@ -53,6 +78,7 @@ def shot(m, root):
 def expand(body, root):
     body = body.replace('{{root}}', root)
     body = re.sub(r'\[\[shot:(.+?)\]\]', lambda m: shot(m, root), body, flags=re.S)
+    body = re.sub(r'\[\[i:([a-z0-9-]+)\]\]', lambda m: icon(m.group(1)), body)
     body = re.sub(r'\[\[(.+?)\|\|(.+?)\]\]', lambda m: bi(m.group(1).strip(), m.group(2).strip()), body, flags=re.S)
     return body
 
@@ -117,9 +143,9 @@ def nav(meta, root):
         <button type="button" data-l="en">EN</button>
         <button type="button" data-l="bn">বাং</button>
       </div>
-      <button type="button" class="theme-btn" aria-label="Day or night">🌙</button>
+      <button type="button" class="theme-btn" aria-label="Day or night">{icon('moon', 'sk to-dark')}{icon('sun', 'sk to-light')}</button>
       <a class="btn primary sm" href="{root}AmrPotli/">{bi('Open app', 'অ্যাপ খুলুন')}</a>
-      <button type="button" class="menu-btn" aria-label="Menu" aria-expanded="false">☰</button>
+      <button type="button" class="menu-btn" aria-label="Menu" aria-expanded="false">{icon('menu', 'sk to-open')}{icon('x', 'sk to-close')}</button>
     </div>
   </div>
 </nav>
@@ -140,7 +166,7 @@ def foot(root):
         <a class="logo" href="{root}./"><img src="{root}AmrPotli/icons/icon.svg" alt="" width="32" height="32">AmrPotli</a>
         <p>{bi('A private money tracker for life and small business in Bangladesh.', 'বাংলাদেশের জীবন আর ছোট ব্যবসার জন্য প্রাইভেট টাকার হিসাব।')}</p>
       </div>
-      {col(bi('App', 'অ্যাপ'), [(f'{root}AmrPotli/', bi('Open AmrPotli', 'AmrPotli খুলুন')), (f'{root}AmrPotli/?install', bi('📲 Install', '📲 ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
+      {col(bi('App', 'অ্যাপ'), [(f'{root}AmrPotli/', bi('Open AmrPotli', 'AmrPotli খুলুন')), (f'{root}AmrPotli/?install', bi(icon('smartphone') + ' Install', icon('smartphone') + ' ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
       {col(bi('Guides', 'গাইড'), [(f'{root}guides/start.html', bi('Get started', 'শুরু করুন')), (f'{root}guides/', bi('Guide for you', 'আপনার গাইড')), (f'{root}guides/how-to.html', bi('How to…', 'কীভাবে করবেন')), (f'{root}faq.html', bi('Questions', 'প্রশ্নোত্তর'))])}
       {col(bi('AmrPotli', 'AmrPotli'), [(f'{root}about.html', bi('About us', 'আমাদের কথা')), (feedback, bi('Send feedback', 'মতামত পাঠান')), (f'{root}AmrPotli/privacy.html', bi('Privacy', 'প্রাইভেসি')), (f'{root}AmrPotli/terms.html', bi('Terms of use', 'ব্যবহারের শর্তাবলি'))])}
     </div>
@@ -170,6 +196,8 @@ def build():
         out = ROOT / meta['out']
         out.parent.mkdir(parents=True, exist_ok=True)
         page = head(meta, root) + nav(meta, root) + expand(body, root) + foot(root)
+        used = set(re.findall(r'href="#i-([a-z0-9-]+)"', page))
+        page = page.replace('<body>\n', '<body>\n' + sprite(used), 1)
         leftover = re.findall(r'\[\[|\]\]|\{\{root\}\}', page)
         if leftover:
             raise SystemExit(f'{src}: unexpanded shortcut')

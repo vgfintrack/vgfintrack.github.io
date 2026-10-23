@@ -18,7 +18,7 @@
   const drawTheme = () => {
     if (!themeBtn) return;
     const bn = html.lang === 'bn';
-    themeBtn.textContent = dark() ? '☀️' : '🌙';
+    themeBtn.classList.toggle('is-dark', dark());
     themeBtn.title = dark() ? (bn ? 'দিনের মোড' : 'Day mode') : bn ? 'রাতের মোড' : 'Night mode';
     themeBtn.setAttribute('aria-label', themeBtn.title);
   };
@@ -38,7 +38,7 @@
     menu.onclick = () => {
       const open = nav.classList.toggle('open');
       menu.setAttribute('aria-expanded', open);
-      menu.textContent = open ? '✕' : '☰';
+      menu.classList.toggle('is-open', open);
     };
     nav.querySelectorAll('.nav-links a').forEach((a) => a.addEventListener('click', () => nav.classList.remove('open')));
   }
