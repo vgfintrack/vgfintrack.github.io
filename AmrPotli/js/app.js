@@ -86,21 +86,117 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
+  if ($('#install-dialog')?.open) drawInstall();
   if (state.data?.loaded && !$('#app').hidden) render();
 });
 window.addEventListener('appinstalled', () => {
   installPrompt = null;
+  if ($('#install-dialog').open) drawInstall('installing');
   markGuide('install');
   toast(t('AmrPotli is installed. Open it from your home screen.'));
   if (state.data?.loaded) render();
 });
 
 async function installApp() {
-  if (!installPrompt) return;
+  if (!installPrompt) return openInstall();
   installPrompt.prompt();
-  await installPrompt.userChoice.catch(() => null);
+  const choice = await installPrompt.userChoice.catch(() => null);
   installPrompt = null;
-  render();
+  if ($('#install-dialog').open) drawInstall(choice?.outcome === 'accepted' ? 'installing' : null);
+  if (state.data?.loaded && !$('#app').hidden) render();
+}
+
+// ---- the install screen: the right steps for each phone and browser.
+// Chrome offers a one-tap install only sometimes (not inside Facebook or
+// Messenger, not in Samsung Internet, not for a while after "No"), so the
+// screen always has a way forward.
+
+const UA = navigator.userAgent;
+const inAppBrowser = () => /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|Line\/|MicroMessenger|; wv\)/i.test(UA);
+const isAndroid = () => /android/i.test(UA);
+const isSamsung = () => /SamsungBrowser/i.test(UA);
+const isFirefox = () => /firefox|fxios/i.test(UA);
+let relatedInstalled = false;
+
+async function checkRelated() {
+  try {
+    relatedInstalled = (await navigator.getInstalledRelatedApps?.())?.length > 0;
+  } catch {}
+}
+
+function installSituation() {
+  if (isInstalled()) return 'standalone';
+  if (relatedInstalled) return 'already';
+  if (inAppBrowser()) return 'inapp';
+  if (installPrompt) return 'prompt';
+  if (isIOS()) return 'ios';
+  if (isSamsung()) return 'samsung';
+  if (isFirefox() && !isAndroid()) return 'firefox';
+  return isAndroid() ? 'android' : 'desktop';
+}
+
+const step = (n, html) => `<li><span class="step-n">${n}</span><span>${html}</span></li>`;
+
+function drawInstall(override = null) {
+  const sit = override || installSituation();
+  const here = location.origin + location.pathname;
+  const body = {
+    standalone: () => `<p class="install-ok">✓ ${t("You're using the installed app.")}</p>`,
+    already: () => `<p class="install-ok">✓ ${t('AmrPotli is already installed on this phone. Find it on your home screen or in your app list.')}</p>
+      <p class="muted">${t('Using it in the browser is fine too: both show the same data.')}</p>`,
+    installing: () => `<p class="install-ok">✓ ${t('Installing… AmrPotli will appear on your home screen in a few seconds.')}</p>`,
+    prompt: () => `<div class="install-hero"><img src="icons/icon.svg" alt="" width="72" height="72">
+        <ul class="install-points"><li>⚡ ${t('Opens in one tap from your home screen')}</li><li>📶 ${t('Works without internet')}</li><li>🛡️ ${t('No Play Store needed, less than 1 MB')}</li></ul></div>
+      <button class="btn primary wide big" data-install-now>📲 ${t('Install')}</button>`,
+    inapp: () => `<p>${t("This page is open inside another app (like Facebook or Messenger), which can't install apps.")}</p>
+      ${
+        isAndroid()
+          ? `<a class="btn primary wide big" href="intent://${here.replace(/^https?:\/\//, '')}?install#Intent;scheme=https;package=com.android.chrome;end">🌐 ${t('Open in Chrome')}</a>`
+          : `<ol class="install-steps">${step(1, t('Tap <b>⋯</b> at the top or bottom of the screen'))}${step(2, t('Choose <b>Open in Safari</b>'))}${step(3, t('Tap <b>📲 Install the app</b> again there'))}</ol>`
+      }
+      <button class="btn wide" data-copy-link>🔗 ${t('Copy link')}</button>`,
+    ios: () => `<ol class="install-steps">
+        ${step(1, t('Tap the Share button <b class="ios-share">⬆︎</b> at the bottom of Safari'))}
+        ${step(2, t('Scroll down and tap <b>Add to Home Screen</b> ➕'))}
+        ${step(3, t('Tap <b>Add</b> at the top right'))}</ol>
+      <p class="muted">${t('Use Safari for this; other iPhone browsers may not show the option.')}</p>`,
+    samsung: () => `<ol class="install-steps">
+        ${step(1, t('Tap the menu <b>☰</b> at the bottom right'))}
+        ${step(2, t('Tap <b>Add page to</b>'))}
+        ${step(3, t('Choose <b>Home screen</b>'))}</ol>`,
+    android: () => `<ol class="install-steps">
+        ${step(1, t('Tap <b>⋮</b> at the top right of Chrome'))}
+        ${step(2, t('Tap <b>Install app</b> or <b>Add to Home screen</b>'))}
+        ${step(3, t('Tap <b>Install</b>'))}</ol>`,
+    desktop: () => `<ol class="install-steps">
+        ${step(1, t('Click the install icon <b>⊕</b> at the right end of the address bar'))}
+        ${step(2, t('Or open the menu <b>⋮</b> and choose <b>Install AmrPotli</b>'))}</ol>`,
+    firefox: () => `<p>${t('Firefox on a computer cannot install web apps. Open this page in Chrome or Edge to install, or keep using it here.')}</p>
+      <button class="btn wide" data-copy-link>🔗 ${t('Copy link')}</button>`,
+    waiting: () => `<div class="install-wait"><div class="spinner"></div><p class="muted">${t('Getting the app ready…')}</p></div>`,
+  }[sit]();
+  $('#install-body').innerHTML = body;
+  $('[data-install-now]', $('#install-body'))?.addEventListener('click', installApp);
+  $('[data-copy-link]', $('#install-body'))?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(`${here}?install`);
+      toast(t('Link copied. Paste it in Chrome.'));
+    } catch {
+      prompt(t('Copy this link:'), `${here}?install`);
+    }
+  });
+}
+
+async function openInstall() {
+  const dlg = $('#install-dialog');
+  await checkRelated();
+  // Chrome may still be deciding; wait a moment before showing the manual steps.
+  const mayPrompt = !isInstalled() && !relatedInstalled && !installPrompt && !inAppBrowser() && !isIOS() && !isSamsung() && 'serviceWorker' in navigator;
+  drawInstall(mayPrompt ? 'waiting' : null);
+  if (!dlg.open) dlg.showModal();
+  if (!mayPrompt) return;
+  for (let i = 0; i < 16 && !installPrompt && dlg.open; i++) await new Promise((r) => setTimeout(r, 250));
+  if (dlg.open) drawInstall();
 }
 
 function installTipDismissed() {
@@ -113,14 +209,10 @@ function installTipDismissed() {
 
 // Setup card: install button, iPhone steps, or "installed".
 function installCard() {
-  let body;
-  if (isInstalled()) body = `<p style="margin:0">✓ ${t('Installed on this device. It opens from your home screen, even offline.')}</p>`;
-  else if (installPrompt)
-    body = `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Open AmrPotli from your home screen like any app. It works offline too.')}</p>
-      <button class="btn primary" data-install>${t('Install AmrPotli')}</button>`;
-  else if (isIOS())
-    body = `<p class="muted" style="margin:0;font-size:13px">${t('On iPhone: tap the Share button in Safari, then "Add to Home Screen".')}</p>`;
-  else body = `<p class="muted" style="margin:0;font-size:13px">${t('Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".')}</p>`;
+  const body = isInstalled()
+    ? `<p style="margin:0">✓ ${t('Installed on this device. It opens from your home screen, even offline.')}</p>`
+    : `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Open AmrPotli from your home screen like any app. It works offline too.')}</p>
+       <button class="btn primary" data-install>📲 ${t('Install the app')}</button>`;
   return `<div class="card" id="install-card"><h3>${t('Install the app')}</h3>${body}</div>`;
 }
 
@@ -227,6 +319,13 @@ async function boot() {
   applyLang(lang);
   applyTheme();
   $('#btn-user').onclick = () => switchView('setup');
+  $('#btn-install').hidden = isInstalled();
+  $('#btn-install').onclick = openInstall;
+  // The website's "Install the app" button lands here with ?install.
+  if (new URLSearchParams(location.search).has('install')) {
+    history.replaceState(null, '', location.pathname);
+    if (!isInstalled()) openInstall();
+  }
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
   setupTxnDialog();
   setupAccountDialog();
@@ -919,13 +1018,7 @@ function guideAction(id) {
     switchView('setup');
     scrollTo('#budgets-card');
     setTimeout(() => $('#budgets-card [data-budget]')?.focus({ preventScroll: true }), 400);
-  } else if (id === 'install') {
-    if (installPrompt) installApp();
-    else {
-      switchView('setup');
-      scrollTo('#install-card');
-    }
-  } else if (id === 'report') switchView('reports');
+  } else if (id === 'install') installApp(); else if (id === 'report') switchView('reports');
 }
 
 // ---------------------------------------------------------------- dashboard

@@ -33,6 +33,7 @@
       <p class="bn">আমার পোটলি · আমার হিসাব, আমার হাতে</p>
       <p class="muted" data-i18n="Your income, spending, savings and investments in one place.">Your income, spending, savings and investments in one place.</p>
       <button id="btn-signin" class="btn primary wide" data-i18n="Sign in with Google">Sign in with Google</button>
+      <button id="btn-install" class="btn wide" type="button" data-i18n="📲 Install the app">📲 Install the app</button>
       <p class="muted" style="font-size:13px" data-i18n-html="🔒 Your data is saved in your own Google Drive, in a private folder only this app can open. Nobody else can see it, not even the people who run this website. &lt;a href=&quot;privacy.html&quot;&gt;Privacy&lt;/a&gt;">🔒 Your data is saved in your own Google Drive, in a private folder only this app can open.
         Nobody else can see it, not even the people who run this website. <a href="privacy.html">Privacy</a></p>
       <p id="login-error" class="error" hidden></p>
@@ -176,6 +177,16 @@
         <button type="submit" class="btn primary" data-i18n="Save">Save</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="install-dialog" class="sheet">
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <h2 data-i18n="📲 Install AmrPotli">📲 Install AmrPotli</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div id="install-body"></div>
+    </div>
   </dialog>
 
   <dialog id="buy-dialog" class="sheet">
