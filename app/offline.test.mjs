@@ -12,7 +12,9 @@ ok(await p.evaluate(() => !!navigator.serviceWorker.controller), 'service worker
 await p.evaluate((d) => localStorage.setItem('mt:demo', JSON.stringify({ doc: d, dirty: false })), JSON.parse(fs.readFileSync('../fixtures/demo.json', 'utf8')));
 await p.reload();
 await p.waitForSelector('.kpis');
-const cached = await p.evaluate(async () => (await (await caches.open('amrpotli-app-v28')).keys()).map((r) => new URL(r.url).pathname));
+// The cache name comes from the app's service worker, so a new version needs no test change.
+const cacheName = fs.readFileSync(`${process.env.AMRPOTLI_SITE}/AmrPotli/sw.js`, 'utf8').match(/const CACHE = '([^']+)'/)[1];
+const cached = await p.evaluate(async (n) => (await (await caches.open(n)).keys()).map((r) => new URL(r.url).pathname), cacheName);
 ok(cached.length >= 17 && cached.some((x) => x.endsWith('/js/app.js')) && cached.some((x) => x.includes('chart.umd')), `app files saved for offline (${cached.length})`);
 // go offline and reopen
 await ctx.setOffline(true);

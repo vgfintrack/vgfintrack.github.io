@@ -21,7 +21,13 @@ await env.withSecurityRulesDisabled(async (c) => {
   });
 });
 const read = async (fn) => { let out; await env.withSecurityRulesDisabled(async (c) => { out = await fn(c.firestore()); }); return out; };
-const stats = () => read(async (db) => (await getDoc(doc(db, 'stats', today))).data() || {});
+// All days added together: phones in Dhaka and Riyadh can be on different dates.
+const stats = () =>
+  read(async (db) => {
+    const out = {};
+    for (const d of (await getDocs(collection(db, 'stats'))).docs) for (const [k, v] of Object.entries(d.data())) out[k] = (out[k] || 0) + v;
+    return out;
+  });
 
 const FAKE_GIS = `window.google = { accounts: { oauth2: {
   initTokenClient(cfg) { return { requestAccessToken() { setTimeout(() => cfg.callback({ access_token: window.__mockUser, expires_in: 3600, scope: cfg.scope }), 10); } }; },
@@ -79,7 +85,7 @@ await p.waitForTimeout(800);
 let st = await stats();
 ok(st.active === 1 && st.new === 1 && st.en === 1 && st.drive === 1 && st.personal === 1, 'one anonymous count for today: ' + JSON.stringify(st));
 ok(!JSON.stringify(st).includes('rina'), 'the count has nothing about who she is');
-const prof = await read(async (db) => (await getDoc(doc(db, 'profs', `${today}~pharmacy`))).data() || {});
+const prof = { n: await read(async (db) => (await getDocs(collection(db, 'profs'))).docs.filter((d) => d.id.endsWith('~pharmacy')).reduce((t, d) => t + d.data().n, 0)) };
 ok(prof.n === 1, 'and +1 for her kind of work (pharmacy): ' + JSON.stringify(prof));
 await p.click('.tabbar button[data-view=setup]');
 ok((await setupCounter(p)).includes('no limit for you'), 'Rina (on the list, unlimited): ' + (await setupCounter(p)));
