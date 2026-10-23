@@ -316,8 +316,11 @@ async function syncCompany() {
   if (!C.connected()) return;
   const data = await C.loadPublic();
   const before = categoryLimit();
-  setCategoryLimit(await C.categoryLimitFor(state.store.mode === 'drive' ? state.user?.email : null, data, FREE_CATEGORIES));
+  const grant = await C.grantFor(state.store.mode === 'drive' ? state.user?.email : null, data, FREE_CATEGORIES);
+  state.grant = grant;
+  setCategoryLimit(grant.limit);
   if (categoryLimit() !== before && state.view === 'setup') render();
+  tellAboutGrant(grant);
   showNotice(data.notice?.app);
   C.sendDailyCount({
     lang,
@@ -334,6 +337,32 @@ function countsOn() {
   } catch {
     return true;
   }
+}
+
+// When the team gives more categories (or a gift ends), say so once.
+function tellAboutGrant(g) {
+  const key = `mt:limit-seen:${state.user?.uid}`;
+  const now = g.limit === Infinity ? 'unlimited' : String(g.limit);
+  let seen = null;
+  try {
+    seen = localStorage.getItem(key);
+  } catch {}
+  if (seen === now || (seen == null && !g.gift)) return;
+  try {
+    localStorage.setItem(key, now);
+  } catch {}
+  const was = seen == null ? FREE_CATEGORIES : seen === 'unlimited' ? Infinity : Number(seen);
+  const until = g.until ? ` ${t('Until {date}.', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : '';
+  const msg =
+    g.limit > was
+      ? `🎉 ${g.limit === Infinity ? t('Good news! The AmrPotli team gave you unlimited categories.') : t('Good news! The AmrPotli team gave you {n} categories.', { n: g.limit })}${until}`
+      : g.limit === FREE_CATEGORIES
+        ? t('Your extra categories have ended. You can have up to {n} again; the ones you already have stay.', { n: FREE_CATEGORIES })
+        : t('You can now have up to {n} categories.', { n: g.limit }) + until;
+  const bar = $('#gift-bar');
+  bar.innerHTML = `<span>${esc(msg)}</span><button class="btn sm">${t('OK')}</button>`;
+  bar.querySelector('button').onclick = () => (bar.hidden = true);
+  bar.hidden = false;
 }
 
 // Feature use, counted (without any details) with the next daily count.
@@ -3163,10 +3192,14 @@ const limitMsg = () => t(categoryLimit() > FREE_CATEGORIES ? EXTRA_LIMIT_MSG : F
 function categoryLimitRow(kind, placeholder) {
   const used = categoryCount();
   const max = categoryLimit();
+  const g = state.grant?.gift ? state.grant : null;
+  const from = g
+    ? ` · 🎁 ${t('from the AmrPotli team')}${g.until ? `, ${t('until {date}', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : ''}`
+    : '';
   const counter =
     max === Infinity
-      ? `<p class="muted cat-count">${t('{n} categories · no limit for you', { n: used })}</p>`
-      : `<p class="muted cat-count ${used >= max ? 'full' : ''}">${t('{a} of {b} categories used', { a: used, b: max })}</p>`;
+      ? `<p class="muted cat-count">${t('{n} categories · no limit for you', { n: used })}${from}</p>`
+      : `<p class="muted cat-count ${used >= max ? 'full' : ''}">${t('{a} of {b} categories used', { a: used, b: max })}${from}</p>`;
   if (used >= max) return `${counter}<p class="limit-note">🔒 ${limitMsg()}</p>`;
   return `<div class="add-row"><input id="new-${kind}" placeholder="${t(placeholder)}"><button class="btn" id="add-${kind}">${t('Add')}</button></div>${counter}`;
 }

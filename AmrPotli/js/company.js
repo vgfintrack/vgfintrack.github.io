@@ -64,17 +64,20 @@ async function commit(writes) {
 
 const PUBLIC_KEY = 'mt:public';
 
-// A fresh copy each time the app opens (it is tiny); the last copy works offline.
+// A fresh copy each time the app opens (it is tiny), reused for half a
+// minute while it stays open; the last copy works offline.
+let fresh = null; // { at, data } from this page load
 export async function loadPublic(force = false) {
   const cached = get(PUBLIC_KEY);
   if (!connected()) return cached?.data || {};
-  if (!force && cached && Date.now() - cached.at < 30_000) return cached.data;
+  if (!force && fresh && Date.now() - fresh.at < 30_000) return fresh.data;
   try {
     const res = await fetch(`${base()}/public?key=${P.apiKey}`);
     if (!res.ok) throw new Error(res.status);
     const json = await res.json();
     const data = Object.fromEntries((json.documents || []).map((d) => [d.name.split('/').pop(), plain({ mapValue: { fields: d.fields || {} } })]));
-    put(PUBLIC_KEY, { at: Date.now(), data });
+    fresh = { at: Date.now(), data };
+    put(PUBLIC_KEY, fresh);
     return data;
   } catch {
     return cached?.data || {};
@@ -86,15 +89,19 @@ async function hash(salt, email) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
-// How many categories this email may have: the free number, or more.
-// Infinity means no limit.
-export async function categoryLimitFor(email, data, free = 24) {
+// How many categories this email may have: { limit, until, gift }.
+// limit is the free number or more (Infinity = no limit); gift is true when
+// the team gave more; until is the last day ('YYYY-MM-DD') or null.
+export async function grantFor(email, data, free = 24) {
+  const none = { limit: free, until: null, gift: false };
   const lim = data?.limits;
-  if (!email || !lim?.salt || !lim.grants || !crypto?.subtle) return free;
+  if (!email || !lim?.salt || !lim.grants || !crypto?.subtle) return none;
   const g = lim.grants[await hash(lim.salt, email)];
-  if (!g || (g.until && g.until < today())) return free;
-  return g.limit ? Math.max(free, g.limit) : Infinity;
+  if (!g || (g.until && g.until < today())) return none;
+  return { limit: g.limit ? Math.max(free, g.limit) : Infinity, until: g.until || null, gift: true };
 }
+
+export const categoryLimitFor = async (email, data, free = 24) => (await grantFor(email, data, free)).limit;
 
 // ---------------------------------------------------------------- anonymous daily counts
 

@@ -722,4 +722,13 @@ export const BN = {
   'To talk about my business': 'আমার ব্যবসা নিয়ে কথা বলতে',
   'Promo code <span class="muted">(if you have one)</span>': 'প্রোমো কোড <span class="muted">(থাকলে)</span>',
   'The AmrPotli team will see these details and may contact you. You can ask us to remove them any time.': 'আমার পোটলি টিম এই তথ্য দেখবে আর আপনার সাথে যোগাযোগ করতে পারে। যেকোনো সময় মুছে দিতে বলতে পারেন।',
+  // ---- extra categories from the team
+  'Until {date}.': '{date} পর্যন্ত।',
+  'until {date}': '{date} পর্যন্ত',
+  'Good news! The AmrPotli team gave you unlimited categories.': 'সুখবর! আমার পোটলি টিম আপনাকে সীমাহীন ক্যাটাগরি দিয়েছে।',
+  'Good news! The AmrPotli team gave you {n} categories.': 'সুখবর! আমার পোটলি টিম আপনাকে {n}টি ক্যাটাগরি দিয়েছে।',
+  'Your extra categories have ended. You can have up to {n} again; the ones you already have stay.': 'আপনার বাড়তি ক্যাটাগরির মেয়াদ শেষ। আবার {n}টি পর্যন্ত রাখা যাবে; যেগুলো আছে সেগুলো থেকে যাবে।',
+  'You can now have up to {n} categories.': 'এখন আপনি {n}টি পর্যন্ত ক্যাটাগরি রাখতে পারবেন।',
+  'from the AmrPotli team': 'আমার পোটলি টিমের উপহার',
+  'OK': 'ঠিক আছে',
 };

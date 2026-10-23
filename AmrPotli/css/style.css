@@ -642,3 +642,7 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .switch-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .switch-row input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--brand); }
 .field textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 15px; resize: vertical; }
+.gift-bar { display: flex; align-items: center; gap: 10px; justify-content: space-between; font-size: 14px; font-weight: 600;
+  background: color-mix(in srgb, var(--brand) 16%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+.gift-bar[hidden] { display: none; }
+.gift-bar .btn { flex: none; }
