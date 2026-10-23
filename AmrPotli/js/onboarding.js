@@ -6,6 +6,7 @@
 
 import { t, lang, addBangla } from './i18n.js';
 import { DEFAULT_SETTINGS } from './store.js';
+import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, BUSINESS_TYPES, POPULAR, searchProfessions, professionById } from './professions.js';
 
 // Bangla for these screens comes with them, so the main app stays small.
 addBangla({
@@ -74,6 +75,21 @@ addBangla({
   'How much profit do you aim for each month?': 'প্রতি মাসে কত লাভ করতে চান?',
   'Profit = sales minus costs.': 'লাভ = বিক্রি বাদ খরচ।',
   'Profit goal': 'লাভের লক্ষ্য',
+  'What do you do?': 'আপনি কী করেন?',
+  'Type your work, or pick one below. I will suggest categories that fit.': 'আপনার কাজ লিখুন, অথবা নিচে থেকে বেছে নিন। মানানসই ক্যাটাগরি সাজিয়ে দেব।',
+  'e.g. teacher, pharmacy, poultry farm': 'যেমন শিক্ষক, ফার্মেসি, মুরগির খামার',
+  'Your work': 'আপনার কাজ',
+  'Your own profession': 'আপনার নিজের পেশা',
+  'Popular': 'জনপ্রিয়',
+  'Other profession: “{name}”': 'অন্য পেশা: “{name}”',
+  'Shop, farm, pharmacy, any trade': 'দোকান, খামার, ফার্মেসি, যেকোনো ব্যবসা',
+  "My business's money": 'আমার ব্যবসার টাকা',
+  'Sales, stock, business costs': 'বিক্রি, মাল কেনা, ব্যবসার খরচ',
+  'What kind of business?': 'কী ধরনের ব্যবসা?',
+  "The business's cash drawer": 'ব্যবসার টাকার ড্রয়ার',
+  'What does the business spend money on?': 'ব্যবসার টাকা কীসে কীসে খরচ হয়?',
+  'How does money come into the business?': 'ব্যবসায় টাকা কীভাবে আসে?',
+  'A healthy business writes down every sale and cost the same day. Start with one now.': 'ভালো ব্যবসা প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
   'A healthy shop writes down every sale and cost the same day. Start with one now.': 'ভালো দোকান প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
 });
 
@@ -82,50 +98,46 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
-// Category names stay in English: they are your data, and reports are in English.
-const PERSONAS = {
-  student: {
-    icon: '🎓', label: 'Student', sub: 'Allowance from family, tuition, scholarship',
-    expense: ['Food', 'Transport', 'Study & Books', 'Mobile & Internet', 'Hostel & Mess', 'Entertainment', 'Medical', 'Other'],
-    income: ['Family Allowance', 'Tuition', 'Scholarship', 'Other Income'],
-  },
-  job: {
-    icon: '💼', label: 'Job holder', sub: 'Monthly salary',
-    expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', 'Medical', 'Shopping', 'Other'],
-    income: ['Salary', 'Bonus', 'Other Income'],
-  },
-  freelancer: {
-    icon: '💻', label: 'Freelancer', sub: 'Clients, Upwork, Fiverr',
-    expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Software & Tools', 'Family Support', 'Medical', 'Other'],
-    income: ['Client Payment', 'Upwork / Fiverr', 'Other Income'],
-  },
-  business: {
-    icon: '🏪', label: 'Business owner', sub: 'A shop, trade or small business',
-    expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', 'Children\'s Education', 'Medical', 'Other'],
-    income: ['Business Profit', 'Rent Received', 'Other Income'],
-  },
-  home: {
-    icon: '🏠', label: 'Running a home', sub: 'Bazar, bills and family costs',
-    expense: ['Bazar & Groceries', 'Utility Bills', 'House Rent', 'Children\'s Education', 'Transport', 'Medical', 'Family Support', 'Other'],
-    income: ['Household Money', 'Salary', 'Other Income'],
-  },
+// The first step asks what you do: a few popular cards, and a search box for
+// everything else (professions.js). The answer picks the starting categories.
+const POPULAR_SUB = {
+  student: 'Allowance from family, tuition, scholarship',
+  job: 'Monthly salary',
+  freelancer: 'Clients, Upwork, Fiverr',
+  home: 'Bazar, bills and family costs',
+  business: 'Shop, farm, pharmacy, any trade',
 };
-const ALL_EXPENSE = [...new Set(Object.values(PERSONAS).flatMap((p) => p.expense).concat(['Gifts & Dawat', 'Clothing', 'Personal Care', 'Savings (DPS)']))];
-const ALL_INCOME = [...new Set(Object.values(PERSONAS).flatMap((p) => p.income).concat(['Salary', 'Tuition', 'Gift Received']))];
+const BTYPE_PROF = { other: 'otherbiz' }; // business type -> its profession entry
+const profName = (p) => (lang === 'bn' ? p.bn : p.en);
+const isShop = () => draft?.persona === 'business' && draft.bizMode === 'shop' && !!draft.btype;
+const starter = () => (isShop() ? BUSINESS[draft.btype] : PERSONAL[draft.persona] || PERSONAL.other);
+const pool = (key) => [...new Set([...starter()[key], ...(isShop() ? BUSINESS_EXTRA : PERSONAL_EXTRA)[key]])];
+const resetLists = () => {
+  draft.expense = [...starter().expense];
+  draft.income = [...starter().income];
+};
 
-// A business owner tracks either their own money (above) or the shop's.
-// Shop mode keeps the shop's money apart: sales in, stock and running costs out.
-const SHOP = {
-  expense: ['Stock Purchase', 'Shop Rent', 'Electricity', 'Staff Salary', 'Transport & Delivery', 'Packaging', 'Mobile & Internet', 'Other'],
-  income: ['Sales', 'Other Income'],
-};
-const SHOP_EXPENSE = [...SHOP.expense, 'Shop Repairs', 'Snacks & Tea', 'Licence & Fees', 'Donation', 'Loan Installment'];
-const SHOP_INCOME = [...SHOP.income, 'Commission', 'Service Income'];
-const isShop = () => draft?.persona === 'business' && draft.bizMode === 'shop';
-const starter = () => (isShop() ? SHOP : PERSONAS[draft.persona]);
+function chooseProfession(p, customLabel = null) {
+  if (customLabel) {
+    draft.prof = { id: 'custom', label: customLabel };
+    draft.persona = 'other';
+    draft.btype = null;
+  } else {
+    draft.prof = { id: p.id };
+    if ('business' in p) {
+      draft.persona = 'business';
+      draft.btype = p.business; // null for plain "Business owner": asked next
+    } else {
+      draft.persona = p.personal;
+      draft.btype = null;
+    }
+  }
+  draft.bizMode = null;
+  resetLists();
+}
 
 const walletLabel = (w) => (w.id === 'cash' && isShop() ? 'Cash box' : w.label);
-const walletSub = (w) => (w.id === 'cash' && isShop() ? "The shop's cash drawer" : w.sub);
+const walletSub = (w) => (w.id === 'cash' && isShop() ? "The business's cash drawer" : w.sub);
 
 // Ids match the earlier default accounts and help the SMS reader find them.
 const WALLETS = [
@@ -140,7 +152,7 @@ const WALLETS = [
 const GOALS = [0, 500, 1000, 2000, 5000, 10000];
 const STEPS = ['hello', 'who', 'where', 'amounts', 'spend', 'income', 'goal', 'done'];
 
-const fresh = () => ({ step: 'hello', persona: null, wallets: ['cash'], bankName: '', balances: {}, expense: null, income: null, goal: null });
+const fresh = () => ({ step: 'hello', persona: null, prof: null, btype: null, bizMode: null, wallets: ['cash'], bankName: '', balances: {}, expense: null, income: null, goal: null });
 let draft = null;
 let draftKey = 'mt:onb';
 let celebrating = false;
@@ -167,7 +179,7 @@ export const isCelebrating = () => celebrating;
 
 const valid = {
   hello: () => true,
-  who: () => !!draft.persona && (draft.persona !== 'business' || !!draft.bizMode),
+  who: () => !!draft.prof && (draft.persona !== 'business' || draft.bizMode === 'personal' || (draft.bizMode === 'shop' && !!draft.btype)),
   where: () => draft.wallets.length > 0,
   amounts: () => draft.wallets.every((id) => !(Number(draft.balances[id]) < 0)),
   spend: () => draft.expense.length > 0,
@@ -207,32 +219,32 @@ export function renderWizard(root, ctx) {
         <li>🔒 ${t('Only you can see your data. It is saved in your own Google Drive.')}</li>
         <li>✏️ ${t('You can change every answer later in Setup.')}</li>
       </ul>`,
-    who: () => `
-      ${coach(t('Which of these sounds most like you?'), t('I will suggest categories that fit you.'))}
+    who: () => {
+      const chosen = draft.prof && (draft.prof.id === 'custom' ? null : professionById(draft.prof.id));
+      const popular = POPULAR.includes(draft.prof?.id);
+      const card = (p, attrs, sub) => `<button type="button" class="ob-option ${draft.prof?.id === p.id ? 'on' : ''}" role="radio" aria-checked="${draft.prof?.id === p.id}" ${attrs}>
+          <span class="ob-ico">${p.icon}</span><span class="ob-txt"><strong>${esc(profName(p))}</strong>${sub ? `<small>${t(sub)}</small>` : ''}</span></button>`;
+      return `
+      ${coach(t('What do you do?'), t('Type your work, or pick one below. I will suggest categories that fit.'))}
+      <div class="prof-search">
+        <span aria-hidden="true">🔎</span>
+        <input id="prof-input" type="search" autocomplete="off" placeholder="${esc(t('e.g. teacher, pharmacy, poultry farm'))}" aria-label="${esc(t('Your work'))}">
+      </div>
+      <div id="prof-results" class="prof-results" role="listbox"></div>
+      ${
+        draft.prof && !popular
+          ? `<div class="ob-options">${
+              chosen
+                ? card(chosen, `data-prof-id="${chosen.id}"`)
+                : `<button type="button" class="ob-option on" role="radio" aria-checked="true"><span class="ob-ico">🧑</span><span class="ob-txt"><strong>${esc(draft.prof.label)}</strong><small>${t('Your own profession')}</small></span></button>`
+            }${subChoices()}</div>`
+          : ''
+      }
+      <p class="ob-label">${t('Popular')}</p>
       <div class="ob-options" role="radiogroup">
-        ${Object.entries(PERSONAS)
-          .map(
-            ([id, x]) => `<button type="button" class="ob-option ${draft.persona === id ? 'on' : ''}" role="radio" aria-checked="${draft.persona === id}" data-persona="${id}">
-              <span class="ob-ico">${x.icon}</span><span class="ob-txt"><strong>${t(x.label)}</strong><small>${t(x.sub)}</small></span></button>
-              ${
-                id === 'business' && draft.persona === 'business'
-                  ? `<div class="ob-sub" role="radiogroup" aria-label="${esc(t('What will you track?'))}">
-                      <p>${t('What will you track?')}</p>
-                      ${[
-                        ['personal', '🧍', 'My personal money', 'Family, bills, savings'],
-                        ['shop', '🏪', "My shop's money", 'Sales, stock, shop costs'],
-                      ]
-                        .map(
-                          ([m, ic, l, sub]) => `<button type="button" class="ob-option ${draft.bizMode === m ? 'on' : ''}" role="radio" aria-checked="${draft.bizMode === m}" data-biz="${m}">
-                            <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(l)}</strong><small>${t(sub)}</small></span></button>`,
-                        )
-                        .join('')}
-                    </div>`
-                  : ''
-              }`,
-          )
-          .join('')}
-      </div>`,
+        ${POPULAR.map((id) => card(professionById(id), `data-persona="${id}"`, POPULAR_SUB[id]) + (draft.prof?.id === id ? subChoices() : '')).join('')}
+      </div>`;
+    },
     where: () => `
       ${coach(t('Where do you keep your money?'), t('Pick all that you use.'))}
       <div class="ob-options grid">
@@ -259,11 +271,11 @@ export function renderWizard(root, ctx) {
           .join('')}
       </div>`,
     spend: () => `
-      ${coach(isShop() ? t('What does the shop spend money on?') : t('What do you usually spend on?'), t('Tap to add or remove. These become your budget categories.'))}
-      ${chipPicker('expense', isShop() ? SHOP_EXPENSE : ALL_EXPENSE, isShop() ? t('Add your own, for example Ice') : t('Add your own, for example Gym'))}`,
+      ${coach(isShop() ? t('What does the business spend money on?') : t('What do you usually spend on?'), t('Tap to add or remove. These become your budget categories.'))}
+      ${chipPicker('expense', pool('expense'), isShop() ? t('Add your own, for example Ice') : t('Add your own, for example Gym'))}`,
     income: () => `
-      ${coach(isShop() ? t('How does money come into the shop?') : t('Where does your money come from?'), t('Pick all that apply.'))}
-      ${chipPicker('income', isShop() ? SHOP_INCOME : ALL_INCOME, isShop() ? t('Add your own, for example Flexiload') : t('Add your own, for example Pocket Money'))}`,
+      ${coach(isShop() ? t('How does money come into the business?') : t('Where does your money come from?'), t('Pick all that apply.'))}
+      ${chipPicker('income', pool('income'), isShop() ? t('Add your own, for example Flexiload') : t('Add your own, for example Pocket Money'))}`,
     goal: () => `
       ${
         isShop()
@@ -288,7 +300,7 @@ export function renderWizard(root, ctx) {
         <div><span>${isShop() ? t('Profit goal') : t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
       </div>
       <p class="ob-lead">${
-        isShop() ? t('A healthy shop writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
+        isShop() ? t('A healthy business writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
       }</p>
       <p class="muted ob-small">${t('Owe someone, or lent money to someone? Add it later with + → Loan.')}</p>`;
     },
@@ -317,6 +329,34 @@ export function renderWizard(root, ctx) {
     </div>`;
 
   bind(root, ctx, step);
+}
+
+// Business owners choose whose money this potli is for; a plain "Business
+// owner" also picks the kind of business.
+function subChoices() {
+  if (draft.persona !== 'business') return '';
+  const modes = [
+    ['personal', '🧍', 'My personal money', 'Family, bills, savings'],
+    ['shop', '🏪', "My business's money", 'Sales, stock, business costs'],
+  ];
+  const kinds =
+    draft.bizMode === 'shop' && draft.prof?.id === 'business'
+      ? `<p>${t('What kind of business?')}</p>
+         <div class="ob-chips">${BUSINESS_TYPES.map((b) => {
+           const p = professionById(BTYPE_PROF[b] || b);
+           return `<button type="button" class="ob-chip ${draft.btype === b ? 'on' : ''}" aria-pressed="${draft.btype === b}" data-btype="${b}">${p.icon} ${esc(profName(p))}</button>`;
+         }).join('')}</div>`
+      : '';
+  return `<div class="ob-sub" role="radiogroup" aria-label="${esc(t('What will you track?'))}">
+      <p>${t('What will you track?')}</p>
+      ${modes
+        .map(
+          ([m, ic, l, sub]) => `<button type="button" class="ob-option ${draft.bizMode === m ? 'on' : ''}" role="radio" aria-checked="${draft.bizMode === m}" data-biz="${m}">
+            <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(l)}</strong><small>${t(sub)}</small></span></button>`,
+        )
+        .join('')}
+      ${kinds}
+    </div>`;
 }
 
 function chipPicker(key, pool, placeholder) {
@@ -381,25 +421,40 @@ function bind(root, ctx, step) {
     go(root, ctx, STEPS[STEPS.indexOf(step) + 1]);
   });
 
-  $$('[data-persona]', root).forEach(
-    (b) =>
-      (b.onclick = () => {
-        if (draft.persona !== b.dataset.persona) {
-          draft.persona = b.dataset.persona;
-          draft.bizMode = null;
-          draft.expense = [...starter().expense];
-          draft.income = [...starter().income];
-        }
-        saveDraft();
-        rerender();
-      }),
-  );
+  const pick = (p, custom) => {
+    if (custom || draft.prof?.id !== p.id) chooseProfession(p, custom);
+    saveDraft();
+    rerender();
+  };
+  $$('[data-persona]', root).forEach((b) => (b.onclick = () => pick(professionById(b.dataset.persona))));
+  // Search: only the list under the box is redrawn while typing, so the keyboard stays open.
+  const box = $('#prof-input', root);
+  const results = $('#prof-results', root);
+  if (box)
+    box.oninput = () => {
+      const q = box.value.trim().replace(/\s+/g, ' ');
+      const found = searchProfessions(q);
+      results.innerHTML =
+        found.map((p) => `<button type="button" role="option" data-prof-id="${p.id}"><span>${p.icon}</span>${esc(profName(p))}<small>${esc(lang === 'bn' ? p.en : p.bn)}</small></button>`).join('') +
+        (q.length >= 2 ? `<button type="button" role="option" class="prof-other" data-prof-custom="${esc(q)}"><span>➕</span>${esc(t('Other profession: “{name}”', { name: q }))}</button>` : '');
+      $$('[data-prof-id]', results).forEach((b) => (b.onclick = () => pick(professionById(b.dataset.profId))));
+      $$('[data-prof-custom]', results).forEach((b) => (b.onclick = () => pick(null, b.dataset.profCustom.slice(0, 40))));
+    };
+  $$('.ob-options [data-prof-id]', root).forEach((b) => (b.onclick = () => pick(professionById(b.dataset.profId))));
   $$('[data-biz]', root).forEach(
     (b) =>
       (b.onclick = () => {
         draft.bizMode = b.dataset.biz;
-        draft.expense = [...starter().expense];
-        draft.income = [...starter().income];
+        resetLists();
+        saveDraft();
+        rerender();
+      }),
+  );
+  $$('[data-btype]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        draft.btype = b.dataset.btype;
+        resetLists();
         saveDraft();
         rerender();
       }),
@@ -508,7 +563,8 @@ async function finish(root, ctx) {
     incomeCategories: [...draft.income],
     expenseCategories: draft.expense.map((name) => ({ name, budget: 0 })),
     onboarding: { persona: isShop() ? 'shop' : draft.persona, hidden: false, done: {} },
-    ...(isShop() && { mode: 'shop' }),
+    ...(isShop() && { mode: 'shop', productGroups: [...BUSINESS[draft.btype].products], stockCategory: BUSINESS[draft.btype].stock }),
+    profession: draft.prof.id === 'custom' ? { label: draft.prof.label } : { id: draft.prof.id, ...(isShop() && { business: draft.btype }) },
     ...(draft.persona === 'home' && { simple: true }), // the simple home screen
   };
   // Show the celebration before the save finishes, so the screen does not jump.

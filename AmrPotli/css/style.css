@@ -588,3 +588,16 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .big-actions button span { font-size: 38px; line-height: 1; }
 .big-actions button:active { transform: translateY(2px); box-shadow: none; }
 .big-mic { padding: 16px; font-size: 18px; border-radius: 16px; box-shadow: 0 3px 0 color-mix(in srgb, var(--brand) 60%, #000); }
+
+/* "What do you do?" search */
+.prof-search { display: flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 14px; padding: 4px 12px; background: var(--surface); }
+.prof-search:focus-within { border-color: var(--brand); }
+.prof-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; padding: 10px 0; }
+.prof-results { display: grid; gap: 4px; }
+.prof-results:empty { display: none; }
+.prof-results button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 600; color: var(--text); }
+.prof-results button span { font-size: 20px; }
+.prof-results button small { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; }
+.prof-results .prof-other { color: var(--brand-text); border-style: dashed; }
+.ob-label { margin: 4px 0 -6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.ob-sub .ob-chips { margin-top: 2px; }

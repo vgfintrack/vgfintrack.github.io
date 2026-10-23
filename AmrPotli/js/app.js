@@ -782,14 +782,18 @@ function setupShopDialogs() {
     const pid = newId();
     const date = $('#buy-date').value;
     const items = buyItems.map((i) => ({ p: i.p, ...(Number(i.amount) > 0 && { amount: Number(i.amount) }) }));
+    // One product with its own category (a farm's "Feed") goes there; anything
+    // else to the business's purchase category ("Medicine Purchase", "Stock Purchase").
     const s = settings();
-    if (!s.expenseCategories.some((c) => c.name === STOCK_CATEGORY))
-      await state.store.saveSettings({ ...s, expenseCategories: [{ name: STOCK_CATEGORY, budget: 0 }, ...s.expenseCategories] });
+    const own = items.length === 1 && s.expenseCategories.some((c) => c.name === items[0].p) ? items[0].p : null;
+    const category = own || s.stockCategory || STOCK_CATEGORY;
+    if (!s.expenseCategories.some((c) => c.name === category))
+      await state.store.saveSettings({ ...s, expenseCategories: [{ name: category, budget: 0 }, ...s.expenseCategories] });
     await state.store.saveTxn({
       type: 'Expense',
       amount: total,
       date,
-      category: STOCK_CATEGORY,
+      category,
       account: sup,
       note: items.map((i) => i.p).join(', '),
       items: items.length ? items : undefined,
