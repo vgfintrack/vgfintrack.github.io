@@ -3,6 +3,7 @@ import * as R from './reports.js';
 import { parseSms } from './sms.js';
 import * as G from './guide.js';
 import * as Rc from './recurring.js';
+import { catIcon, accIcon } from './icons.js';
 import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
@@ -448,6 +449,38 @@ function bindLock(root) {
   );
 }
 
+// ---------------------------------------------------------------- quick actions
+// The Dashboard's grid of one-tap actions, an icon and a word each.
+
+const QUICK = [
+  ['Expense', '💸', 'Expense'],
+  ['Income', '💰', 'Income'],
+  ['Transfer', '🔁', 'Transfer'],
+  ['Loan', '🤝', 'Loan'],
+  ['sms', '📋', 'Paste SMS'],
+  ['regular', '🗓️', 'Regular'],
+  ['budget', '🎯', 'Budget'],
+  ['report', '📄', 'Statement'],
+];
+
+function quickActions() {
+  return `<nav class="quick" aria-label="${esc(t('Quick actions'))}">${QUICK.map(
+    ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${icon}</span><span>${t(label)}</span></button>`,
+  ).join('')}</nav>`;
+}
+
+function quickAction(id) {
+  if (['Expense', 'Income', 'Transfer', 'Loan'].includes(id)) {
+    txnType = id;
+    return openTxn();
+  }
+  if (id === 'regular') {
+    switchView('setup');
+    return setTimeout(() => $('#rules-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+  guideAction(id);
+}
+
 // ---------------------------------------------------------------- getting-started guide
 
 const guideFlags = () => ({ installed: isInstalled() });
@@ -535,7 +568,7 @@ function renderDashboard() {
   const accRows = (list, sign = '') =>
     list
       .map(
-        (a) => `<div class="li"><span class="name">${esc(a.name)}</span>
+        (a) => `<div class="li"><span class="name"><span class="li-ic" aria-hidden="true">${accIcon(a)}</span>${esc(a.name)}</span>
         <span class="num">${sign}${moneyExact(w.balances[a.id].value)}</span></div>`,
       )
       .join('');
@@ -556,6 +589,7 @@ function renderDashboard() {
 
   $('#view-dashboard').innerHTML = `
     ${G.streakPill(txns, C.today())}
+    ${quickActions()}
     ${dueCard()}
     ${guide}
     ${guide ? '' : installTip()}
@@ -619,7 +653,7 @@ function renderDashboard() {
             const ratio = b > 0 ? m / b : m > 0 ? 2 : 0;
             const left = b - m;
             return `<div class="budget">
-              <div class="top"><span>${esc(c.name)}</span>
+              <div class="top"><span><span class="li-ic" aria-hidden="true">${catIcon(c.name)}</span>${esc(c.name)}</span>
                 <span class="r num">${money(m)} / ${money(b)}${isWeek ? ` · ${t('week {amount}', { amount: money(spent[c.name] || 0) })}` : ''}</span></div>
               <div class="progress ${budgetClass(ratio)}"><div style="width:${Math.min(100, ratio * 100)}%"></div></div>
               <div class="left ${left < 0 ? 'bad' : ''}">${left < 0 ? t('Over by {amount}', { amount: money(-left) }) : t('{amount} left', { amount: money(left) })}</div>
@@ -669,6 +703,7 @@ function renderDashboard() {
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
   bindRecurring($('#view-dashboard'));
+  $$('[data-quick]').forEach((b) => (b.onclick = () => quickAction(b.dataset.quick)));
   $$('[data-guide]').forEach((b) => (b.onclick = () => guideAction(b.dataset.guide)));
   $$('[data-guide-hide]').forEach(
     (b) =>
@@ -837,7 +872,7 @@ function txnRow(t) {
   const { title, sub } = describeTxn(t);
   const cls = t.type === 'Income' ? 'income' : t.type === 'Expense' ? 'expense' : 'transfer';
   const sign = t.type === 'Income' ? '+' : t.type === 'Expense' ? '−' : '';
-  const icon = t.type === 'Income' ? '↓' : t.type === 'Expense' ? '↑' : '⇄';
+  const icon = loanActionOf(t) ? '🤝' : t.type === 'Transfer' ? '🔁' : catIcon(t.category);
   return `<button class="txn" data-id="${esc(t.id)}">
     <span class="ic ${cls}">${icon}</span>
     <span class="mid"><div class="t">${esc(title)}</div><div class="sub">${esc(sub)}</div></span>
@@ -1045,6 +1080,33 @@ function fillFromSms(text) {
   showSmsInfo(lines.map(esc).join('<br>'), warn);
 }
 
+// Category tiles: the real <select> stays (hidden) and holds the value; the
+// tiles mirror it, so code that sets the select only needs syncCatGrid().
+function syncCatGrid() {
+  const sel = $('#txn-category');
+  const grid = $('#txn-cat-grid');
+  const opts = [...sel.options];
+  const key = opts.map((o) => o.value).join('|');
+  if (grid.dataset.key !== key) {
+    grid.dataset.key = key;
+    grid.innerHTML = opts
+      .map((o) => `<button type="button" role="radio" data-cat="${esc(o.value)}"><span aria-hidden="true">${catIcon(o.value)}</span><small>${esc(o.textContent)}</small></button>`)
+      .join('');
+    $$('[data-cat]', grid).forEach(
+      (b) =>
+        (b.onclick = () => {
+          sel.value = b.dataset.cat;
+          syncCatGrid();
+        }),
+    );
+  }
+  $$('[data-cat]', grid).forEach((b) => {
+    const on = b.dataset.cat === sel.value;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on);
+  });
+}
+
 function fillSelect(sel, items, value) {
   sel.innerHTML = items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
   if (value != null && items.some(([v]) => v === value)) sel.value = value;
@@ -1227,6 +1289,7 @@ function showFee() {
 
 function updateTxnHint() {
   updateFeeSuggestion();
+  syncCatGrid();
   const from = accById($('#txn-account').value);
   const to = accById($('#txn-to').value);
   let hint = '';
@@ -1533,7 +1596,7 @@ function rulesCard() {
                 </div></div>`;
             })
             .join('')
-        : `<p class="muted" style="margin:0;font-size:13px">${t('Rent, tuition, DPS, a mobile pack… When you add a transaction, choose Repeat: Every month, and AmrPotli reminds you each time it is due.')}</p>`
+        : `<p class="muted" style="margin:0;font-size:13px">🗓️ ${t('Rent, tuition, DPS… Add a transaction and choose Repeat.')}</p>`
     }
   </div>`;
 }
@@ -1630,6 +1693,9 @@ function reportContext() {
   };
 }
 
+const REPORT_ICONS = { statement: '🏦', income: '📊', networth: '⚖️', tax: '🧾', loan: '🤝' };
+const REPORT_SHORT = { statement: 'Account statement', income: 'Income & expense', networth: 'Assets & liabilities', tax: 'Tax summary', loan: 'Loan statement' };
+
 function renderReports() {
   const accs = accounts();
   const people = accs.filter((a) => a.type === 'Debt' || a.type === 'Lend');
@@ -1651,18 +1717,20 @@ function renderReports() {
   const r = reportRange();
   $('#view-reports').innerHTML = `
     <div class="card" style="display:grid;gap:10px">
-      <h3 style="margin:0">${t('Documents')}</h3>
-      <p class="muted" style="margin:0;font-size:13px">${t('Make a printable statement from your records. It opens as a page you can print or save as PDF. Documents are in English.')}</p>
-      ${Object.entries(R.REPORTS)
-        .map(
-          ([k, v]) => `<button class="choice ${kind === k ? 'recommended selected' : ''}" data-report="${k}">
-            <strong>${esc(t(v.title))}</strong><span>${esc(t(v.uses))}</span></button>`,
-        )
-        .join('')}
+      <h3 style="margin:0">${t('Documents')} <small>${t('Print or PDF · English')}</small></h3>
+      <div class="doc-tiles" role="radiogroup">
+        ${Object.entries(R.REPORTS)
+          .map(
+            ([k, v]) => `<button class="doc-tile ${kind === k ? 'on' : ''}" role="radio" aria-checked="${kind === k}" data-report="${k}">
+              <span class="qi" aria-hidden="true">${REPORT_ICONS[k] || '📄'}</span><span>${esc(t(REPORT_SHORT[k] || v.title))}</span></button>`,
+          )
+          .join('')}
+      </div>
     </div>
 
     <div class="card" style="display:grid;gap:12px">
       <h3 style="margin:0">${esc(t(R.REPORTS[kind].title))}</h3>
+      <p class="muted" style="margin:-6px 0 0;font-size:13px">${esc(t(R.REPORTS[kind].uses))}</p>
       ${
         kind === 'networth'
           ? `<div class="field"><label for="r-asof">${t('As of date')}</label><input type="date" id="r-asof" value="${esc(report.asOf)}"></div>`
@@ -1839,7 +1907,6 @@ function renderSetup() {
           <button class="btn" id="export-csv">${t('Download transactions (.csv)')}</button>
           <label class="btn" style="text-align:center">${t('Import .json file…')}
             <input type="file" accept=".json,application/json" id="import" hidden></label>
-          <p class="muted" style="font-size:12px;margin:0">${t('After choosing a file you can replace your data or add the file to it.')}</p>
         </div>
       </div>
 
@@ -1848,7 +1915,7 @@ function renderSetup() {
         <p style="margin:0 0 10px">${esc(u.displayName || '')}<br><span class="muted">${esc(u.email || '')}</span></p>
         ${
           state.store.mode === 'drive'
-            ? `<p class="muted" style="margin:0 0 10px;font-size:13px">${t("Your data is stored in a private app folder in this Google account's Drive. Nobody else can see it, including the people who run this website. Signing out removes it from this device only.")}</p>
+            ? `<p class="muted" style="margin:0 0 10px;font-size:13px">🔒 ${t('Only you can see your data. It is in a private folder in your Google Drive.')}</p>
                <button class="btn" id="signout">${t('Sign out')}</button>`
             : `<p class="muted" style="margin:0;font-size:13px">${t('Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.')}</p>`
         }

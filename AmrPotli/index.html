@@ -80,7 +80,6 @@
       </div>
       <div class="sms-row" id="sms-row">
         <button type="button" id="sms-btn" class="btn sm" data-i18n="📋 Paste SMS">📋 Paste SMS</button>
-        <span class="muted" data-i18n="bKash, Nagad or bank message">bKash, Nagad or bank message</span>
       </div>
       <div id="sms-panel" class="sms-panel" hidden>
         <textarea id="sms-text" rows="4" placeholder="Paste the SMS here" data-i18n-ph="Paste the SMS here"></textarea>
@@ -111,7 +110,8 @@
       </label>
       <div class="field" id="txn-category-field">
         <label for="txn-category" data-i18n="Category">Category</label>
-        <select id="txn-category"></select>
+        <select id="txn-category" class="sr-select" tabindex="-1" aria-hidden="true"></select>
+        <div id="txn-cat-grid" class="cat-grid" role="radiogroup" aria-label="Category" data-i18n-label="Category"></div>
       </div>
       <div class="field" id="txn-person-field" hidden>
         <label for="txn-person" id="txn-person-label" data-i18n="Lender">Lender</label>
@@ -128,13 +128,13 @@
         </div>
       </div>
       <div class="field" id="txn-fee-field">
-        <label for="txn-fee" id="txn-fee-label" data-i18n-html="Service charge &lt;span class=&quot;muted&quot;&gt;(optional: bKash cash-out, bank transfer fee)&lt;/span&gt;">Service charge <span class="muted">(optional: bKash cash-out, bank transfer fee)</span></label>
+        <label for="txn-fee" id="txn-fee-label" data-i18n-html="🧾 Service charge">🧾 Service charge</label>
         <div class="fee-row">
           <input id="txn-fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
           <button type="button" id="txn-fee-suggest" class="suggest" hidden></button>
         </div>
       </div>
-      <button type="button" id="txn-fee-add" class="linkish fee-add" hidden data-i18n="+ Add a service charge (bKash cash-out, bank fee)">+ Add a service charge (bKash cash-out, bank fee)</button>
+      <button type="button" id="txn-fee-add" class="linkish fee-add" hidden data-i18n="+ 🧾 Service charge">+ 🧾 Service charge</button>
       <div class="row2" id="txn-plan-field" hidden>
         <div class="field">
           <label for="txn-plan-count" data-i18n-html="Monthly installments &lt;span class=&quot;muted&quot;&gt;(optional)&lt;/span&gt;">Monthly installments <span class="muted">(optional)</span></label>

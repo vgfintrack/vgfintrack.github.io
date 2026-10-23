@@ -491,3 +491,26 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .btn.danger-fill { background: var(--bad); border-color: var(--bad); color: #fff; }
 .btn.danger-fill:disabled { opacity: 0.45; cursor: not-allowed; }
 .danger-link { color: var(--bad); display: block; margin-top: 14px; font-weight: 500; }
+
+/* ---------- icons instead of words ---------- */
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 4px; padding: 14px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.quick button, .doc-tile { display: grid; justify-items: center; gap: 6px; border: 0; background: none; cursor: pointer; padding: 4px 2px; font-size: 12.5px; line-height: 1.2; text-align: center; color: var(--text); border-radius: 12px; }
+.quick button:active, .doc-tile:active { background: var(--surface-2); }
+.qi { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 23px; background: color-mix(in srgb, var(--brand) 10%, var(--surface-2)); }
+@media (min-width: 720px) { .quick { grid-template-columns: repeat(8, 1fr); } }
+
+.doc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.doc-tile { border: 2px solid transparent; padding: 10px 4px; }
+.doc-tile.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
+@media (min-width: 720px) { .doc-tiles { grid-template-columns: repeat(5, 1fr); } }
+
+.field { position: relative; }
+.sr-select { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 236px; overflow-y: auto; padding: 2px; }
+.cat-grid button { display: grid; justify-items: center; gap: 3px; padding: 8px 2px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; min-width: 0; }
+.cat-grid button span { font-size: 22px; line-height: 1; }
+.cat-grid button small { font-size: 11px; line-height: 1.2; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: center; word-break: break-word; }
+.cat-grid button.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, var(--surface)); }
+.li-ic { display: inline-block; width: 1.6em; }
+.amount-field input::-webkit-outer-spin-button, .amount-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.amount-field input[type=number] { -moz-appearance: textfield; appearance: textfield; }
