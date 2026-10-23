@@ -44,10 +44,37 @@ export function catIcon(name = '') {
 
 export function accIcon(a) {
   if (!a) return '💰';
+  if (a.supplier) return { company: '🏭', distributor: '🚚', sr: '🧑‍💼', wholesale: '🏬' }[a.supplier.kind] || '🏭';
   if (a.type === 'Debt') return '🤝';
   if (a.type === 'Lend') return '🫴';
   if (a.type === 'Investment') return '📈';
   if (/cash|hand|নগদ|ক্যাশ/i.test(a.name)) return '💵';
   if (/bkash|nagad|rocket|upay|wallet/i.test(a.name)) return '📱';
   return '🏦';
+}
+
+// Product groups a shop buys; anything else falls back to the category icons.
+const PRODUCT = [
+  [/ice ?cream/i, '🍦'],
+  [/toilet|shampoo|paste|cosmetic|cream/i, '🧴'],
+  [/rice|grain|dal|lentil|flour|atta|chal/i, '🍚'],
+  [/\boil\b|ghee/i, '🛢️'],
+  [/spice|masala|salt/i, '🌶️'],
+  [/tea|sugar|coffee/i, '☕'],
+  [/biscuit|snack|chips|chanachur|cake/i, '🍪'],
+  [/drink|juice|water|soft|cola/i, '🥤'],
+  [/soap|detergent|wash|clean/i, '🧼'],
+  [/egg|dairy|milk|butter/i, '🥚'],
+  [/cigarette|bidi|tobacco/i, '🚬'],
+  [/station|pen|paper|khata/i, '🖊️'],
+  [/vegetable|potato|onion|sobji/i, '🥔'],
+  [/fruit/i, '🍌'],
+  [/bread|bakery|bun/i, '🍞'],
+  [/baby|diaper/i, '🍼'],
+  [/medicine|saline/i, '💊'],
+];
+
+export function productIcon(name = '') {
+  for (const [re, icon] of PRODUCT) if (re.test(name)) return icon;
+  return /other/i.test(name) ? '📦' : catIcon(name);
 }

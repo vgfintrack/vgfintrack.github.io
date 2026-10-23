@@ -516,3 +516,35 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .amount-field input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .ob-sub { display: grid; gap: 8px; margin: -2px 0 6px 28px; padding-left: 12px; border-left: 3px solid var(--brand); }
 .ob-sub p { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* shop: suppliers and purchases */
+.label-like { font-size: 12px; color: var(--muted); font-weight: 550; }
+.row-add { display: flex; gap: 8px; }
+.row-add select { flex: 1; min-width: 0; }
+.chip-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-pick .ob-chip { padding: 6px 11px; font-size: 13px; }
+.buy-items { width: 100%; display: grid; gap: 6px; margin-top: 6px; }
+.buy-items p { margin: 0; font-size: 12px; }
+.buy-item { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 14px; }
+.buy-item input { width: 120px; }
+.quick-chips { display: flex; gap: 6px; margin-top: 6px; }
+.quick-chips .ob-chip { padding: 5px 11px; font-size: 12.5px; }
+.kind-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.kind-pick button { display: grid; justify-items: center; gap: 3px; padding: 8px 2px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; }
+.kind-pick button span { font-size: 22px; }
+.kind-pick button small { font-size: 11.5px; }
+.kind-pick button.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, var(--surface)); }
+.sup-row { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; cursor: pointer; color: inherit; }
+.sup-row .mid { min-width: 0; }
+.sup-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sup-stats > div { display: grid; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.sup-stats span { font-size: 12px; color: var(--muted); }
+.sup-stats strong { font-size: 19px; }
+.sup-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.sheet-body { padding: 18px; display: grid; gap: 4px; }
+.mini-bar { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 6px 0; font-size: 13.5px; }
+.mini-bar .progress { grid-column: 1 / -1; height: 6px; }
+.mb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-sec { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 10px; }
+.txn-list { display: grid; gap: 8px; }
+.budget.no-budget .progress > div { background: var(--muted); opacity: 0.35; }

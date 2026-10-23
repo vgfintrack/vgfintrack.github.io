@@ -41,8 +41,19 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Shown to people who set up with the wizard (or asked for it in Setup), until they hide it.
 export const guideOn = (d) => !!d.settings?.onboarding && !d.settings.onboarding.hidden;
 
+// A shop's guide speaks of sales and stock.
+const SHOP_WORDS = {
+  expense: ['Record your first stock purchase', 'Pick a supplier, what you bought and what you paid'],
+  income: ['Record your first sale', "Today's cash sales, or one bKash payment"],
+};
+
 export function guideState(d, flags) {
-  const items = GUIDE.map((g) => ({ ...g, isDone: g.done(d, flags) }));
+  const shop = d.settings?.mode === 'shop';
+  const items = GUIDE.map((g) => ({
+    ...g,
+    ...(shop && SHOP_WORDS[g.id] && { label: SHOP_WORDS[g.id][0], sub: SHOP_WORDS[g.id][1] }),
+    isDone: g.done(d, flags),
+  }));
   return { items, count: items.filter((i) => i.isDone).length, next: items.find((i) => !i.isDone) };
 }
 

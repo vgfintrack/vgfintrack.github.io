@@ -178,6 +178,111 @@
     </form>
   </dialog>
 
+  <dialog id="buy-dialog" class="sheet">
+    <form id="buy-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 data-i18n="📦 Stock purchase">📦 Stock purchase</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div class="field">
+        <label for="buy-supplier" data-i18n="Bought from">Bought from</label>
+        <div class="row-add">
+          <select id="buy-supplier"></select>
+          <button type="button" class="btn" id="buy-new-supplier" data-i18n="+ New">+ New</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label-like" data-i18n="What did you buy?">What did you buy?</span>
+        <div id="buy-products" class="chip-pick"></div>
+        <div class="add-row"><input id="buy-new-product" placeholder="Other product, e.g. Ice cream" data-i18n-ph="Other product, e.g. Ice cream" maxlength="30"><button type="button" class="btn" id="buy-add-product" data-i18n="Add">Add</button></div>
+      </div>
+      <label class="amount-field">
+        <span>৳</span>
+        <input id="buy-total" type="number" inputmode="decimal" min="0" step="any" placeholder="0" aria-label="Total" data-i18n-label="Total" />
+      </label>
+      <div class="field">
+        <label for="buy-paid" data-i18n="Paid now">Paid now</label>
+        <div class="row2">
+          <input id="buy-paid" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+          <select id="buy-from" aria-label="Paid from" data-i18n-label="Paid from"></select>
+        </div>
+        <div class="quick-chips">
+          <button type="button" class="ob-chip" id="buy-paid-all" data-i18n="Paid in full">Paid in full</button>
+          <button type="button" class="ob-chip" id="buy-paid-none" data-i18n="All on baki">All on baki</button>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="buy-date" data-i18n="Date">Date</label>
+          <input id="buy-date" type="date" />
+        </div>
+        <div class="field">
+          <label for="buy-memo" data-i18n="Memo no.">Memo no.</label>
+          <input id="buy-memo" type="text" placeholder="Optional" data-i18n-ph="Optional" maxlength="30" />
+        </div>
+      </div>
+      <p id="buy-hint" class="hint"></p>
+      <p id="buy-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sup-dialog" class="sheet">
+    <form id="sup-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="sup-title" data-i18n="Supplier">Supplier</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div class="field">
+        <span class="label-like" data-i18n="Who is it?">Who is it?</span>
+        <div class="kind-pick" id="sup-kind" role="radiogroup">
+          <button type="button" data-kind="company"><span>🏭</span><small data-i18n="Company">Company</small></button>
+          <button type="button" data-kind="distributor"><span>🚚</span><small data-i18n="Distributor">Distributor</small></button>
+          <button type="button" data-kind="sr"><span>🧑‍💼</span><small data-i18n="Sales rep">Sales rep</small></button>
+          <button type="button" data-kind="wholesale"><span>🏬</span><small data-i18n="Wholesaler">Wholesaler</small></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sup-name" id="sup-name-label" data-i18n="Name">Name</label>
+        <input id="sup-name" type="text" maxlength="40" required />
+      </div>
+      <div class="field" id="sup-of-field">
+        <label for="sup-of" id="sup-of-label" data-i18n="Which company?">Which company?</label>
+        <input id="sup-of" type="text" maxlength="40" placeholder="e.g. PRAN, ACI, Square" data-i18n-ph="e.g. PRAN, ACI, Square" />
+      </div>
+      <div class="field" id="sup-place-field">
+        <label for="sup-place" data-i18n="Market">Market</label>
+        <input id="sup-place" type="text" maxlength="40" placeholder="e.g. Moulvibazar, Polashi Bazar" data-i18n-ph="e.g. Moulvibazar, Polashi Bazar" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="sup-phone" data-i18n="Phone">Phone</label>
+          <input id="sup-phone" type="tel" inputmode="tel" maxlength="20" placeholder="Optional" data-i18n-ph="Optional" />
+        </div>
+        <div class="field">
+          <label for="sup-due" data-i18n="Baki owed now">Baki owed now</label>
+          <input id="sup-due" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+        </div>
+      </div>
+      <p id="sup-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="submit" class="btn primary" data-i18n="Save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="supv-dialog" class="sheet">
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <h2 id="supv-title"></h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <div id="supv-body"></div>
+    </div>
+  </dialog>
+
   <dialog id="delete-dialog" class="sheet">
     <form id="delete-form" method="dialog" novalidate>
       <div class="sheet-head">

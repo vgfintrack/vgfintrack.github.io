@@ -3,7 +3,7 @@ import * as R from './reports.js';
 import { parseSms } from './sms.js';
 import * as G from './guide.js';
 import * as Rc from './recurring.js';
-import { catIcon, accIcon } from './icons.js';
+import { catIcon, accIcon, productIcon } from './icons.js';
 import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
@@ -20,7 +20,7 @@ const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFr
 const money2 = (n) => (Number.isInteger(n) ? nf.format(n) : n.toFixed(2));
 // Exact amounts for balances: whole taka when possible, otherwise with paisa.
 const moneyExact = (n) => {
-  const r = Math.round(n * 100) / 100;
+  const r = Math.round(n * 100) / 100 || 0; // no "-0"
   return Number.isInteger(r) ? nf.format(r) : nf2.format(r);
 };
 const pct = (r) => (r == null || !isFinite(r) ? '—' : `${Math.round(r * 100)}%`);
@@ -231,6 +231,7 @@ async function boot() {
   setupTxnDialog();
   setupAccountDialog();
   setupDeleteDialog();
+  setupShopDialogs();
 }
 
 function renderAvatar() {
@@ -471,6 +472,371 @@ function bindLock(root) {
   );
 }
 
+// ---------------------------------------------------------------- shop: suppliers and stock purchases
+// A supplier is a Debt account with a `supplier` record (who they are). A
+// purchase is a "Stock Purchase" expense charged to the supplier, which adds
+// to what the shop owes them, plus a transfer for whatever was paid on the spot.
+
+const SUPPLIER_KINDS = { company: ['🏭', 'Company'], distributor: ['🚚', 'Distributor'], sr: ['🧑‍💼', 'Sales rep'], wholesale: ['🏬', 'Wholesaler'] };
+const DEFAULT_PRODUCTS = ['Rice & Grains', 'Oil & Ghee', 'Spices', 'Tea & Sugar', 'Biscuits & Snacks', 'Drinks', 'Soap & Detergent', 'Toiletries', 'Eggs & Dairy', 'Cigarettes', 'Stationery', 'Other goods'];
+const STOCK_CATEGORY = 'Stock Purchase';
+const isShopMode = () => settings().mode === 'shop';
+const suppliers = () => accounts().filter((a) => a.supplier);
+const productGroups = () => settings().productGroups || DEFAULT_PRODUCTS;
+const kindIcon = (a) => SUPPLIER_KINDS[a?.supplier?.kind]?.[0] || '🏭';
+const supplierLine = (a) => [t(SUPPLIER_KINDS[a.supplier.kind]?.[1] || 'Supplier'), a.supplier.of, a.supplier.place].filter(Boolean).join(' · ');
+const owed = (id) => C.worth(accounts(), state.data.transactions).balances[id]?.value ?? 0;
+const isPurchase = (x) => x.type === 'Expense' && (x.purchase || x.category === STOCK_CATEGORY);
+
+function suppliersCard(w) {
+  const list = suppliers().sort((a, b) => w.balances[b.id].value - w.balances[a.id].value || a.name.localeCompare(b.name));
+  const total = list.reduce((s, a) => s + w.balances[a.id].value, 0);
+  return `<div class="card" id="suppliers-card">
+    <h3>🏭 ${t('Suppliers')} <span><button class="btn sm" data-sup-add>${t('+ Add')}</button> <button class="btn sm primary" data-buy>📦 ${t('Purchase')}</button></span></h3>
+    ${
+      list.length
+        ? `<div class="loan-head"><span>${t('I owe them')}</span><span class="num">${moneyExact(total)}</span></div>
+           <div class="list">${list
+             .map(
+               (a) => `<button class="li sup-row" data-sup="${esc(a.id)}">
+                 <span class="mid"><div class="name">${kindIcon(a)} ${esc(a.name)}</div><div class="sub">${esc(supplierLine(a))}</div></span>
+                 <span class="num ${w.balances[a.id].value > 0.004 ? 'expense' : ''}">${moneyExact(w.balances[a.id].value)}</span></button>`,
+             )
+             .join('')}</div>`
+        : `<p class="muted" style="margin:0;font-size:13px">${t('Add the companies, sales reps and wholesalers you buy from.')}</p>`
+    }
+  </div>`;
+}
+
+function purchasesCard(month) {
+  const buys = state.data.transactions.filter((x) => isPurchase(x) && x.date >= month.start && x.date <= month.end);
+  if (!buys.length && !suppliers().length) return '';
+  const total = buys.reduce((s, x) => s + Number(x.amount), 0);
+  const byProduct = {};
+  const bySupplier = {};
+  for (const x of buys) {
+    bySupplier[x.account] = (bySupplier[x.account] || 0) + Number(x.amount);
+    const split = (x.items || []).filter((i) => Number(i.amount) > 0);
+    const splitSum = split.reduce((s, i) => s + Number(i.amount), 0);
+    for (const i of split) byProduct[i.p] = (byProduct[i.p] || 0) + Number(i.amount);
+    const rest = Number(x.amount) - splitSum;
+    if (rest > 0.004) {
+      const k = (x.items || []).length === 1 ? x.items[0].p : 'Mixed';
+      byProduct[k] = (byProduct[k] || 0) + rest;
+    }
+  }
+  const bars = (obj, label, icon) => {
+    const rows = Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const max = rows[0]?.[1] || 1;
+    return rows
+      .map(
+        ([k, v]) => `<div class="mini-bar"><span class="mb-name">${icon(k)} ${esc(label(k))}</span><span class="num">${money(v)}</span>
+          <div class="progress"><div style="width:${(v / max) * 100}%"></div></div></div>`,
+      )
+      .join('');
+  };
+  return `<div class="card">
+    <h3>📦 ${t('Purchases this month')} <small class="num">${money(total)}</small></h3>
+    ${
+      buys.length
+        ? `<div class="mb-sec">${t('By product')}</div>${bars(byProduct, (k) => (k === 'Mixed' ? t('Mixed, not split') : k), (k) => (k === 'Mixed' ? '🧺' : productIcon(k)))}
+           <div class="mb-sec">${t('By supplier')}</div>${bars(bySupplier, (k) => accName(k), (k) => kindIcon(accById(k)))}`
+        : `<p class="muted" style="margin:0">${t('No purchases yet this month.')}</p>`
+    }
+  </div>`;
+}
+
+function bindShop(root) {
+  $$('[data-buy]', root).forEach((b) => (b.onclick = () => openPurchase(b.dataset.buy || null)));
+  $$('[data-sup-add]', root).forEach((b) => (b.onclick = () => openSupplier()));
+  $$('[data-sup]', root).forEach((b) => (b.onclick = () => openSupplierView(b.dataset.sup)));
+}
+
+// ---- purchase form
+
+let buyItems = []; // [{ p, amount }]
+
+function openPurchase(supplierId = null) {
+  if (!suppliers().length) return openSupplier(null, (id) => openPurchase(id));
+  const sups = suppliers();
+  fillSelect($('#buy-supplier'), sups.map((a) => [a.id, `${kindIcon(a)} ${a.name}`]), supplierId || sups[0].id);
+  const liquid = accounts().filter((a) => a.type === 'Liquid');
+  fillSelect($('#buy-from'), liquid.map((a) => [a.id, a.name]), liquid.find((a) => /cash/i.test(a.name))?.id);
+  buyItems = [];
+  $('#buy-total').value = '';
+  $('#buy-total').readOnly = false;
+  $('#buy-paid').value = '';
+  $('#buy-memo').value = '';
+  $('#buy-date').value = C.today();
+  $('#buy-new-product').value = '';
+  $('#buy-error').hidden = true;
+  renderBuyProducts();
+  $('#buy-dialog').showModal();
+}
+
+function renderBuyProducts() {
+  const chosen = new Set(buyItems.map((i) => i.p));
+  const all = [...new Set([...productGroups(), ...chosen])];
+  $('#buy-products').innerHTML = `${all
+    .map((p) => `<button type="button" class="ob-chip ${chosen.has(p) ? 'on' : ''}" aria-pressed="${chosen.has(p)}" data-product="${esc(p)}">${productIcon(p)} ${esc(p)}</button>`)
+    .join('')}
+    ${
+      buyItems.length
+        ? `<div class="buy-items"><p class="muted">${t('Amount for each (optional):')}</p>${buyItems
+            .map(
+              (i, n) => `<label class="buy-item"><span>${productIcon(i.p)} ${esc(i.p)}</span>
+                <input type="number" inputmode="decimal" min="0" step="any" placeholder="৳" value="${i.amount || ''}" data-item="${n}"></label>`,
+            )
+            .join('')}</div>`
+        : ''
+    }`;
+  $$('[data-product]', $('#buy-products')).forEach(
+    (b) =>
+      (b.onclick = () => {
+        const p = b.dataset.product;
+        buyItems = buyItems.some((i) => i.p === p) ? buyItems.filter((i) => i.p !== p) : [...buyItems, { p, amount: 0 }];
+        renderBuyProducts();
+        syncBuyTotal();
+      }),
+  );
+  $$('[data-item]', $('#buy-products')).forEach(
+    (inp) =>
+      (inp.oninput = () => {
+        buyItems[Number(inp.dataset.item)].amount = Number(inp.value) || 0;
+        syncBuyTotal();
+      }),
+  );
+  updateBuyHint();
+}
+
+// When items have amounts, the total is their sum.
+function syncBuyTotal() {
+  const sum = buyItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const split = sum > 0;
+  $('#buy-total').readOnly = split;
+  if (split) $('#buy-total').value = Math.round(sum * 100) / 100;
+  updateBuyHint();
+}
+
+function updateBuyHint() {
+  const sup = accById($('#buy-supplier').value);
+  const total = Number($('#buy-total').value) || 0;
+  const paid = Number($('#buy-paid').value) || 0;
+  let hint = '';
+  if (sup && total > 0) {
+    const due = owed(sup.id) + total - paid;
+    hint =
+      paid >= total
+        ? t('Paid in full. You owe {name} {amount} in total.', { name: sup.name, amount: moneyExact(owed(sup.id)) })
+        : t('{amount} goes on baki. You will owe {name} {due} in total.', { amount: moneyExact(total - paid), name: sup.name, due: moneyExact(due) });
+  }
+  $('#buy-hint').textContent = hint;
+}
+
+function setupShopDialogs() {
+  $('#buy-supplier').onchange = updateBuyHint;
+  $('#buy-total').oninput = updateBuyHint;
+  $('#buy-paid').oninput = updateBuyHint;
+  $('#buy-paid-all').onclick = () => {
+    $('#buy-paid').value = $('#buy-total').value;
+    updateBuyHint();
+  };
+  $('#buy-paid-none').onclick = () => {
+    $('#buy-paid').value = '';
+    updateBuyHint();
+  };
+  $('#buy-new-supplier').onclick = () => {
+    $('#buy-dialog').close();
+    openSupplier(null, (id) => openPurchase(id));
+  };
+  const addProduct = () => {
+    const p = $('#buy-new-product').value.trim().replace(/\s+/g, ' ');
+    if (!p) return;
+    const known = productGroups().find((x) => x.toLowerCase() === p.toLowerCase());
+    const name = known || p;
+    if (!known) state.store.saveSettings({ ...settings(), productGroups: [...productGroups(), name] });
+    if (!buyItems.some((i) => i.p === name)) buyItems.push({ p: name, amount: 0 });
+    $('#buy-new-product').value = '';
+    renderBuyProducts();
+  };
+  $('#buy-add-product').onclick = addProduct;
+  $('#buy-new-product').onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addProduct();
+    }
+  };
+  $('#buy-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => {
+      $('#buy-error').textContent = m;
+      $('#buy-error').hidden = false;
+    };
+    const sup = $('#buy-supplier').value;
+    const total = Number($('#buy-total').value);
+    const paid = Number($('#buy-paid').value) || 0;
+    if (!(total > 0)) return err(t('Enter an amount greater than 0.'));
+    if (paid < 0 || paid > total + 0.004) return err(t('Paid now cannot be more than the total.'));
+    if (!$('#buy-date').value) return err(t('Pick a date.'));
+    const pid = newId();
+    const date = $('#buy-date').value;
+    const items = buyItems.map((i) => ({ p: i.p, ...(Number(i.amount) > 0 && { amount: Number(i.amount) }) }));
+    const s = settings();
+    if (!s.expenseCategories.some((c) => c.name === STOCK_CATEGORY))
+      await state.store.saveSettings({ ...s, expenseCategories: [{ name: STOCK_CATEGORY, budget: 0 }, ...s.expenseCategories] });
+    await state.store.saveTxn({
+      type: 'Expense',
+      amount: total,
+      date,
+      category: STOCK_CATEGORY,
+      account: sup,
+      note: items.map((i) => i.p).join(', '),
+      items: items.length ? items : undefined,
+      memo: $('#buy-memo').value.trim() || undefined,
+      purchase: pid,
+    });
+    if (paid > 0)
+      await state.store.saveTxn({ type: 'Transfer', amount: paid, date, category: 'Transfer', account: $('#buy-from').value, toAccount: sup, note: '', purchase: pid });
+    $('#buy-dialog').close();
+    toast(paid >= total ? t('Purchase saved, paid in full') : t('Purchase saved · {amount} on baki', { amount: money(total - paid) }));
+  };
+
+  // supplier form
+  $$('#sup-kind [data-kind]').forEach((b) => (b.onclick = () => setSupKind(b.dataset.kind)));
+  $('#sup-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => {
+      $('#sup-error').textContent = m;
+      $('#sup-error').hidden = false;
+    };
+    const name = $('#sup-name').value.trim().replace(/\s+/g, ' ');
+    if (!name) return err(t('Enter a name.'));
+    if (state.data.accounts.some((a) => a.id !== supEdit?.id && a.name.toLowerCase() === name.toLowerCase())) return err(t('You already have an account with this name.'));
+    const due = Number($('#sup-due').value) || 0;
+    if (due < 0) return err(t('Baki cannot be negative.'));
+    const id = supEdit?.id || newId();
+    const opening = supEdit ? (supEdit.opening || 0) + (due - owed(supEdit.id)) : due;
+    const supplier = {
+      kind: supKind,
+      of: ['distributor', 'sr'].includes(supKind) ? $('#sup-of').value.trim() || undefined : undefined,
+      place: ['wholesale', 'distributor'].includes(supKind) ? $('#sup-place').value.trim() || undefined : undefined,
+      phone: $('#sup-phone').value.trim() || undefined,
+    };
+    await state.store.saveAccount({ ...(supEdit || {}), id, name, type: 'Debt', opening: Math.round(opening * 100) / 100, supplier, order: supEdit?.order ?? 50 });
+    $('#sup-dialog').close();
+    toast(supEdit ? t('Updated') : t('Supplier added'));
+    const after = supAfter;
+    supAfter = null;
+    after?.(id);
+  };
+}
+
+let supEdit = null;
+let supAfter = null;
+let supKind = 'wholesale';
+
+function setSupKind(kind) {
+  supKind = kind;
+  $$('#sup-kind [data-kind]').forEach((b) => {
+    b.classList.toggle('on', b.dataset.kind === kind);
+    b.setAttribute('aria-checked', b.dataset.kind === kind);
+  });
+  $('#sup-name-label').textContent = t({ company: 'Company name', distributor: 'Distributor name', sr: "Sales rep's name", wholesale: 'Shop name' }[kind]);
+  $('#sup-of-field').hidden = !['distributor', 'sr'].includes(kind);
+  $('#sup-place-field').hidden = !['wholesale', 'distributor'].includes(kind);
+}
+
+function openSupplier(a = null, after = null) {
+  supEdit = a;
+  supAfter = after;
+  $('#sup-title').textContent = a ? t('Edit supplier') : t('New supplier');
+  $('#sup-name').value = a?.name || '';
+  $('#sup-of').value = a?.supplier?.of || '';
+  $('#sup-place').value = a?.supplier?.place || '';
+  $('#sup-phone').value = a?.supplier?.phone || '';
+  $('#sup-due').value = a ? Math.round(owed(a.id) * 100) / 100 || '' : '';
+  $('#sup-error').hidden = true;
+  setSupKind(a?.supplier?.kind || 'wholesale');
+  $('#sup-dialog').showModal();
+  $('#sup-name').focus();
+}
+
+function openSupplierView(id) {
+  const a = accById(id);
+  if (!a) return;
+  const month = C.monthRange(C.today());
+  const txns = state.data.transactions.filter((x) => x.account === id || x.toAccount === id).sort(txnSort);
+  const bought = txns.filter((x) => isPurchase(x) && x.date >= month.start && x.date <= month.end).reduce((s, x) => s + Number(x.amount), 0);
+  $('#supv-title').textContent = `${kindIcon(a)} ${a.name}`;
+  $('#supv-body').innerHTML = `
+    <p class="muted" style="margin:0 0 12px">${esc(supplierLine(a))}${a.supplier.phone ? ` · <a href="tel:${esc(a.supplier.phone)}">📞 ${esc(a.supplier.phone)}</a>` : ''}</p>
+    <div class="sup-stats">
+      <div><span>${t('I owe them')}</span><strong class="num expense">${moneyExact(owed(id))}</strong></div>
+      <div><span>${t('Bought this month')}</span><strong class="num">${money(bought)}</strong></div>
+    </div>
+    <div class="sup-actions">
+      <button class="btn primary" data-supv="buy">📦 ${t('Purchase')}</button>
+      <button class="btn" data-supv="pay">💵 ${t('Pay')}</button>
+      <button class="btn" data-supv="edit">✏️ ${t('Edit')}</button>
+    </div>
+    <h3 style="margin:16px 0 4px">${t('History')}</h3>
+    <div class="txn-list">${txns.slice(0, 20).map(txnRow).join('') || `<p class="muted">${t('Nothing yet.')}</p>`}</div>`;
+  const body = $('#supv-body');
+  $('[data-supv=buy]', body).onclick = () => {
+    $('#supv-dialog').close();
+    openPurchase(id);
+  };
+  $('[data-supv=pay]', body).onclick = () => {
+    $('#supv-dialog').close();
+    paySupplier(id);
+  };
+  $('[data-supv=edit]', body).onclick = () => {
+    $('#supv-dialog').close();
+    openSupplier(a);
+  };
+  $$('.txn', body).forEach(
+    (el) =>
+      (el.onclick = () => {
+        $('#supv-dialog').close();
+        openTxn(state.data.transactions.find((x) => x.id === el.dataset.id));
+      }),
+  );
+  $('#supv-dialog').showModal();
+}
+
+function productsCard() {
+  return `<div class="card" id="products-card">
+    <h3>📦 ${t('Products you buy')}</h3>
+    <div class="chips">${productGroups()
+      .map((p, i) => `<span class="chip">${productIcon(p)} ${esc(p)}<button data-del-prod="${i}" aria-label="${esc(t('Remove {name}', { name: p }))}">✕</button></span>`)
+      .join('')}</div>
+    <div class="add-row"><input id="new-prod" placeholder="${esc(t('New product group'))}" maxlength="30"><button class="btn" id="add-prod">${t('Add')}</button></div>
+  </div>`;
+}
+
+function bindProducts(root) {
+  const save = (list) => state.store.saveSettings({ ...settings(), productGroups: list });
+  $$('[data-del-prod]', root).forEach((b) => (b.onclick = () => save(productGroups().filter((_, i) => i !== Number(b.dataset.delProd)))));
+  const add = $('#add-prod', root);
+  if (!add) return;
+  add.onclick = () => {
+    const name = $('#new-prod', root).value.trim().replace(/\s+/g, ' ');
+    if (!name || productGroups().some((p) => p.toLowerCase() === name.toLowerCase())) return;
+    save([...productGroups(), name]);
+  };
+}
+
+function paySupplier(id) {
+  txnType = 'Transfer';
+  openTxn();
+  const from = accounts().find((a) => a.type === 'Liquid' && /cash/i.test(a.name)) || accounts().find((a) => a.type === 'Liquid');
+  if (from) $('#txn-account').value = from.id;
+  $('#txn-to').value = id;
+  const due = owed(id);
+  if (due > 0) $('#txn-amount').value = Math.round(due * 100) / 100;
+  updateTxnHint();
+}
+
 // ---------------------------------------------------------------- quick actions
 // The Dashboard's grid of one-tap actions, an icon and a word each.
 
@@ -485,12 +851,22 @@ const QUICK = [
   ['report', '📄', 'Statement'],
 ];
 
-const SHOP_WORDS = { Expense: 'Cost', Income: 'Sale' };
+// A shop's grid: sell, buy stock, pay costs and suppliers.
+const QUICK_SHOP = [
+  ['Income', '🛍️', 'Sale'],
+  ['buy', '📦', 'Purchase'],
+  ['Expense', '💸', 'Cost'],
+  ['paysup', '💵', 'Pay supplier'],
+  ['suppliers', '🏭', 'Suppliers'],
+  ['sms', '📋', 'Paste SMS'],
+  ['Transfer', '🔁', 'Transfer'],
+  ['report', '📄', 'Statement'],
+];
 
 function quickActions() {
-  const shop = settings().mode === 'shop';
-  return `<nav class="quick" aria-label="${esc(t('Quick actions'))}">${QUICK.map(
-    ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${shop && id === 'Income' ? '🛍️' : icon}</span><span>${t((shop && SHOP_WORDS[label]) || label)}</span></button>`,
+  const list = isShopMode() ? QUICK_SHOP : QUICK;
+  return `<nav class="quick" aria-label="${esc(t('Quick actions'))}">${list.map(
+    ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${icon}</span><span>${t(label)}</span></button>`,
   ).join('')}</nav>`;
 }
 
@@ -499,6 +875,13 @@ function quickAction(id) {
     txnType = id;
     return openTxn();
   }
+  if (id === 'buy') return openPurchase();
+  if (id === 'paysup') {
+    const w = C.worth(accounts(), state.data.transactions);
+    const top = suppliers().sort((a, b) => w.balances[b.id].value - w.balances[a.id].value)[0];
+    return top ? paySupplier(top.id) : openSupplier();
+  }
+  if (id === 'suppliers') return $('#suppliers-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (id === 'regular') {
     switchView('setup');
     return setTimeout(() => $('#rules-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -524,6 +907,7 @@ function showGuide(on) {
 
 function guideAction(id) {
   const scrollTo = (sel) => setTimeout(() => $(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  if (id === 'expense' && isShopMode()) return openPurchase();
   if (id === 'expense' || id === 'income') {
     txnType = id === 'expense' ? 'Expense' : 'Income';
     openTxn();
@@ -678,18 +1062,21 @@ function renderDashboard() {
           .map((c) => {
             const b = Number(c.budget) || 0;
             const m = monthSpent[c.name] || 0;
-            const ratio = b > 0 ? m / b : m > 0 ? 2 : 0;
+            const ratio = b > 0 ? m / b : 0;
             const left = b - m;
-            return `<div class="budget">
+            return `<div class="budget ${b > 0 ? '' : 'no-budget'}">
               <div class="top"><span><span class="li-ic" aria-hidden="true">${catIcon(c.name)}</span>${esc(c.name)}</span>
                 <span class="r num">${money(m)} / ${money(b)}${isWeek ? ` · ${t('week {amount}', { amount: money(spent[c.name] || 0) })}` : ''}</span></div>
               <div class="progress ${budgetClass(ratio)}"><div style="width:${Math.min(100, ratio * 100)}%"></div></div>
-              <div class="left ${left < 0 ? 'bad' : ''}">${left < 0 ? t('Over by {amount}', { amount: money(-left) }) : t('{amount} left', { amount: money(left) })}</div>
+              <div class="left ${b > 0 && left < 0 ? 'bad' : ''}">${
+                b > 0 ? (left < 0 ? t('Over by {amount}', { amount: money(-left) }) : t('{amount} left', { amount: money(left) })) : t('No budget set')
+              }</div>
             </div>`;
           })
           .join('') || `<p class="muted">${t('Set monthly budgets in Setup.')}</p>`}
       </div>
 
+      ${isShopMode() ? suppliersCard(w) + purchasesCard(month) : ''}
       ${loansCard(accs, w)}
       ${comingUpCard()}
 
@@ -731,6 +1118,7 @@ function renderDashboard() {
   $('#see-all').onclick = () => switchView('transactions');
   bindInstall($('#view-dashboard'));
   bindRecurring($('#view-dashboard'));
+  bindShop($('#view-dashboard'));
   $$('[data-quick]').forEach((b) => (b.onclick = () => quickAction(b.dataset.quick)));
   $$('[data-guide]').forEach((b) => (b.onclick = () => guideAction(b.dataset.guide)));
   $$('[data-guide-hide]').forEach(
@@ -757,7 +1145,7 @@ function dueText(a) {
 
 // Who I owe and who owes me, with one-tap repay / got-back buttons.
 function loansCard(accs, w) {
-  const open = (type) => accs.filter((a) => a.type === type && w.balances[a.id].value > 0.004);
+  const open = (type) => accs.filter((a) => a.type === type && !a.supplier && w.balances[a.id].value > 0.004);
   const debts = open('Debt');
   const lends = open('Lend');
   const planText = (a) => {
@@ -862,6 +1250,7 @@ function txnSort(a, b) {
 function loanActionOf(t) {
   if (t.type !== 'Transfer') return null;
   if (t.loan) return t.loan;
+  if (accById(t.account)?.supplier || accById(t.toAccount)?.supplier) return null; // paying a supplier is not a loan
   const from = accById(t.account)?.type;
   const to = accById(t.toAccount)?.type;
   if (from === 'Debt') return 'borrow';
@@ -882,13 +1271,23 @@ function describeTxn(x, L = t) {
     lend: () => L('Lent to {name}', { name: personName(x.toAccount) }),
     collect: () => L('{name} paid back', { name: personName(x.account) }),
   }[loan];
-  const title = loanTitle ? loanTitle() : isT ? `${accName(x.account)} → ${accName(x.toAccount)}` : x.category;
+  const toSupplier = isT && accById(x.toAccount)?.supplier;
+  const title = loanTitle
+    ? loanTitle()
+    : x.purchase && x.type === 'Expense'
+      ? `${L('Purchase')} · ${accName(x.account)}`
+      : toSupplier
+        ? L('Paid {name}', { name: accName(x.toAccount) })
+        : isT
+          ? `${accName(x.account)} → ${accName(x.toAccount)}`
+          : x.category;
   const moneyAcc = loan === 'borrow' || loan === 'collect' ? x.toAccount : x.account;
   const feeWord = x.feeCategory === C.INTEREST_CATEGORY ? L('interest {amount}', { amount: money2(Number(x.fee)) }) : L('charge {amount}', { amount: money2(Number(x.fee)) });
   const sub = [
     loan ? `${L('Loan')} · ${accName(moneyAcc)}` : isT ? L('Transfer') : accName(x.account),
     Number(x.fee) && x.type !== 'Income' ? feeWord : '',
     x.recurring ? `↻ ${L('regular')}` : '',
+    x.memo ? `${L('Memo')} ${x.memo}` : '',
     x.note,
   ]
     .filter(Boolean)
@@ -900,7 +1299,15 @@ function txnRow(t) {
   const { title, sub } = describeTxn(t);
   const cls = t.type === 'Income' ? 'income' : t.type === 'Expense' ? 'expense' : 'transfer';
   const sign = t.type === 'Income' ? '+' : t.type === 'Expense' ? '−' : '';
-  const icon = loanActionOf(t) ? '🤝' : t.type === 'Transfer' ? '🔁' : catIcon(t.category);
+  const icon = loanActionOf(t)
+    ? '🤝'
+    : t.purchase && t.type === 'Expense'
+      ? '📦'
+      : t.type === 'Transfer'
+        ? accById(t.toAccount)?.supplier
+          ? '💵'
+          : '🔁'
+        : catIcon(t.category);
   return `<button class="txn" data-id="${esc(t.id)}">
     <span class="ic ${cls}">${icon}</span>
     <span class="mid"><div class="t">${esc(title)}</div><div class="sub">${esc(sub)}</div></span>
@@ -1156,7 +1563,7 @@ function fillLoanFields(x = null, preset = null) {
   const action = $('#txn-loan').value;
   const cfg = LOAN[action];
   const accs = accounts();
-  const people = accs.filter((a) => a.type === cfg.personType);
+  const people = accs.filter((a) => a.type === cfg.personType && !a.supplier);
   const prevPerson = $('#txn-person').value;
   const person = x ? (cfg.personIsFrom ? x.account : x.toAccount) : preset?.person ?? prevPerson;
   fillSelect(
@@ -1899,6 +2306,8 @@ function renderSetup() {
         <div class="add-row"><input id="new-inc" placeholder="${t('New income source')}"><button class="btn" id="add-inc">${t('Add')}</button></div>
       </div>
 
+      ${isShopMode() ? productsCard() : ''}
+
       ${rulesCard()}
 
       ${lockCard()}
@@ -2013,6 +2422,7 @@ function renderSetup() {
   bindInstall(v);
   bindRecurring(v);
   bindLock(v);
+  bindProducts(v);
   $('#guide-show', v)?.addEventListener('click', () => {
     showGuide(true);
     switchView('dashboard');
