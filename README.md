@@ -12,7 +12,7 @@ here. `.gitignore` refuses `seed*.json`, backups and a `private/` folder.
 
 | Group | What | How |
 |---|---|---|
-| `app` | The app in a browser: start screens, setup, shop, purchases, baki, simple screen, voice, product limit, gifts, install, offline, layout on small phones | Playwright, demo mode or a fake Google sign-in and fake Drive |
+| `app` | The app in a browser: start screens, setup, shop, purchases, baki, simple screen, voice, product limit, gifts, install, offline, layout on small phones, and team shops (owner, helper, a second phone, removing a helper) | Playwright, demo mode or the fake Google in `lib/fake-google.mjs` (sign-in, a Drive with owners and sharing, the file picker) |
 | `site` | Every website page: links, images, both languages, day/night | Playwright |
 | `firebase` | Firestore rules, the team dashboard, and what the app sends (counts, kinds of work, feedback, contact) | Local Firestore + Auth emulators (project `demo-amrpotli`), never the real project |
 
