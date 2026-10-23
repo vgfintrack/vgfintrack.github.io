@@ -1,0 +1,19 @@
+{
+  "name": "amrpotli-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests for AmrPotli, kept apart from the app. Local Firebase emulators, fake Google sign-in, made-up data only.",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:app": "node run.mjs app",
+    "test:site": "node run.mjs site",
+    "test:firebase": "node run.mjs firebase"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "11.10.0",
+    "firebase-tools": "^15.34.1",
+    "http-server": "^14.1.1",
+    "playwright": "1.56.1"
+  }
+}

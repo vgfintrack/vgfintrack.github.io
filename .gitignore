@@ -1,0 +1,8 @@
+node_modules/
+out/
+firestore.rules
+*.log
+# Never: real data or backups of anyone's money
+seed*.json
+*backup*.json
+private/

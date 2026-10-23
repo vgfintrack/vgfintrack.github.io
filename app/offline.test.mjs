@@ -1,0 +1,62 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+const p = await ctx.newPage();
+const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.goto('http://localhost:8091/AmrPotli/');
+await p.evaluate(() => navigator.serviceWorker.ready);
+await p.reload(); // now controlled by the service worker
+ok(await p.evaluate(() => !!navigator.serviceWorker.controller), 'service worker active');
+await p.evaluate((d) => localStorage.setItem('mt:demo', JSON.stringify({ doc: d, dirty: false })), JSON.parse(fs.readFileSync('../fixtures/demo.json', 'utf8')));
+await p.reload();
+await p.waitForSelector('.kpis');
+const cached = await p.evaluate(async () => (await (await caches.open('amrpotli-app-v26')).keys()).map((r) => new URL(r.url).pathname));
+ok(cached.length >= 17 && cached.some((x) => x.endsWith('/js/app.js')) && cached.some((x) => x.includes('chart.umd')), `app files saved for offline (${cached.length})`);
+// go offline and reopen
+await ctx.setOffline(true);
+await p.reload();
+await p.waitForSelector('.kpis', { timeout: 8000 });
+ok((await p.$eval('.kpi .v', (e) => e.textContent)) === '25,500', 'opens with no internet, data intact');
+await p.click('.tabbar button[data-view=reports]');
+ok(await p.isVisible('[data-report=statement]'), 'other screens work offline');
+await p.click('.tabbar button[data-view=dashboard]');
+await p.click('#fab');
+await p.fill('#txn-amount', '30');
+await p.selectOption('#txn-category', 'Transport');
+await p.click('#txn-form button[type=submit]');
+await p.waitForTimeout(200);
+ok((await p.$$eval('.kpi .v', (e) => e[1].textContent)) === '13,010', 'can add a ৳30 rickshaw fare offline');
+// back online: a new version of the site is picked up on the next open
+await ctx.setOffline(false);
+const idx = 'sitecopy/AmrPotli/index.html';
+fs.writeFileSync(idx, fs.readFileSync(idx, 'utf8').replace('<title>', '<title>v2 '));
+await p.reload();
+await p.waitForSelector('.kpis');
+ok((await p.title()).startsWith('v2'), 'online again: the newest version loads (no stale app)');
+fs.writeFileSync(idx, fs.readFileSync(idx, 'utf8').replace('<title>v2 ', '<title>'));
+// install tip + button (simulated browser install prompt)
+await p.evaluate(() => {
+  const e = new Event('beforeinstallprompt');
+  e.prompt = () => (window.__prompted = true);
+  e.userChoice = Promise.resolve({ outcome: 'accepted' });
+  window.dispatchEvent(e);
+});
+await p.waitForSelector('.install-tip');
+ok(true, 'Dashboard shows the install tip when the browser can install');
+await p.screenshot({ path: 'install-tip.png' });
+await p.click('.install-tip [data-install]');
+ok(await p.evaluate(() => window.__prompted === true), 'Install button opens the browser install dialog');
+await p.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
+await p.click('.install-tip [data-install-later]');
+await p.reload(); await p.waitForSelector('.kpis');
+await p.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
+await p.waitForTimeout(300);
+ok(!(await p.$('.install-tip')), '"Not now" is remembered');
+await p.click('.tabbar button[data-view=setup]');
+ok(await p.isVisible('#view-setup [data-install]'), 'Setup still offers Install');
+const man = await p.evaluate(async () => (await fetch('manifest.json')).json());
+ok(man.icons.some((i) => i.purpose === 'maskable') && man.scope === './' && man.id === './', 'manifest has maskable icon, scope and id');
+ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
+await b.close();
