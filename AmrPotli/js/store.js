@@ -247,6 +247,10 @@ function createDemoStore() {
     async signIn() {},
     async signOut() {},
     async syncNow() {},
+    // Demo data lives only in this browser.
+    async deleteMyData() {
+      for (const k of ['mt:demo', 'mt:onb:demo', 'mt:lock:demo']) save(k, null);
+    },
     subscribe: (cb) => engine.subscribe(cb),
     saveTxn: async (t) => engine.saveTxn(t),
     deleteTxn: async (id) => engine.deleteTxn(id),
@@ -449,6 +453,23 @@ async function createDriveStore() {
     return reconnecting;
   }
 
+  // Signs this device out: revokes the token and drops the local copy.
+  function forget() {
+    if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
+    dropToken();
+    fileId = null;
+    engine?.clear();
+    engine = null;
+    for (const [cb, off] of dataSubs) {
+      off?.();
+      dataSubs.set(cb, null);
+    }
+    user = null;
+    save(LAST_USER_KEY, null);
+    setStatus('idle');
+    authCb(null);
+  }
+
   const mutate = (fn) => async (...args) => {
     if (!engine) throw new Error(t('Not signed in'));
     fn(...args);
@@ -506,19 +527,23 @@ async function createDriveStore() {
         await sync();
         if (engine.dirty && !confirm(t('Some changes could not be saved to Google Drive yet. Sign out anyway and lose them?'))) return;
       }
-      if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
-      dropToken();
-      fileId = null;
-      engine?.clear();
-      engine = null;
-      for (const [cb, off] of dataSubs) {
-        off?.();
-        dataSubs.set(cb, null);
+      forget();
+    },
+    // Deletes every AmrPotli file in this Google account's Drive and this
+    // device's copy, then removes the app's access to the account.
+    // Called from a button tap (it may need to sign in again first).
+    async deleteMyData() {
+      clearTimeout(syncTimer);
+      await syncing?.catch(() => {});
+      if (!hasToken()) {
+        await requestToken(true);
+        keepToken();
       }
-      user = null;
-      save(LAST_USER_KEY, null);
-      setStatus('idle');
-      authCb(null);
+      const list = await (await api('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id)&pageSize=1000')).json();
+      for (const f of list.files || []) await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' });
+      const uid = user.uid;
+      forget();
+      for (const k of [`mt:data:${uid}`, tokenKey(uid), `mt:onb:${uid}`, `mt:lock:${uid}`]) save(k, null);
     },
     subscribe(cb) {
       dataSubs.set(cb, engine ? engine.subscribe(cb) : null);

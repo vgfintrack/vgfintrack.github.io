@@ -186,6 +186,7 @@ async function boot() {
       return;
     }
     $('#login').hidden = true;
+    if (hasLock()) lockNow();
     $('#app').hidden = false;
     renderAvatar();
     unsub = state.store.subscribe((data) => {
@@ -227,6 +228,7 @@ async function boot() {
   $$('dialog [data-close]').forEach((b) => (b.onclick = () => b.closest('dialog').close()));
   setupTxnDialog();
   setupAccountDialog();
+  setupDeleteDialog();
 }
 
 function renderAvatar() {
@@ -335,6 +337,115 @@ async function renderWelcome() {
       }
     },
   });
+}
+
+// ---------------------------------------------------------------- app lock
+// The keypad (lock.js) loads only on devices where a lock is set.
+
+const lockKey = () => `mt:lock:${state.user?.uid}`;
+function lockCfg() {
+  try {
+    return JSON.parse(localStorage.getItem(lockKey()));
+  } catch {
+    return null;
+  }
+}
+const hasLock = () => !!state.user && !!lockCfg();
+const lockModule = () => import('./lock.js');
+
+async function lockNow() {
+  document.documentElement.classList.add('locked'); // hide the app before the keypad loads
+  const L = await lockModule();
+  await L.showKeypad({ uid: state.user.uid, onForgot: forgotPin, demo: state.store.mode === 'demo' });
+}
+
+async function forgotPin() {
+  if (state.store.mode === 'demo') {
+    try {
+      localStorage.removeItem('mt:demo');
+    } catch {}
+    return location.reload();
+  }
+  await state.store.signOut();
+}
+
+// Lock again after the app was in the background for the chosen time.
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return (hiddenAt = Date.now());
+  const cfg = hasLock() && lockCfg();
+  if (cfg && hiddenAt && Date.now() - hiddenAt >= (cfg.after ?? 60) * 1000) lockNow();
+});
+
+function lockCard() {
+  const cfg = lockCfg();
+  if (!cfg)
+    return `<div class="card" id="lock-card"><h3>🔒 ${t('App lock')}</h3>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${t('PIN or fingerprint when AmrPotli opens.')}</p>
+      <button class="btn primary" data-lock-on>${t('Turn on')}</button></div>`;
+  const after = cfg.after ?? 60;
+  return `<div class="card" id="lock-card"><h3>🔒 ${t('App lock')} <small>${t('On')}</small></h3>
+    <div class="lock-opts">
+      <button class="btn sm" data-lock-bio hidden>${cfg.cred ? `✓ ${t('Fingerprint on')}` : `☝ ${t('Add fingerprint')}`}</button>
+      <button class="btn sm" data-lock-change>${t('Change PIN')}</button>
+      <button class="btn sm danger" data-lock-off>${t('Turn off')}</button>
+    </div>
+    <h3 style="margin-top:14px">${t('Lock after')}</h3>
+    <div class="segmented" style="display:flex">
+      ${[[0, 'Immediately'], [60, '1 min'], [300, '5 min']]
+        .map(([v, l]) => `<button data-lock-after="${v}" style="flex:1" class="${after === v ? 'active' : ''}">${t(l)}</button>`)
+        .join('')}
+    </div></div>`;
+}
+
+function bindLock(root) {
+  const uid = state.user.uid;
+  const label = state.user.email || state.user.displayName;
+  const on = $('[data-lock-on]', root);
+  if (on)
+    on.onclick = async () => {
+      const L = await lockModule();
+      if (!(await L.showKeypad({ uid, mode: 'set', canCancel: true }))) return;
+      if ((await L.canBiometric()) && confirm(t('Also unlock with fingerprint or face?'))) await L.enrollBiometric(uid, label).catch(() => toast(t('Fingerprint was not set up.')));
+      toast(t('App lock is on'));
+      render();
+    };
+  const unlockFirst = async (L) => L.showKeypad({ uid, mode: 'unlock', canCancel: true });
+  const off = $('[data-lock-off]', root);
+  if (off)
+    off.onclick = async () => {
+      const L = await lockModule();
+      if (!(await unlockFirst(L))) return;
+      L.removeLock(uid);
+      toast(t('App lock is off'));
+      render();
+    };
+  const change = $('[data-lock-change]', root);
+  if (change)
+    change.onclick = async () => {
+      const L = await lockModule();
+      if (!(await unlockFirst(L))) return;
+      if (await L.showKeypad({ uid, mode: 'set', canCancel: true })) toast(t('PIN changed'));
+    };
+  const bio = $('[data-lock-bio]', root);
+  if (bio) {
+    lockModule().then(async (L) => {
+      if (!(await L.canBiometric())) return;
+      bio.hidden = false;
+      bio.onclick = async () => {
+        if (lockCfg()?.cred) L.removeBiometric(uid);
+        else await L.enrollBiometric(uid, label).catch(() => toast(t('Fingerprint was not set up.')));
+        render();
+      };
+    });
+  }
+  $$('[data-lock-after]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        (await lockModule()).setAfter(uid, Number(b.dataset.lockAfter));
+        render();
+      }),
+  );
 }
 
 // ---------------------------------------------------------------- getting-started guide
@@ -1694,6 +1805,8 @@ function renderSetup() {
 
       ${rulesCard()}
 
+      ${lockCard()}
+
       ${installCard()}
 
       <div class="card">
@@ -1739,6 +1852,7 @@ function renderSetup() {
                <button class="btn" id="signout">${t('Sign out')}</button>`
             : `<p class="muted" style="margin:0;font-size:13px">${t('Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.')}</p>`
         }
+        <button class="linkish danger-link" id="delete-account">${t('Delete my account')}</button>
       </div>
     </div>`;
 
@@ -1803,6 +1917,7 @@ function renderSetup() {
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
   bindInstall(v);
   bindRecurring(v);
+  bindLock(v);
   $('#guide-show', v)?.addEventListener('click', () => {
     showGuide(true);
     switchView('dashboard');
@@ -1812,6 +1927,7 @@ function renderSetup() {
   $('#export-csv', v).onclick = exportCsv;
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
+  $('#delete-account', v).onclick = openDelete;
 }
 
 // Renames a category and moves its past transactions with it.
@@ -1902,6 +2018,41 @@ function download(name, text, type) {
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------------------------------------------------------------- delete account
+
+async function openDelete() {
+  // With an app lock, only the owner may delete.
+  if (hasLock() && !(await (await lockModule()).showKeypad({ uid: state.user.uid, mode: 'unlock', canCancel: true }))) return;
+  $('#delete-confirm').value = '';
+  $('#delete-go').disabled = true;
+  $('#delete-error').hidden = true;
+  $('#delete-dialog').showModal();
+}
+
+function setupDeleteDialog() {
+  $('#delete-backup').onclick = exportJson;
+  $('#delete-confirm').oninput = () => ($('#delete-go').disabled = $('#delete-confirm').value.trim().toUpperCase() !== 'DELETE');
+  $('#delete-form').onsubmit = async (e) => {
+    e.preventDefault();
+    if ($('#delete-go').disabled) return;
+    $('#delete-go').disabled = true;
+    $('#delete-go').textContent = t('Deleting…');
+    try {
+      const demo = state.store.mode === 'demo';
+      await state.store.deleteMyData();
+      $('#delete-dialog').close();
+      if (demo) return location.reload();
+      toast(t('Your AmrPotli account and data were deleted.'));
+    } catch (err) {
+      if (err?.type === 'popup_closed') return;
+      $('#delete-error').textContent = t('Could not delete: {msg}. Nothing was removed from this device; try again.', { msg: err.message || String(err) });
+      $('#delete-error').hidden = false;
+    } finally {
+      $('#delete-go').textContent = t('Delete everything');
+    }
+  };
 }
 
 function exportJson() {

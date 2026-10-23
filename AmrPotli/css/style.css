@@ -463,3 +463,31 @@ body.onboarding main { padding-bottom: 24px; }
 .due-actions, .rule-actions { display: flex; gap: 6px; align-items: center; }
 .rule-row input { width: 110px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .fee-add { justify-self: start; font-weight: 500; }
+
+/* app lock (lock.js) */
+html.locked #app, html.locked #login { visibility: hidden; }
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); overflow: auto; }
+.lock-box { width: min(320px, 100%); display: grid; justify-items: center; gap: 14px; text-align: center; }
+.lock-box img { border-radius: 18px; }
+.lock-box h2 { font-size: 19px; }
+.lock-dots { display: flex; gap: 16px; }
+.lock-dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--brand); }
+.lock-dots i.on { background: var(--brand); }
+.lock-dots.shake { animation: lock-shake 0.35s; }
+@keyframes lock-shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.lock-msg { margin: 0; min-height: 20px; font-size: 13px; color: var(--bad); }
+.lock-pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px 22px; }
+.lock-pad button { width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 26px; font-weight: 500; cursor: pointer; }
+.lock-pad button:active { background: color-mix(in srgb, var(--brand) 20%, var(--surface-2)); }
+.lock-pad .lock-text { background: none; font-size: 15px; color: var(--muted); }
+.lock-pad .lock-text[data-del] { font-size: 24px; }
+.lock-pad .lock-bio { background: none; color: var(--brand-text); display: grid; place-items: center; }
+.lock-pad .lock-bio svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.lock-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { .lock-dots.shake { animation: none; } }
+
+/* delete account */
+.delete-list { margin: 0; padding: 12px 14px; list-style: none; display: grid; gap: 8px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--line)); font-size: 14px; }
+.btn.danger-fill { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.danger-fill:disabled { opacity: 0.45; cursor: not-allowed; }
+.danger-link { color: var(--bad); display: block; margin-top: 14px; font-weight: 500; }
