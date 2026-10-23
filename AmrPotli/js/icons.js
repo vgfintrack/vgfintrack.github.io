@@ -4,6 +4,11 @@
 
 const CATEGORY = [
   [/service charge/i, '🧾'],
+  [/govt fee/i, '🏛️'],
+  [/commission/i, '🪙'],
+  [/paper|toner|\bink\b/i, '📄'],
+  [/internet bill|wifi|broadband/i, '📶'],
+  [/photocopy|printing|print|lamination|binding|scan|compose|typing|application charge/i, '🖨️'],
   [/stock|purchase|\bmal\b|goods|wholesale/i, '📦'],
   [/repair/i, '🔧'],
   [/licen|trade fee|tax/i, '📜'],
@@ -66,7 +71,8 @@ const PRODUCT = [
   [/soap|detergent|wash|clean/i, '🧼'],
   [/egg|dairy|milk|butter/i, '🥚'],
   [/cigarette|bidi|tobacco/i, '🚬'],
-  [/station|pen|paper|khata/i, '🖊️'],
+  [/toner|ink|a4|photo paper|paper/i, '📄'],
+  [/station|pen|khata/i, '🖊️'],
   [/vegetable|potato|onion|sobji/i, '🥔'],
   [/fruit/i, '🍌'],
   [/bread|bakery|bun/i, '🍞'],

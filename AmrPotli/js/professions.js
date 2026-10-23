@@ -34,6 +34,9 @@ export const BUSINESS = {
   mobile: { stock: 'Stock Purchase', expense: ['Stock Purchase', ...RUNNING, 'Repair Parts', 'Other'], income: ['Phone Sales', 'Accessories Sales', 'Flexiload Commission', 'Repair Service', 'Other Income'], products: ['Mobile Phones', 'Chargers & Cables', 'Covers & Glass', 'Earphones', 'SIM & Scratch Cards', 'Other goods'] },
   stationery: { stock: 'Stock Purchase', expense: ['Stock Purchase', ...RUNNING, 'Printer Ink & Paper', 'Other'], income: ['Sales', 'Photocopy & Printing', 'Other Income'], products: ['Pens & Pencils', 'Khata & Paper', 'Books', 'School Bags', 'Art & Craft', 'Other goods'] },
   clothing: { stock: 'Stock Purchase', expense: ['Stock Purchase', ...RUNNING, 'Tailoring', 'Other'], income: ['Sales', 'Other Income'], products: ['Sharee', 'Three-piece', 'Shirts & Pants', 'Kids Wear', 'Fabric', 'Other goods'] },
+  // Computer & photocopy shop (cyber café, digital centre): mostly services. Government
+  // fees taken from customers go in and out again, so only the shop's own charge is profit.
+  cyber: { stock: 'Paper & Supplies', expense: ['Paper & Supplies', 'Govt Fees Paid', 'Internet Bill', 'Electricity', 'Shop Rent', 'Computer Repairs', 'Staff Salary', 'Other'], income: ['Online Application Charges', 'Govt Fees Collected', 'Printing', 'Photocopy', 'Lamination & Binding', 'Scan & Email', 'Compose & Typing', 'Photo Print', 'bKash & Flexiload Commission', 'Other Income'], products: ['A4 Paper', 'Toner & Ink', 'Lamination Sheets', 'Photo Paper', 'Binding Materials', 'Computer Accessories', 'Other goods'] },
   tailor: { stock: 'Fabric & Thread', expense: ['Fabric & Thread', 'Shop Rent', 'Electricity', 'Staff Salary', 'Machine Repairs', 'Other'], income: ['Tailoring Charges', 'Fabric Sales', 'Other Income'], products: ['Fabric', 'Thread & Buttons', 'Lace & Accessories', 'Other goods'] },
   restaurant: { stock: 'Bazar & Ingredients', expense: ['Bazar & Ingredients', 'Gas', ...RUNNING, 'Utensils & Packaging', 'Other'], income: ['Food Sales', 'Other Income'], products: ['Rice & Flour', 'Meat & Fish', 'Vegetables', 'Oil & Spices', 'Tea, Sugar & Milk', 'Drinks', 'Other goods'] },
   hardware: { stock: 'Stock Purchase', expense: ['Stock Purchase', ...RUNNING, 'Loading & Unloading', 'Other'], income: ['Sales', 'Other Income'], products: ['Cement', 'Rod & Steel', 'Paint', 'Sanitary', 'Pipes & Fittings', 'Tools', 'Other goods'] },
@@ -53,7 +56,7 @@ export const BUSINESS_EXTRA = {
 };
 
 // The kinds of business offered when someone picks just "Business owner".
-export const BUSINESS_TYPES = ['grocery', 'pharmacy', 'electronics', 'mobile', 'stationery', 'clothing', 'restaurant', 'hardware', 'agri', 'poultry', 'fish', 'dairy', 'online', 'other'];
+export const BUSINESS_TYPES = ['grocery', 'pharmacy', 'cyber', 'electronics', 'mobile', 'stationery', 'clothing', 'restaurant', 'hardware', 'agri', 'poultry', 'fish', 'dairy', 'online', 'other'];
 
 // id, icon, English, Bangla, other words people type, and where it leads.
 const P = (id, icon, en, bn, words, to) => ({ id, icon, en, bn, words, ...to });
@@ -84,7 +87,8 @@ export const PROFESSIONS = [
   P('pharmacy', '💊', 'Pharmacy', 'ফার্মেসি', 'ওষুধের দোকান medicine drug store dispensary', { business: 'pharmacy' }),
   P('electronics', '🔌', 'Electronics shop', 'ইলেকট্রনিক্স দোকান', 'electric ইলেকট্রিক fan tv fridge', { business: 'electronics' }),
   P('mobile', '📱', 'Mobile phone shop', 'মোবাইলের দোকান', 'mobile servicing মোবাইল সার্ভিসিং phone', { business: 'mobile' }),
-  P('stationery', '✏️', 'Stationery & library', 'স্টেশনারি ও লাইব্রেরি', 'library লাইব্রেরি photocopy ফটোকপি bookshop বইয়ের দোকান', { business: 'stationery' }),
+  P('cyber', '🖨️', 'Computer & photocopy shop', 'কম্পিউটার ও ফটোকপির দোকান', 'cyber cafe সাইবার ক্যাফে online service অনলাইন সেবা অনলাইন আবেদন application আবেদন print প্রিন্ট printing compose কম্পোজ typing টাইপ lamination লেমিনেটিং scan স্ক্যান passport পাসপোর্ট nid জন্মনিবন্ধন digital center ডিজিটাল সেন্টার udc কম্পিউটারের দোকান', { business: 'cyber' }),
+  P('stationery', '✏️', 'Stationery & library', 'স্টেশনারি ও লাইব্রেরি', 'library লাইব্রেরি bookshop বইয়ের দোকান খাতা কলম', { business: 'stationery' }),
   P('clothing', '👗', 'Clothing shop', 'কাপড়ের দোকান', 'boutique বুটিক garments shop শাড়ি fashion', { business: 'clothing' }),
   P('tailor', '✂️', 'Tailor', 'দর্জি', 'টেইলার্স tailoring সেলাই', { business: 'tailor' }),
   P('restaurant', '🍛', 'Restaurant / tea stall', 'হোটেল / চায়ের দোকান', 'restaurant রেস্টুরেন্ট cafe tea stall চা fast food খাবার হোটেল', { business: 'restaurant' }),
