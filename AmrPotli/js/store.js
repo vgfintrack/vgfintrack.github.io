@@ -24,6 +24,11 @@ const LAST_USER_KEY = 'mt:last-user';
 // reloads lets the app sync without asking again every time.
 const tokenKey = (uid) => `mt:token:${uid}`;
 
+// Free plan: up to this many categories in total (expense categories and
+// income sources together). Ones the app adds itself (Service Charges, Loan
+// Interest, a shop's purchase category) are never blocked.
+export const MAX_CATEGORIES = 24;
+
 export const DEFAULT_SETTINGS = {
   savingsGoal: 0,
   incomeCategories: ['Salary', 'Tuition', 'Scholarship', 'Other Income'],

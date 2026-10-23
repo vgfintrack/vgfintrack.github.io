@@ -640,4 +640,9 @@ export const BN = {
   'Add a phone number (Edit) to send the reminder straight to them.': 'সরাসরি মনে করিয়ে দিতে ফোন নম্বর যোগ করুন (বদলান)।',
   'Got baki from {name}': '{name}-এর কাছ থেকে বাকি আদায়',
   'Back to simple view': 'সহজ ভিউতে ফিরে যান',
+  // ---- category limit
+  '{a} of {b} categories used': '{b}টির মধ্যে {a}টি ক্যাটাগরি ব্যবহার হয়েছে',
+  'The free plan has up to {n} categories (expense and income together). Remove or rename one to make room. More will come with a paid plan.': 'ফ্রি প্ল্যানে মোট {n}টি পর্যন্ত ক্যাটাগরি রাখা যায় (খরচ আর আয় মিলিয়ে)। নতুন যোগ করতে একটি বাদ দিন বা নাম বদলান। পেইড প্ল্যানে আরও পাওয়া যাবে।',
+  'Up to {n} categories in total on the free plan.': 'ফ্রি প্ল্যানে মোট {n}টি পর্যন্ত ক্যাটাগরি।',
+  '{a} of {b} categories': '{b}টির মধ্যে {a}টি ক্যাটাগরি',
 };

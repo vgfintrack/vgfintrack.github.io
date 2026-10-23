@@ -602,3 +602,7 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .ob-label { margin: 4px 0 -6px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .ob-sub .ob-chips { margin-top: 2px; }
 .back-simple { border-color: var(--brand); color: var(--brand-text); font-size: 15px; }
+.cat-count { font-size: 12px; margin: 8px 0 0; }
+.cat-count.full { color: var(--warn); font-weight: 600; }
+.limit-note { font-size: 13px; margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); }
+.limit-inline { color: var(--warn); font-weight: 600; }

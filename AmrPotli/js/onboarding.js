@@ -5,7 +5,7 @@
 // closed tab picks up where the user left off.
 
 import { t, lang, addBangla } from './i18n.js';
-import { DEFAULT_SETTINGS } from './store.js';
+import { DEFAULT_SETTINGS, MAX_CATEGORIES } from './store.js';
 import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, BUSINESS_TYPES, POPULAR, searchProfessions, professionById } from './professions.js';
 
 // Bangla for these screens comes with them, so the main app stays small.
@@ -369,8 +369,13 @@ function chipPicker(key, pool, placeholder) {
       <input maxlength="30" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}">
       <button class="btn" type="submit">${t('Add')}</button>
     </form>
-    <p class="muted ob-small" id="ob-count">${t('{n} selected', { n: list.length })}</p>`;
+    <p class="muted ob-small" id="ob-count">${countText(key)}</p>`;
 }
+
+// Expense and income together stay within the free plan's limit.
+const usedCategories = () => (draft.expense?.length || 0) + (draft.income?.length || 0);
+const countText = (key) =>
+  `${t('{n} selected', { n: draft[key].length })} · ${t('{a} of {b} categories', { a: usedCategories(), b: MAX_CATEGORIES })}`;
 
 function totalBalance() {
   return draft.wallets.reduce((s, id) => s + (Number(draft.balances[id]) || 0), 0);
@@ -489,11 +494,15 @@ function bind(root, ctx, step) {
       (b.onclick = () => {
         const c = b.dataset.chip;
         const on = !draft[key].includes(c);
+        if (on && usedCategories() >= MAX_CATEGORIES) {
+          $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: MAX_CATEGORIES })}</span>`;
+          return;
+        }
         draft[key] = on ? [...draft[key], c] : draft[key].filter((x) => x !== c);
         b.classList.toggle('on', on);
         b.setAttribute('aria-pressed', on);
         b.textContent = `${on ? '✓' : '+'} ${c}`;
-        $('#ob-count', root).textContent = t('{n} selected', { n: draft[key].length });
+        $('#ob-count', root).textContent = countText(key);
         saveDraft();
         refreshNext();
       }),
@@ -506,6 +515,10 @@ function bind(root, ctx, step) {
       const name = inp.value.trim().replace(/\s+/g, ' ');
       if (!name) return;
       const same = draft[key].find((x) => x.toLowerCase() === name.toLowerCase());
+      if (!same && usedCategories() >= MAX_CATEGORIES) {
+        $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: MAX_CATEGORIES })}</span>`;
+        return;
+      }
       if (!same) draft[key] = [...draft[key], name];
       saveDraft();
       rerender();

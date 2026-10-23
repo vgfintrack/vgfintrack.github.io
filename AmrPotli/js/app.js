@@ -5,7 +5,7 @@ import * as G from './guide.js';
 import * as Rc from './recurring.js';
 import { catIcon, accIcon, productIcon } from './icons.js';
 import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
-import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
+import { createStore, DEFAULT_SETTINGS, MAX_CATEGORIES, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
 // ---------------------------------------------------------------- helpers
@@ -2749,6 +2749,17 @@ function openReport() {
 
 // ---------------------------------------------------------------- setup
 
+// ---- the free plan's category limit (expense + income together)
+const categoryCount = () => settings().expenseCategories.length + settings().incomeCategories.length;
+const LIMIT_MSG = 'The free plan has up to {n} categories (expense and income together). Remove or rename one to make room. More will come with a paid plan.';
+
+function categoryLimitRow(kind, placeholder) {
+  const used = categoryCount();
+  const counter = `<p class="muted cat-count ${used >= MAX_CATEGORIES ? 'full' : ''}">${t('{a} of {b} categories used', { a: used, b: MAX_CATEGORIES })}</p>`;
+  if (used >= MAX_CATEGORIES) return `${counter}<p class="limit-note">🔒 ${t(LIMIT_MSG, { n: MAX_CATEGORIES })}</p>`;
+  return `<div class="add-row"><input id="new-${kind}" placeholder="${t(placeholder)}"><button class="btn" id="add-${kind}">${t('Add')}</button></div>${counter}`;
+}
+
 function renderSetup() {
   const s = settings();
   const w = C.worth(accounts(), state.data.transactions);
@@ -2786,7 +2797,7 @@ function renderSetup() {
               <button class="icon-btn" data-del-exp="${i}" aria-label="${esc(t('Remove {name}', { name: c.name }))}">✕</button></div>`,
           )
           .join('')}
-        <div class="add-row"><input id="new-exp" placeholder="${t('New expense category')}"><button class="btn" id="add-exp">${t('Add')}</button></div>
+        ${categoryLimitRow('exp', 'New expense category')}
       </div>
 
       <div class="card">
@@ -2796,7 +2807,7 @@ function renderSetup() {
             .map((c, i) => `<span class="chip"><span data-rename-inc="${i}" style="cursor:pointer">${esc(c)}</span><button data-del-inc="${i}" aria-label="${esc(t('Remove {name}', { name: c }))}">✕</button></span>`)
             .join('')}
         </div>
-        <div class="add-row"><input id="new-inc" placeholder="${t('New income source')}"><button class="btn" id="add-inc">${t('Add')}</button></div>
+        ${categoryLimitRow('inc', 'New income source')}
       </div>
 
       ${isShopMode() ? productsCard() : ''}
@@ -2890,11 +2901,12 @@ function renderSetup() {
         );
       }),
   );
-  $('#add-exp', v).onclick = () => {
+  $('#add-exp', v)?.addEventListener('click', () => {
     const name = $('#new-exp', v).value.trim();
     if (!name || s.expenseCategories.some((c) => c.name === name)) return;
+    if (categoryCount() >= MAX_CATEGORIES) return toast(t(LIMIT_MSG, { n: MAX_CATEGORIES }));
     save({ expenseCategories: [...s.expenseCategories, { name, budget: 0 }] });
-  };
+  });
 
   $$('[data-del-inc]', v).forEach(
     (b) =>
@@ -2911,11 +2923,12 @@ function renderSetup() {
         renameCategory('Income', s.incomeCategories[i], (name) => s.incomeCategories.map((c, j) => (j === i ? name : c)));
       }),
   );
-  $('#add-inc', v).onclick = () => {
+  $('#add-inc', v)?.addEventListener('click', () => {
     const name = $('#new-inc', v).value.trim();
     if (!name || s.incomeCategories.includes(name)) return;
+    if (categoryCount() >= MAX_CATEGORIES) return toast(t(LIMIT_MSG, { n: MAX_CATEGORIES }));
     save({ incomeCategories: [...s.incomeCategories, name] });
-  };
+  });
 
   $$('[data-theme-pref]', v).forEach((b) => (b.onclick = () => applyTheme(b.dataset.themePref)));
   $$('[data-simple]', v).forEach(
