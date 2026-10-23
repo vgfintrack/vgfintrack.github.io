@@ -81,6 +81,7 @@
       </div>
       <div class="sms-row" id="sms-row">
         <button type="button" id="sms-btn" class="btn sm" data-i18n="📋 Paste SMS">📋 Paste SMS</button>
+        <button type="button" id="voice-btn" class="btn sm voice-btn" hidden data-i18n="🎤 Speak">🎤 Speak</button>
       </div>
       <div id="sms-panel" class="sms-panel" hidden>
         <textarea id="sms-text" rows="4" placeholder="Paste the SMS here" data-i18n-ph="Paste the SMS here"></textarea>
@@ -107,8 +108,10 @@
       </div>
       <label class="amount-field">
         <span>৳</span>
-        <input id="txn-amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" required />
+        <input id="txn-amount" type="text" inputmode="none" autocomplete="off" placeholder="0" required aria-label="Amount" data-i18n-label="Amount" />
+        <span id="calc-result" class="calc-result" hidden></span>
       </label>
+      <div id="calc-pad" class="calc-pad" hidden></div>
       <div class="field" id="txn-category-field">
         <label for="txn-category" data-i18n="Category">Category</label>
         <select id="txn-category" class="sr-select" tabindex="-1" aria-hidden="true"></select>

@@ -581,4 +581,15 @@ export const BN = {
   'Getting the app ready…': 'অ্যাপ তৈরি হচ্ছে…',
   'Link copied. Paste it in Chrome.': 'লিংক কপি হয়েছে। Chrome-এ পেস্ট করুন।',
   'Copy this link:': 'এই লিংকটি কপি করুন:',
+  'Amount': 'পরিমাণ',
+  // ---- voice entry
+  '🎤 Speak': '🎤 বলুন',
+  'Listening…': 'শুনছি…',
+  'Say what you spent, for example: "ডিম দেড়শো, মাছ সাড়ে চারশো"': 'কী খরচ হলো বলুন, যেমন: "ডিম দেড়শো, মাছ সাড়ে চারশো"',
+  "Couldn't find an amount. Try again, and say the taka amount.": 'টাকার পরিমাণ পাওয়া যায়নি। আবার বলুন, টাকার অঙ্কসহ।',
+  'Filled in. Check and tap Save.': 'পূরণ হয়েছে। দেখে নিয়ে সেভ চাপুন।',
+  'Allow the microphone for this site to use voice.': 'ভয়েসের জন্য এই সাইটকে মাইক্রোফোনের অনুমতি দিন।',
+  'Voice needs an internet connection.': 'ভয়েসের জন্য ইন্টারনেট লাগবে।',
+  "Didn't hear anything. Tap 🎤 and speak again.": 'কিছু শোনা যায়নি। 🎤 চেপে আবার বলুন।',
+  "Voice didn't work this time. You can type instead.": 'এবার ভয়েস কাজ করেনি। লিখেও দিতে পারেন।',
 };

@@ -563,3 +563,16 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .install-steps b { white-space: nowrap; }
 .install-ok { font-size: 16px; font-weight: 600; color: var(--ok); }
 .install-wait { display: grid; justify-items: center; gap: 10px; padding: 16px; }
+
+/* calculator pad (keypad.js) */
+.amount-field { position: relative; }
+.amount-field input { flex: 1; min-width: 0; }
+.calc-result { font-size: 17px; font-weight: 600; color: var(--brand-text); white-space: nowrap; }
+.calc-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.calc-pad button { height: 46px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 20px; font-weight: 600; cursor: pointer; touch-action: manipulation; user-select: none; }
+.calc-pad button:active { background: var(--surface-2); }
+.calc-pad button.op { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand-text); }
+.calc-pad button.del { color: var(--muted); }
+.voice-btn.listening { border-color: var(--bad); color: var(--bad); animation: mic-pulse 1.2s ease-in-out infinite; }
+@keyframes mic-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--bad) 18%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .voice-btn.listening { animation: none; } }

@@ -4,6 +4,7 @@ import { parseSms } from './sms.js';
 import * as G from './guide.js';
 import * as Rc from './recurring.js';
 import { catIcon, accIcon, productIcon } from './icons.js';
+import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
 import { createStore, DEFAULT_SETTINGS, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
@@ -1526,6 +1527,15 @@ function setupTxnDialog() {
     delete $('#txn-amount').dataset.auto;
     updateFeeSuggestion();
   };
+  // The calculator pad shows while the amount is being entered, and folds
+  // away when another field is used.
+  keypad = attachKeypad($('#txn-amount'), $('#calc-pad'), $('#calc-result'), { onChange: () => $('#txn-amount').dispatchEvent(new Event('input')) });
+  $('#txn-amount').addEventListener('focus', () => ($('#calc-pad').hidden = false));
+  // Only typing in another box folds the pad; tapping a button must not move
+  // the sheet under the finger (the tap would then miss).
+  $('#txn-form').addEventListener('focusin', (e) => {
+    if (e.target !== $('#txn-amount') && e.target.matches('input, select, textarea')) $('#calc-pad').hidden = true;
+  });
   $('#txn-fee').oninput = () => {
     feeOpen = true; // keep the box while the user edits it, even when emptied
     updateTxnHint();
@@ -1533,6 +1543,9 @@ function setupTxnDialog() {
   $('#txn-plan-count').oninput = updateTxnHint;
   $('#txn-plan-interest').oninput = updateTxnHint;
   $('#sms-btn').onclick = openSmsPanel;
+  // Voice: shown only where the phone can listen; its code loads on the first tap.
+  $('#voice-btn').hidden = !(window.SpeechRecognition || window.webkitSpeechRecognition);
+  $('#voice-btn').onclick = speakEntry;
   $('#sms-cancel').onclick = () => ($('#sms-panel').hidden = true);
   $('#sms-read').onclick = () => fillFromSms($('#sms-text').value);
   $('#txn-fee-suggest').onclick = () => {
@@ -1555,6 +1568,40 @@ async function openSmsPanel() {
     }
   } catch {
     // no clipboard permission: the user pastes into the box instead
+  }
+}
+
+async function speakEntry() {
+  const btn = $('#voice-btn');
+  if (btn.classList.contains('listening')) return (await import('./voice.js')).listen.stop?.();
+  // Answer the tap at once; the voice code (small) loads while the user starts talking.
+  btn.classList.add('listening');
+  btn.textContent = `🎙️ ${t('Listening…')}`;
+  showSmsInfo(`🎤 ${esc(t('Say what you spent, for example: "ডিম দেড়শো, মাছ সাড়ে চারশো"'))}`);
+  try {
+    const V = await import('./voice.js');
+    const heard = await V.listen(lang === 'bn' ? 'bn-BD' : 'en-IN');
+    const s = settings();
+    const r = V.parseSpeech(heard, { expense: s.expenseCategories.map((c) => c.name), income: s.incomeCategories });
+    if (!r) return showSmsInfo(`🎤 “${esc(heard)}”<br>${esc(t("Couldn't find an amount. Try again, and say the taka amount."))}`, true);
+    setTxnType(r.type);
+    $('#txn-amount').value = r.expr;
+    $('#txn-amount').dataset.itemized = prettyExpr(r.expr);
+    if (r.category) $('#txn-category').value = r.category;
+    $('#txn-note').value = r.note;
+    updateTxnHint();
+    showSmsInfo(`🎤 “${esc(heard)}”<br>✓ ${esc(t('Filled in. Check and tap Save.'))}`);
+  } catch (e) {
+    const msg = {
+      'not-allowed': 'Allow the microphone for this site to use voice.',
+      'service-not-allowed': 'Allow the microphone for this site to use voice.',
+      network: 'Voice needs an internet connection.',
+      'no-speech': "Didn't hear anything. Tap 🎤 and speak again.",
+    }[e] || "Voice didn't work this time. You can type instead.";
+    showSmsInfo(esc(t(msg)), true);
+  } finally {
+    btn.classList.remove('listening');
+    btn.textContent = t('🎤 Speak');
   }
 }
 
@@ -1634,6 +1681,10 @@ function syncCatGrid() {
     b.setAttribute('aria-checked', on);
   });
 }
+
+// The amount box may hold a sum ("60+80+150"); this is its total.
+let keypad = null;
+const amountValue = () => evalExpr($('#txn-amount').value).value;
 
 function fillSelect(sel, items, value) {
   sel.innerHTML = items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
@@ -1787,7 +1838,7 @@ function setTxnType(type, x = null, preset = null) {
 // (e.g. bKash cash-out), so it does not have to be worked out every time.
 function updateFeeSuggestion() {
   const btn = $('#txn-fee-suggest');
-  const amount = Number($('#txn-amount').value);
+  const amount = amountValue();
   const from = $('#txn-account').value;
   const to = txnType === 'Transfer' ? $('#txn-to').value : null;
   btn.hidden = true;
@@ -1816,6 +1867,7 @@ function showFee() {
 }
 
 function updateTxnHint() {
+  keypad?.refresh();
   updateFeeSuggestion();
   syncCatGrid();
   const from = accById($('#txn-account').value);
@@ -1840,7 +1892,7 @@ function updateTxnHint() {
     const plan = action === 'repay' && person ? planInfo(person) : null;
     if (plan && !plan.done) hint += ' ' + t('Installment {k} of {n}.', { k: plan.k, n: plan.n });
     const count = Number($('#txn-plan-count').value);
-    const amount = Number($('#txn-amount').value);
+    const amount = amountValue();
     if (action === 'borrow' && count > 1 && amount > 0) {
       const each = (amount + (Number($('#txn-plan-interest').value) || 0)) / count;
       hint += ' ' + t('You will pay about {amount} a month for {n} months.', { amount: money2(Math.round(each * 100) / 100), n: count });
@@ -1896,15 +1948,28 @@ function openTxn(x = null, preset = null) {
   feeOpen = Number(x?.fee) > 0;
   $('#txn-repeat').value = '';
   $('#txn-repeat-hint').hidden = true;
+  $('#calc-pad').hidden = true;
   delete $('#txn-amount').dataset.auto;
+  delete $('#txn-amount').dataset.itemized;
   const type = x ? (loanActionOf(x) ? 'Loan' : x.type) : preset?.loan ? 'Loan' : txnType;
   setTxnType(type, x, preset);
   $('#txn-dialog').showModal();
   if (!x) $('#txn-amount').focus();
 }
 
+// A sum like "60 + 80 + 150" is kept in the note, so the parts are not lost.
+function noteWithSum() {
+  const note = $('#txn-note').value.trim();
+  const raw = $('#txn-amount').value;
+  if (!evalExpr(raw).isSum) return note;
+  const sum = prettyExpr(raw);
+  // Voice already wrote the items with their amounts; don't repeat them.
+  if ($('#txn-amount').dataset.itemized === sum) return note;
+  return note.includes(sum) ? note : [note, sum].filter(Boolean).join(' · ');
+}
+
 async function saveTxn(another) {
-  const amount = Number($('#txn-amount').value);
+  const amount = amountValue();
   const err = (m) => {
     $('#txn-error').textContent = m;
     $('#txn-error').hidden = false;
@@ -1924,7 +1989,7 @@ async function saveTxn(another) {
     category: isT ? 'Transfer' : $('#txn-category').value,
     account: $('#txn-account').value,
     toAccount: isT ? $('#txn-to').value : null,
-    note: $('#txn-note').value.trim(),
+    note: noteWithSum(),
     fee: fee > 0 ? fee : undefined,
     feeCategory: undefined,
     loan: undefined,
@@ -1980,7 +2045,7 @@ async function saveLoan(amount, another, err) {
     date: $('#txn-date').value,
     account: cfg.personIsFrom ? person : moneyAcc,
     toAccount: cfg.personIsFrom ? moneyAcc : person,
-    note: $('#txn-note').value.trim(),
+    note: noteWithSum(),
     fee: interest > 0 ? interest : undefined,
     feeCategory: interest > 0 ? C.INTEREST_CATEGORY : undefined,
   };
