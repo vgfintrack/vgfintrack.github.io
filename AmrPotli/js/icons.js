@@ -36,7 +36,7 @@ const CATEGORY = [
   [/software|tools|laptop|computer/i, '💻'],
   [/client|upwork|fiverr|freelanc|payment/i, '🧑‍💻'],
   [/business|profit|sales|shop/i, '🏪'],
-  [/saving|dps|deposit|fdr|invest/i, '🐷'],
+  [/saving|dps|deposit|fdr|invest/i, '💎'],
   [/donat|zakat|sadaqah|charity/i, '🤲'],
   [/gym|sport|fitness/i, '🏋️'],
   [/other/i, '📦'],

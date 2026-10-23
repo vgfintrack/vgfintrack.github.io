@@ -580,19 +580,21 @@ function feedback() {
 // ---------------------------------------------------------------- Extra limits
 
 const FREE_LIMIT = 24;
+const FREE_PRODUCTS = 15;
 
 function limits() {
   const items = [...list('grants')].sort((a, b) => a.id.localeCompare(b.id));
   const pub = list('public').find((p) => p.id === 'limits');
   const teamWithout = [OWNER, ...list('team').map((m) => m.id)].filter((e, i, a) => a.indexOf(e) === i && !items.some((g) => g.id === e));
-  return `${head('Extra limits', `The free plan has ${FREE_LIMIT} categories. People on this list get more in their own AmrPotli.`,
+  return `${head('Extra limits', `The free plan has ${FREE_LIMIT} categories and ${FREE_PRODUCTS} products. People on this list get more in their own AmrPotli.`,
     canWrite('limits') ? `${teamWithout.length ? `<button class="btn" data-act="grant-team">${icon('users')} Add the team (${teamWithout.length})</button>` : ''}<button class="btn primary" data-act="grant-new">${icon('plus')} Give more</button>` : '')}
     <p class="note">${icon('shield-check')} The app downloads only scrambled emails and checks the user's own email on the phone, so it never sends anyone's email anywhere. A change reaches the person the next time they open AmrPotli with internet.</p>
-    <div class="card">${items.length ? `<div class="table-wrap"><table><thead><tr><th>Email</th><th class="num">Categories</th><th>Until</th><th>Why</th><th>Given by</th><th></th></tr></thead><tbody>${items
+    <div class="card">${items.length ? `<div class="table-wrap"><table><thead><tr><th>Email</th><th class="num">Categories</th><th class="num">Products</th><th>Until</th><th>Why</th><th>Given by</th><th></th></tr></thead><tbody>${items
       .map((g) => {
         const over = g.until && g.until < today();
         return `<tr><td><b>${esc(g.id)}</b>${teamName(g.id) !== g.id ? `<br><span class="muted">${esc(teamName(g.id))}</span>` : ''}</td>
           <td class="num">${g.limit ? nf.format(g.limit) : 'Unlimited'}</td>
+          <td class="num">${g.products == null ? `<span class="muted">${FREE_PRODUCTS}</span>` : g.products ? nf.format(g.products) : 'Unlimited'}</td>
           <td class="${over ? 'late' : ''}">${g.until ? dayLabel(g.until) + (over ? ' (ended)' : '') : '<span class="muted">No end</span>'}</td>
           <td class="muted">${esc(g.note || '')}</td><td class="muted">${esc(teamName(g.by))}</td>
           <td>${canWrite('limits') ? `<button class="btn sm" data-act="grant-edit" data-id="${esc(g.id)}">${icon('pencil')}</button>` : ''}</td></tr>`;
@@ -606,8 +608,9 @@ async function publishLimits(next) {
   const pub = list('public').find((p) => p.id === 'limits');
   const salt = pub?.salt || crypto.getRandomValues(new Uint32Array(4)).join('-');
   const grants = {};
-  for (const g of next) grants[await emailHash(salt, g.id)] = { limit: Number(g.limit) || 0, ...(g.until && { until: g.until }) };
-  await setDoc(doc(db, 'public', 'limits'), { salt, grants, free: FREE_LIMIT, updatedAt: serverTimestamp() });
+  for (const g of next)
+    grants[await emailHash(salt, g.id)] = { limit: Number(g.limit) || 0, ...(g.products != null && { products: Number(g.products) || 0 }), ...(g.until && { until: g.until }) };
+  await setDoc(doc(db, 'public', 'limits'), { salt, grants, free: FREE_LIMIT, freeProducts: FREE_PRODUCTS, updatedAt: serverTimestamp() });
 }
 
 function grantForm(g = null) {
@@ -617,7 +620,8 @@ function grantForm(g = null) {
     fields: [
       { name: 'email', label: 'Email', type: 'email', value: g?.id, required: true, max: 120 },
       { name: 'limit', label: 'Categories', type: 'select', options: [['0', 'Unlimited'], ['30', '30'], ['40', '40'], ['50', '50'], ['75', '75'], ['100', '100']], value: String(g?.limit ?? 0), half: true },
-      { name: 'until', label: 'Until (optional)', type: 'date', value: g?.until, half: true },
+      { name: 'products', label: 'Products (shops)', type: 'select', options: [['0', 'Unlimited'], ['', `${FREE_PRODUCTS} (free)`], ['25', '25'], ['40', '40'], ['60', '60'], ['100', '100']], value: g ? (g.products == null ? '' : String(g.products)) : '0', half: true },
+      { name: 'until', label: 'Until (optional)', type: 'date', value: g?.until },
       { name: 'note', label: 'Why', value: g?.note, max: 120, placeholder: 'e.g. Founder, tester, partner shop' },
     ],
     remove: g
@@ -631,11 +635,11 @@ function grantForm(g = null) {
     submit: async (d) => {
       const email = lower(d.email);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Enter a valid email.');
-      const row = { limit: Number(d.limit), until: d.until || '', note: d.note, by: S.user.email, at: serverTimestamp() };
+      const row = { limit: Number(d.limit), ...(d.products !== '' && { products: Number(d.products) }), until: d.until || '', note: d.note, by: S.user.email, at: serverTimestamp() };
       if (g && g.id !== email) await deleteDoc(doc(db, 'grants', g.id));
       await setDoc(doc(db, 'grants', email), row);
       await publishLimits([...list('grants').filter((x) => x.id !== email && x.id !== g?.id), { id: email, ...row }]);
-      log('limit set', `${email}: ${row.limit || 'unlimited'}${row.until ? ` until ${row.until}` : ''}`);
+      log('limit set', `${email}: ${row.limit || 'unlimited'} categories, ${row.products == null ? FREE_PRODUCTS : row.products || 'unlimited'} products${row.until ? ` until ${row.until}` : ''}`);
       return 'Saved and published';
     },
   });
@@ -850,7 +854,7 @@ function memberForm(m = null) {
       await setDoc(doc(db, 'team', email), row);
       log(m ? 'team edit' : 'team add', `${email} as ${d.role}`);
       if (!m && d.grant !== undefined && d.grant !== '') {
-        const g = { limit: 0, until: d.role === 'guest' ? d.until : '', note: `Team (${d.role})`, by: S.user.email, at: serverTimestamp() };
+        const g = { limit: 0, products: 0, until: d.role === 'guest' ? d.until : '', note: `Team (${d.role})`, by: S.user.email, at: serverTimestamp() };
         await setDoc(doc(db, 'grants', email), g);
         await publishLimits([...list('grants').filter((x) => x.id !== email), { id: email, ...g }]);
       }
@@ -932,7 +936,7 @@ $('#main').addEventListener('click', async (e) => {
     if (act === 'grant-edit') grantForm(byId('grants', id));
     if (act === 'grant-team') {
       const add = [OWNER, ...list('team').map((m) => m.id)].filter((e, i, a) => a.indexOf(e) === i && !list('grants').some((g) => g.id === e));
-      const rows = add.map((email) => ({ id: email, limit: 0, until: '', note: 'Team', by: S.user.email, at: serverTimestamp() }));
+      const rows = add.map((email) => ({ id: email, limit: 0, products: 0, until: '', note: 'Team', by: S.user.email, at: serverTimestamp() }));
       for (const { id: email, ...g } of rows) await setDoc(doc(db, 'grants', email), g);
       await publishLimits([...list('grants'), ...rows]);
       log('limit team', `${rows.length} people`);

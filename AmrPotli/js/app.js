@@ -5,7 +5,7 @@ import * as G from './guide.js';
 import * as Rc from './recurring.js';
 import { catIcon, accIcon, productIcon } from './icons.js';
 import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
-import { createStore, DEFAULT_SETTINGS, FREE_CATEGORIES, categoryLimit, setCategoryLimit, newId } from './store.js';
+import { createStore, DEFAULT_SETTINGS, FREE_CATEGORIES, categoryLimit, setCategoryLimit, FREE_PRODUCTS, productLimit, setProductLimit, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
 // ---------------------------------------------------------------- helpers
@@ -316,10 +316,12 @@ async function syncCompany() {
   if (!C.connected()) return;
   const data = await C.loadPublic();
   const before = categoryLimit();
-  const grant = await C.grantFor(state.store.mode === 'drive' ? state.user?.email : null, data, FREE_CATEGORIES);
+  const beforeProducts = productLimit();
+  const grant = await C.grantFor(state.store.mode === 'drive' ? state.user?.email : null, data, FREE_CATEGORIES, FREE_PRODUCTS);
   state.grant = grant;
   setCategoryLimit(grant.limit);
-  if (categoryLimit() !== before && state.view === 'setup') render();
+  setProductLimit(grant.products);
+  if ((categoryLimit() !== before || productLimit() !== beforeProducts) && state.view === 'setup') render();
   tellAboutGrant(grant);
   showNotice(data.notice?.app);
   C.sendDailyCount({
@@ -342,7 +344,8 @@ function countsOn() {
 // When the team gives more categories (or a gift ends), say so once.
 function tellAboutGrant(g) {
   const key = `mt:limit-seen:${state.user?.uid}`;
-  const now = g.limit === Infinity ? 'unlimited' : String(g.limit);
+  const word = (n) => (n === Infinity ? 'unlimited' : String(n));
+  const now = word(g.limit) + (g.products > FREE_PRODUCTS ? `|${word(g.products)}` : '');
   let seen = null;
   try {
     seen = localStorage.getItem(key);
@@ -351,11 +354,16 @@ function tellAboutGrant(g) {
   try {
     localStorage.setItem(key, now);
   } catch {}
-  const was = seen == null ? FREE_CATEGORIES : seen === 'unlimited' ? Infinity : Number(seen);
+  const [wasCat, wasProd] = (seen || '').split('|');
+  const num = (w, base) => (!w ? base : w === 'unlimited' ? Infinity : Number(w));
+  const was = num(wasCat, FREE_CATEGORIES);
+  const wasProducts = num(wasProd, FREE_PRODUCTS);
+  const productsUp = isShopMode() && g.products > wasProducts;
+  const productsLine = productsUp ? ` ${g.products === Infinity ? t('Products: no limit.') : t('Products: up to {n}.', { n: g.products })}` : '';
   const until = g.until ? ` ${t('Until {date}.', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : '';
   const msg =
-    g.limit > was
-      ? `🎉 ${g.limit === Infinity ? t('Good news! The AmrPotli team gave you unlimited categories.') : t('Good news! The AmrPotli team gave you {n} categories.', { n: g.limit })}${until}`
+    g.limit > was || productsUp
+      ? `🎉 ${g.limit === Infinity ? t('Good news! The AmrPotli team gave you unlimited categories.') : t('Good news! The AmrPotli team gave you {n} categories.', { n: g.limit })}${productsLine}${until}`
       : g.limit === FREE_CATEGORIES
         ? t('Your extra categories have ended. You can have up to {n} again; the ones you already have stay.', { n: FREE_CATEGORIES })
         : t('You can now have up to {n} categories.', { n: g.limit }) + until;
@@ -995,6 +1003,7 @@ function setupShopDialogs() {
     if (!p) return;
     const known = productGroups().find((x) => x.toLowerCase() === p.toLowerCase());
     const name = known || p;
+    if (!known && productsFull()) return toast(productMsg());
     if (!known) state.store.saveSettings({ ...settings(), productGroups: [...productGroups(), name] });
     if (!buyItems.some((i) => i.p === name)) buyItems.push({ p: name, amount: 0 });
     $('#buy-new-product').value = '';
@@ -1151,13 +1160,29 @@ function openSupplierView(id) {
   $('#supv-dialog').showModal();
 }
 
+// ---- the free plan's product limit (like categories)
+const FREE_PRODUCT_MSG = 'The free plan has up to {n} products. Remove one to make room. More will come with a paid plan.';
+const EXTRA_PRODUCT_MSG = 'You can have up to {n} products. Remove one to make room.';
+const productMsg = () => t(productLimit() > FREE_PRODUCTS ? EXTRA_PRODUCT_MSG : FREE_PRODUCT_MSG, { n: productLimit() });
+const productsFull = () => productGroups().length >= productLimit();
+
 function productsCard() {
+  const used = productGroups().length;
+  const max = productLimit();
+  const counter =
+    max === Infinity
+      ? `<p class="muted cat-count">${t('{n} products · no limit for you', { n: used })}</p>`
+      : `<p class="muted cat-count ${used >= max ? 'full' : ''}">${t('{a} of {b} products used', { a: used, b: max })}</p>`;
   return `<div class="card" id="products-card">
     <h3>📦 ${t('Products you buy')}</h3>
     <div class="chips">${productGroups()
       .map((p, i) => `<span class="chip">${productIcon(p)} ${esc(p)}<button data-del-prod="${i}" aria-label="${esc(t('Remove {name}', { name: p }))}">✕</button></span>`)
       .join('')}</div>
-    <div class="add-row"><input id="new-prod" placeholder="${esc(t('New product group'))}" maxlength="30"><button class="btn" id="add-prod">${t('Add')}</button></div>
+    ${
+      used >= max
+        ? `${counter}<p class="limit-note">🔒 ${productMsg()}</p>`
+        : `<div class="add-row"><input id="new-prod" placeholder="${esc(t('New product group'))}" maxlength="30"><button class="btn" id="add-prod">${t('Add')}</button></div>${counter}`
+    }
   </div>`;
 }
 
@@ -1177,6 +1202,7 @@ function bindProducts(root) {
   add.onclick = () => {
     const name = $('#new-prod', root).value.trim().replace(/\s+/g, ' ');
     if (!name || productGroups().some((p) => p.toLowerCase() === name.toLowerCase())) return;
+    if (productsFull()) return toast(productMsg());
     save([...productGroups(), name]);
   };
 }
@@ -1218,13 +1244,13 @@ function renderSimple() {
         <span>${t('This month')}</span>
         <span class="income">${t('got')} ${money(st.income)}</span>
         <span class="expense">${t('spent')} ${money(st.expenses)}</span>
-        ${savings ? `<span>🐷 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
+        ${savings ? `<span>💎 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
       </div>
     </div>
     <div class="big-actions">
       <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
       <button data-simple-act="Expense"><span>🛒</span>${t('Spent')}</button>
-      <button data-simple-act="save"><span>🐷</span>${t('Saved')}</button>
+      <button data-simple-act="save"><span>💎</span>${t('Saved')}</button>
       <button data-simple-act="Loan"><span>🤝</span>${t('Loan')}</button>
     </div>
     ${
@@ -1987,7 +2013,7 @@ function txnRow(t) {
         ? accById(t.toAccount)?.supplier
           ? '💵'
           : t.toAccount === SAVINGS_ID
-            ? '🐷'
+            ? '💎'
             : '🔁'
         : catIcon(t.category);
   return `<button class="txn" data-id="${esc(t.id)}">

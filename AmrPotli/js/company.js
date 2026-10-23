@@ -89,16 +89,18 @@ async function hash(salt, email) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
-// How many categories this email may have: { limit, until, gift }.
-// limit is the free number or more (Infinity = no limit); gift is true when
-// the team gave more; until is the last day ('YYYY-MM-DD') or null.
-export async function grantFor(email, data, free = 24) {
-  const none = { limit: free, until: null, gift: false };
+// What this email may have: { limit, products, until, gift }. limit is the
+// number of categories and products the number of product groups: the free
+// numbers or more (Infinity = no limit). gift is true when the team gave
+// more; until is the last day ('YYYY-MM-DD') or null.
+export async function grantFor(email, data, free = 24, freeProducts = 15) {
+  const none = { limit: free, products: freeProducts, until: null, gift: false };
   const lim = data?.limits;
   if (!email || !lim?.salt || !lim.grants || !crypto?.subtle) return none;
   const g = lim.grants[await hash(lim.salt, email)];
   if (!g || (g.until && g.until < today())) return none;
-  return { limit: g.limit ? Math.max(free, g.limit) : Infinity, until: g.until || null, gift: true };
+  const more = (n, base) => (n === 0 ? Infinity : n == null ? base : Math.max(base, n));
+  return { limit: more(g.limit, free), products: more(g.products, freeProducts), until: g.until || null, gift: true };
 }
 
 export const categoryLimitFor = async (email, data, free = 24) => (await grantFor(email, data, free)).limit;

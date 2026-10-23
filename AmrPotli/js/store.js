@@ -37,6 +37,11 @@ export const FREE_CATEGORIES = 24;
 let categoryMax = FREE_CATEGORIES;
 export const categoryLimit = () => categoryMax; // Infinity = no limit
 export const setCategoryLimit = (n) => (categoryMax = n);
+// Free plan: up to this many product groups (what a shop buys). Same rules.
+export const FREE_PRODUCTS = 15;
+let productMax = FREE_PRODUCTS;
+export const productLimit = () => productMax; // Infinity = no limit
+export const setProductLimit = (n) => (productMax = n);
 
 export const DEFAULT_SETTINGS = {
   savingsGoal: 0,
