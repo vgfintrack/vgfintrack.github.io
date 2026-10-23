@@ -146,6 +146,12 @@ for (const keys of [['active', 'new', 'bn', 'shop', 'drive', 'baki', 'voice'], [
 const prof = (id) => ({ transform: { document: `projects/demo-amrpotli/databases/(default)/documents/profs/${today}~${id}`, fieldTransforms: [{ fieldPath: 'n', increment: { integerValue: '1' } }] } });
 for (const id of ['pharmacy', 'pharmacy', 'student', 'custom']) ok((await commit([prof(id)])).ok, 'app adds 1 for its kind of work: ' + id);
 ok(!(await commit([prof('Rahim Pharmacy')])).ok, 'typed words are refused as a kind of work');
+// weekly and monthly users, and where: 5 phones this month, 3 in Bangladesh, 2 in Saudi Arabia; 3 chose a district
+const isoWeek = (d) => { const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); const y = t.getUTCFullYear(); return `${y}-${String(Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0')}`; };
+const month = today.slice(0, 7);
+const bump = (path) => commit([{ transform: { document: `projects/demo-amrpotli/databases/(default)/documents/${path}`, fieldTransforms: [{ fieldPath: 'n', increment: { integerValue: '1' } }] } }]);
+for (const path of [...Array(5).fill(`actives/m-${month}`), ...Array(4).fill(`actives/w-${isoWeek(new Date())}`), ...Array(3).fill(`where/${month}~c-bd`), ...Array(2).fill(`where/${month}~c-sa`), `where/${month}~d-sylhet`, `where/${month}~d-sylhet`, `where/${month}~d-coxsbazar`])
+  await bump(path);
 const now = { setToServerValue: 'REQUEST_TIME' };
 const docW = (col, id, fields, at = 'at') => ({ update: { name: `projects/demo-amrpotli/databases/(default)/documents/${col}/${id}`, fields }, updateTransforms: [{ fieldPath: at, ...now }], currentDocument: { exists: false } });
 const S = (v) => ({ stringValue: v });
@@ -160,7 +166,12 @@ await go(p, 'users');
 const u = await p.textContent('#main');
 ok(u.includes('Rahim Uddin') && u.includes('POLASHI50') && u.includes('Wants to test'), 'opt-in listed with its promo code');
 ok(/Phone-days active\s*3/.test(await p.textContent('.kpis')), 'counts: 3 phone-days');
-const work = await p.$$eval('.split.wide .ln', (e) => e.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
+const work = await p.$$eval('.card:has-text("Kinds of work") .split.wide .ln', (e) => e.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
+const kp = await p.textContent('.kpis');
+ok(/Phones this week\s*4/.test(kp) && /Phones this month\s*5/.test(kp), 'weekly 4 and monthly 5 phones: ' + kp.replace(/\s+/g, ' ').slice(0, 120));
+const where = await p.textContent('#main');
+ok(where.includes('Bangladesh') && where.includes('60%') && where.includes('Saudi Arabia') && where.includes('40%') && where.includes('Outside Bangladesh: 2'), 'countries card: Bangladesh 60%, Saudi Arabia 40%');
+ok(where.includes('Sylhet division') && where.includes("Cox's Bazar") && where.includes('3 phones chose a district (60% of 5'), 'districts card: by division and district');
 ok(work.length === 3 && work[0].includes('Pharmacy') && work[0].includes('50%') && work.some((w) => w.includes('Student') && w.includes('25%')) && work.some((w) => w.includes('Own profession (typed)')), 'Kinds of work card: ' + work.join(' | '));
 await p.screenshot({ path: SHOTS + 'dash-4-users.png', fullPage: true });
 await go(p, 'promos');

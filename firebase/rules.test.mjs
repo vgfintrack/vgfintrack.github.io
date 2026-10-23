@@ -78,6 +78,20 @@ await no(setDoc(doc(app, 'profs/2026-10-23~job'), { n: increment(1), email: 'x@y
 await no(setDoc(doc(app, 'profs/hello~job'), { n: increment(1) }), 'id must start with a date');
 await no(getDoc(doc(app, 'profs/2026-10-23~pharmacy')), 'the app cannot read them');
 await yes(getDoc(doc(founder, 'profs/2026-10-23~pharmacy')), 'founder reads them');
+// ---- weekly and monthly users, and where
+await yes(setDoc(doc(app, 'actives/w-2026-43'), { n: increment(1) }), 'the app adds 1 for this week');
+await yes(setDoc(doc(app, 'actives/m-2026-10'), { n: increment(1) }), 'and for this month');
+await yes(setDoc(doc(app, 'actives/m-2026-10'), { n: increment(1) }, { merge: true }), 'another phone this month');
+await no(setDoc(doc(app, 'actives/m-2026-10'), { n: increment(2) }, { merge: true }), 'cannot add 2 at once');
+await no(setDoc(doc(app, 'actives/today'), { n: increment(1) }), 'only week or month ids');
+await yes(setDoc(doc(app, 'where/2026-10~c-bd'), { n: increment(1) }), 'country from the time zone');
+await yes(setDoc(doc(app, 'where/2026-10~d-coxsbazar'), { n: increment(1) }), 'a district the user chose');
+await no(setDoc(doc(app, 'where/2026-10~d-Road 12, Dhanmondi'), { n: increment(1) }), 'no typed addresses');
+await no(setDoc(doc(app, 'where/2026-10~gps-23.8,90.4'), { n: increment(1) }), 'no coordinates');
+await no(setDoc(doc(app, 'where/2026-10~c-bd'), { n: increment(1), city: 'Dhaka' }, { merge: true }), 'no other fields');
+await no(getDoc(doc(app, 'where/2026-10~c-bd')), 'the app cannot read places');
+await no(getDoc(doc(emp, 'actives/m-2026-10')), 'employee without Users cannot read them');
+await yes(getDoc(doc(founder, 'where/2026-10~c-bd')), 'founder reads places');
 
 const optin = { name: 'Rahim', email: 'rahim@gmail.com', why: 'tester', code: 'POLASHI', profession: 'Grocery shop', lang: 'bn', mode: 'shop', app: '2026.10.23', at: serverTimestamp() };
 await yes(addDoc(collection(app, 'optins'), optin), 'a user opts in from the app');

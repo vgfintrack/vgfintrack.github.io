@@ -28,8 +28,8 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   hasGrantedAllScopes: () => true, revoke() {} } } };`;
 const b = await chromium.launch();
 const drive = {};
-async function device(user, { lang = 'en' } = {}) {
-  const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+async function device(user, { lang = 'en', tz = 'Asia/Dhaka' } = {}) {
+  const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: tz });
   await ctx.addInitScript(([u, l]) => { window.__mockUser = u; if (!sessionStorage.x) { localStorage.setItem('mt:lang', l); sessionStorage.x = 1; } }, [user, lang]);
   await ctx.route('**/AmrPotli/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';\nexport const firebaseProject = { projectId: 'demo-amrpotli', apiKey: 'demo' };" }));
   await ctx.route('https://accounts.google.com/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: FAKE_GIS }));
@@ -119,7 +119,8 @@ await R.ctx.close();
 
 // ---------------------------------------------------------------- Sabbir: 40; a stranger: 24; an ended grant: 24
 for (const [user, want] of [['sabbir', '40 categories used'], ['random', 'of 24 categories used'], ['old', 'of 24 categories used']]) {
-  const D = await device(user, { lang: user === 'sabbir' ? 'bn' : 'en' });
+  // Sabbir works in Riyadh: his phone's time zone says Saudi Arabia.
+  const D = await device(user, { lang: user === 'sabbir' ? 'bn' : 'en', tz: user === 'sabbir' ? 'Asia/Riyadh' : 'Asia/Dhaka' });
   await D.p.waitForTimeout(2500);
   await D.p.click('.tabbar button[data-view=setup]');
   const txt = await setupCounter(D.p);
@@ -129,6 +130,13 @@ for (const [user, want] of [['sabbir', '40 categories used'], ['random', 'of 24 
 }
 st = await stats();
 ok(st.active === 4 && st.bn === 1, 'four phones counted today: ' + JSON.stringify(st));
+// weekly and monthly users, country and district (summed over ids, whatever today's date is)
+const sum = async (col, test) => read(async (db) => (await getDocs(collection(db, col))).docs.filter((d) => test(d.id)).reduce((t, d) => t + (d.data().n || 0), 0));
+ok((await sum('actives', (id) => id.startsWith('w-'))) === 4 && (await sum('actives', (id) => id.startsWith('m-'))) === 4, 'weekly and monthly users: 4 phones each');
+ok((await sum('where', (id) => id.endsWith('~c-bd'))) === 3 && (await sum('where', (id) => id.endsWith('~c-sa'))) === 1, 'countries from the time zone: 3 Bangladesh, 1 Saudi Arabia');
+ok((await sum('where', (id) => id.endsWith('~d-sylhet'))) === 4, 'district only because they chose Sylhet');
+const ids = await read(async (db) => [...(await getDocs(collection(db, 'where'))).docs, ...(await getDocs(collection(db, 'actives'))).docs].map((d) => JSON.stringify(d.data()) + d.id).join(' '));
+ok(!/rina|sabbir|random|old@|gmail/i.test(ids), 'nothing about who they are');
 
 // ---------------------------------------------------------------- website: notice and contact forms
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });

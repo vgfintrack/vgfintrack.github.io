@@ -109,8 +109,13 @@ await sync(q);
 await q.waitForSelector('#team-bar:not([hidden])', { timeout: 8000 });
 ok((await q.textContent('#team-bar')).includes('can no longer open Rahim Store'), 'Karim is told he was removed');
 await q.click('[data-team-back]');
-await q.waitForSelector('.ob, .kpis', { timeout: 8000 });
-ok(await q.evaluate(() => !Object.keys(localStorage).some((k) => k.includes(':shop:'))), 'Karim back to his own AmrPotli; no copy of the shop left on his phone');
+const gone = await q.waitForFunction(() => !Object.keys(localStorage).some((k) => k.includes(':shop:')) && !document.querySelector('.helper-hello'), null, { timeout: 8000 }).then(() => true, () => false);
+await q.waitForTimeout(2000); // and it stays gone after the next syncs
+ok(gone && (await q.evaluate(() => !Object.keys(localStorage).some((k) => k.includes(':shop:')))), 'Karim back to his own AmrPotli; no copy of the shop left on his phone');
+await q.waitForTimeout(2500);
+const own = files().find(([, f]) => f.owner === 'karim' && f.name === 'amrpotli.json');
+ok(!own || !Object.keys(JSON.parse(own[1].content).transactions || {}).length, 'and the shop’s entries did not land in Karim’s own Drive file');
+
 
 ok([R, K, R2].every((x) => x.p.errs.length === 0), 'no errors ' + [R, K, R2].flatMap((x) => x.p.errs).join(' | '));
 await b.close();
