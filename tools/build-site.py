@@ -157,7 +157,7 @@ def foot(root):
     col = lambda title, items: '<div><b>' + title + '</b>' + ''.join(
         f'<a href="{href}"{blank if href.startswith("http") else ""}>{label}</a>' for href, label in items
     ) + '</div>'
-    feedback = 'https://docs.google.com/forms/d/e/1FAIpQLSdvSfgm0FSD-HoNBByTHWaTj-Kl_0-zTXREGdng5tHuB1Xkcg/viewform?usp=pp_url&entry.247074758=website'
+    feedback = f'{root}contact.html'
     return f'''
 <footer class="site-foot">
   <div class="wrap">

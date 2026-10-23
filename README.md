@@ -12,6 +12,9 @@ run Saturday to Friday.
 - **Website:** the pages around the app (home, features, guides for each kind of user, how-to, FAQ, about) are built
   from `tools/pages/` by `python3 tools/build-site.py` (Python 3.12+), which adds the shared menu and footer. Edit the
   page in `tools/pages/`, run the script, and commit both. Screenshots in `assets/guide/` come from made-up demo data.
+- **Team dashboard:** `/team/` (owner vgfintrack@gmail.com, founders, employees, guests) runs on Firebase;
+  see `firebase/README.md`. The app only reads a public notice and a scrambled limits list from it, sends one
+  anonymous count a day (can be turned off), and sends feedback or contact details only when the user does.
 - **Sign-in:** anyone can sign in with their own Google account
 - **Languages:** English and বাংলা (Setup → Language, or the switch on the sign-in screen). Bangla text lives in
   `AmrPotli/js/i18n-bn.js`, keyed by the English phrase; documents in Reports stay in English.

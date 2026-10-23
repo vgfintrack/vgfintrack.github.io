@@ -22,7 +22,7 @@ export function feedbackUrl(from) {
 }
 
 const feedbackLink = () =>
-  `<a class="linkish guide-help" href="${feedbackUrl('guide')}" target="_blank" rel="noopener">💬 ${t('Stuck, or have an idea? Tell us')}</a>`;
+  `<button type="button" class="linkish guide-help" data-feedback="guide">💬 ${t('Stuck, or have an idea? Tell us')}</button>`;
 
 // Each step is done when the data shows it, so the list stays right on every
 // device. Report and install leave no data behind, so they are flags in settings.

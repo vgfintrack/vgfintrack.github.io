@@ -31,8 +31,12 @@ const receiptIds = (doc) => new Set(live(doc.transactions).map((x) => x.receipt)
 
 // Free plan: up to this many categories in total (expense categories and
 // income sources together). Ones the app adds itself (Service Charges, Loan
-// Interest, a shop's purchase category) are never blocked.
-export const MAX_CATEGORIES = 24;
+// Interest, a shop's purchase category) are never blocked. The team can give
+// some people more (company.js checks the list on the phone).
+export const FREE_CATEGORIES = 24;
+let categoryMax = FREE_CATEGORIES;
+export const categoryLimit = () => categoryMax; // Infinity = no limit
+export const setCategoryLimit = (n) => (categoryMax = n);
 
 export const DEFAULT_SETTINGS = {
   savingsGoal: 0,

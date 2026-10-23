@@ -1,0 +1,67 @@
+<!--{"out": "contact.html", "nav": "about",
+"title_en": "Feedback & contact · AmrPotli",
+"title_bn": "মতামত ও যোগাযোগ · আমার পোটলি",
+"description": "Send feedback to the AmrPotli team, ask a question, or sign up to test new features."}-->
+
+<header class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}./">[[Home || হোম]]</a> › [[Feedback &amp; contact || মতামত ও যোগাযোগ]]</div>
+    <h1>[[Talk to the AmrPotli team || আমার পোটলি টিমের সাথে কথা বলুন]]</h1>
+    <p class="lead">[[Found a problem, have an idea, or want to test new features first? Write to us here. || কোনো সমস্যা পেয়েছেন, আইডিয়া আছে, বা নতুন ফিচার সবার আগে পরীক্ষা করতে চান? এখানে লিখুন।]]</p>
+    <ul class="toc">
+      <li><a href="#feedback">[[i:message-circle]] [[Send feedback || মতামত পাঠান]]</a></li>
+      <li><a href="#tester">[[i:flask-conical]] [[Become a tester || টেস্টার হোন]]</a></li>
+    </ul>
+  </div>
+</header>
+
+<section class="block" id="feedback">
+  <div class="wrap narrow">
+    <h2>[[i:message-circle]] [[Send feedback || মতামত পাঠান]]</h2>
+    <form class="card form-card" id="site-feedback" novalidate>
+      <label>[[What is it about? || কী নিয়ে?]]
+        <select name="kind">
+          <option value="idea">An idea · একটা আইডিয়া</option>
+          <option value="problem">A problem · একটা সমস্যা</option>
+          <option value="question">A question · একটা প্রশ্ন</option>
+          <option value="praise">Something I like · যা ভালো লেগেছে</option>
+        </select>
+      </label>
+      <label>[[Your message || আপনার কথা]]<textarea name="text" rows="6" maxlength="2000" required></textarea></label>
+      <label>[[Phone or email (optional, if you want a reply) || ফোন বা ইমেইল (ঐচ্ছিক, উত্তর চাইলে)]]<input name="contact" maxlength="120"></label>
+      <p class="muted small-print">[[Please don't write amounts, balances or account numbers. || দয়া করে টাকার অঙ্ক, ব্যালেন্স বা অ্যাকাউন্ট নম্বর লিখবেন না।]]</p>
+      <p class="form-msg" hidden></p>
+      <button class="btn primary" type="submit">[[Send || পাঠান]]</button>
+    </form>
+  </div>
+</section>
+
+<section class="block alt" id="tester">
+  <div class="wrap narrow">
+    <h2>[[i:flask-conical]] [[Become a tester || টেস্টার হোন]]</h2>
+    <p class="sub">[[Testers try new features before everyone else and tell us what works. Many of AmrPotli's features came from them. || টেস্টাররা নতুন ফিচার সবার আগে ব্যবহার করে জানান কোনটা কাজ করছে। আমার পোটলির অনেক ফিচার তাদের কাছ থেকেই এসেছে।]]</p>
+    <form class="card form-card" id="site-optin" novalidate>
+      <div class="row-2">
+        <label>[[Name || নাম]]<input name="name" maxlength="80" required></label>
+        <label>[[Phone (optional) || ফোন (ঐচ্ছিক)]]<input name="phone" type="tel" maxlength="20"></label>
+      </div>
+      <label>[[Email (the Google account you use for AmrPotli) || ইমেইল (আমার পোটলিতে যে Google অ্যাকাউন্ট ব্যবহার করেন)]]<input name="email" type="email" maxlength="120" required></label>
+      <div class="row-2">
+        <label>[[I'd like || আমি চাই]]
+          <select name="why">
+            <option value="tester">To test new features · নতুন ফিচার পরীক্ষা করতে</option>
+            <option value="updates">News about AmrPotli · আমার পোটলির খবর</option>
+            <option value="business">To talk about my business · আমার ব্যবসা নিয়ে কথা বলতে</option>
+            <option value="support">Help using the app · অ্যাপ ব্যবহারে সাহায্য</option>
+          </select>
+        </label>
+        <label>[[Promo code (if you have one) || প্রোমো কোড (থাকলে)]]<input name="code" maxlength="30"></label>
+      </div>
+      <label>[[What do you do? (optional) || আপনি কী করেন? (ঐচ্ছিক)]]<input name="profession" maxlength="60"></label>
+      <p class="muted small-print">[[The AmrPotli team will see these details and may contact you. Ask us any time to remove them. || আমার পোটলি টিম এই তথ্য দেখবে আর যোগাযোগ করতে পারে। যেকোনো সময় মুছে দিতে বলতে পারেন।]]</p>
+      <p class="form-msg" hidden></p>
+      <button class="btn primary" type="submit">[[Send || পাঠান]]</button>
+    </form>
+    <p class="muted" style="margin-top:22px">[[Or email us: || অথবা ইমেইল করুন:]] <a href="mailto:vgfintrack@gmail.com">vgfintrack@gmail.com</a></p>
+  </div>
+</section>

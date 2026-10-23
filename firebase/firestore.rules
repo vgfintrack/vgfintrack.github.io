@@ -1,0 +1,182 @@
+rules_version = '2';
+
+// AmrPotli team dashboard and the few things the app shares.
+//
+// Who is who:
+//   owner     vgfintrack@gmail.com: everything.
+//   founder   everything, except changing the owner or other founders.
+//   employee  the sections the owner or a founder gave them, plus tasks.
+//   guest     reads the sections they were given, until their end date.
+//
+// The app (no sign-in) may only: read the public notice and limits list,
+// add anonymous daily counts, and add an opt-in or a feedback message.
+// It can never read anything else. Users' money stays in their own Drive.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------ people
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function me() {
+      return request.auth.token.email.lower();
+    }
+    function isOwner() {
+      return signedIn() && me() == 'vgfintrack@gmail.com';
+    }
+    function teamDoc() {
+      return /databases/$(database)/documents/team/$(me());
+    }
+    function member() {
+      return get(teamDoc()).data;
+    }
+    function inTeam() {
+      return signedIn() && exists(teamDoc())
+        && (member().role != 'guest' || (member().get('until', null) is timestamp && member().until > request.time));
+    }
+    function isMember() {
+      return isOwner() || inTeam();
+    }
+    function isLead() {
+      return isOwner() || (inTeam() && member().role == 'founder');
+    }
+    function canRead(section) {
+      return isLead() || (inTeam() && section in member().get('sections', []));
+    }
+    function canWrite(section) {
+      return isLead() || (inTeam() && member().role == 'employee' && section in member().get('sections', []));
+    }
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    function str(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    // ------------------------------------------------------------ team
+    // Owner manages everyone; founders manage employees and guests.
+    function staffRole(r) {
+      return r == 'employee' || r == 'guest';
+    }
+    function validMember() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'role', 'sections', 'until', 'note', 'addedBy', 'addedAt', 'lastSeen'])
+        && d.role in ['founder', 'employee', 'guest']
+        && str(d.name, 80)
+        && d.get('sections', []) is list;
+    }
+    match /team/{email} {
+      allow read: if isMember();
+      allow create: if email != 'vgfintrack@gmail.com' && validMember()
+        && (isOwner() || (isLead() && staffRole(request.resource.data.role)));
+      allow update: if email != 'vgfintrack@gmail.com' && validMember()
+        && (isOwner() || (isLead() && staffRole(resource.data.role) && staffRole(request.resource.data.role))
+            || (signedIn() && me() == email && changed().hasOnly(['name', 'lastSeen'])));
+      allow delete: if isOwner() || (isLead() && staffRole(resource.data.role));
+    }
+
+    // ------------------------------------------------------------ extra category limits
+    // Private list with emails, for the team. The app reads public/limits,
+    // which holds only scrambled (hashed) emails.
+    match /grants/{email} {
+      allow read: if canRead('limits');
+      allow write: if canWrite('limits');
+    }
+
+    // ------------------------------------------------------------ public: read by the app and the website
+    match /public/{name} {
+      allow read: if true;
+      allow write: if (name == 'limits' && canWrite('limits')) || (name == 'notice' && canWrite('notices'));
+    }
+
+    // ------------------------------------------------------------ anonymous daily counts from the app
+    // One document per day. Each phone adds 1 to "active" and to the
+    // things it used, once a day. No ids, no emails, no amounts.
+    function countKeys() {
+      return ['active', 'new', 'bn', 'en', 'shop', 'personal', 'simple', 'lock', 'drive',
+              'voice', 'sms', 'photo', 'calc', 'baki', 'buy', 'repeat', 'report'];
+    }
+    function plusOne(k) {
+      return !(k in changed()) || request.resource.data[k] == resource.data.get(k, 0) + 1;
+    }
+    match /stats/{day} {
+      allow read: if canRead('users');
+      allow create: if day.matches('20[0-9][0-9]-[01][0-9]-[0-3][0-9]')
+        && request.resource.data.keys().hasOnly(countKeys())
+        && request.resource.data.active == 1
+        && request.resource.data.values().hasOnly([1]);
+      allow update: if changed().hasOnly(countKeys()) && 'active' in changed()
+        && plusOne('active') && plusOne('new') && plusOne('bn') && plusOne('en') && plusOne('shop')
+        && plusOne('personal') && plusOne('simple') && plusOne('lock') && plusOne('drive') && plusOne('voice')
+        && plusOne('sms') && plusOne('photo') && plusOne('calc') && plusOne('baki') && plusOne('buy')
+        && plusOne('repeat') && plusOne('report');
+    }
+
+    // ------------------------------------------------------------ users who chose to share their contact
+    function validOptin() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'email', 'phone', 'why', 'code', 'profession', 'lang', 'mode', 'app', 'at'])
+        && str(d.name, 80) && d.name.size() > 0
+        && str(d.email, 120) && d.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+        && str(d.get('phone', ''), 20) && str(d.get('code', ''), 30) && str(d.get('profession', ''), 60)
+        && d.why in ['support', 'updates', 'tester', 'business']
+        && str(d.get('lang', ''), 5) && str(d.get('mode', ''), 20) && str(d.get('app', ''), 20)
+        && d.at == request.time;
+    }
+    match /optins/{id} {
+      allow create: if validOptin();
+      allow read: if canRead('users');
+      allow update: if canWrite('users') && changed().hasOnly(['status', 'note', 'updatedBy']);
+      allow delete: if canWrite('users');
+    }
+
+    // ------------------------------------------------------------ feedback from the app and the website
+    function validFeedback() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['kind', 'text', 'contact', 'from', 'app', 'lang', 'code', 'at'])
+        && d.kind in ['problem', 'idea', 'praise', 'question']
+        && str(d.text, 2000) && d.text.size() > 0
+        && str(d.get('contact', ''), 120) && str(d.get('from', ''), 30) && str(d.get('app', ''), 40)
+        && str(d.get('lang', ''), 5) && str(d.get('code', ''), 30)
+        && d.at == request.time;
+    }
+    match /feedback/{id} {
+      allow create: if validFeedback();
+      allow read: if canRead('feedback');
+      allow update: if canWrite('feedback') && changed().hasOnly(['status', 'note', 'updatedBy', 'updatedAt']);
+      allow delete: if isLead();
+    }
+
+    // ------------------------------------------------------------ team-only sections
+    match /leads/{id} {
+      allow read: if canRead('leads');
+      allow write: if canWrite('leads');
+    }
+    match /promos/{code} {
+      allow read: if canRead('promos');
+      allow write: if canWrite('promos');
+    }
+    match /costs/{id} {
+      allow read: if canRead('costs');
+      allow write: if canWrite('costs');
+    }
+
+    // Tasks: everyone in the team sees them; the person a task is given to
+    // can move it along even without the Tasks section.
+    match /tasks/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && (isLead() || member().role == 'employee')
+        && request.resource.data.createdBy == me();
+      allow update: if canWrite('tasks') || isLead()
+        || (isMember() && resource.data.assignee == me()
+            && changed().hasOnly(['status', 'notes', 'updatedAt', 'updatedBy']));
+      allow delete: if isLead() || (isMember() && resource.data.createdBy == me());
+    }
+
+    // Who did what. Written by the dashboard, read by the owner and founders.
+    match /activity/{id} {
+      allow create: if isMember() && request.resource.data.by == me() && request.resource.data.at == request.time;
+      allow read: if isLead();
+    }
+  }
+}

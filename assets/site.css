@@ -250,3 +250,23 @@ tr:last-child td { border-bottom: 0; }
 .seg button.on { background: var(--text); color: var(--bg); box-shadow: none; }
 .menu-btn .to-close, .menu-btn.is-open .to-open { display: none; }
 .menu-btn.is-open .to-close { display: block; }
+
+/* ---------- the team's notice on top of every page */
+.site-notice { background: color-mix(in srgb, var(--brand) 12%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); font-size: 15px; }
+.site-notice .wrap { display: flex; gap: 12px; align-items: center; padding-top: 9px; padding-bottom: 9px; }
+.site-notice span { flex: 1; }
+.site-notice a { font-weight: 600; white-space: nowrap; }
+.site-notice button { border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
+
+/* ---------- contact forms */
+.form-card { display: grid; gap: 14px; }
+.form-card label { display: grid; gap: 6px; font-weight: 600; font-size: 15px; }
+.form-card input, .form-card select, .form-card textarea { font: inherit; font-weight: 400; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; }
+.form-card textarea { resize: vertical; }
+.form-card input:focus, .form-card select:focus, .form-card textarea:focus { outline: 2px solid color-mix(in srgb, var(--brand) 40%, transparent); border-color: var(--brand); }
+.form-card .row-2 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.form-card .btn { justify-self: start; }
+.small-print { font-size: 13px; margin: 0; }
+.form-msg { margin: 0; font-weight: 600; }
+.form-msg.good { color: var(--ok); }
+.form-msg.bad { color: var(--bad); }

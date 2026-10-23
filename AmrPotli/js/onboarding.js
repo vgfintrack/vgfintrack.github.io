@@ -5,7 +5,7 @@
 // closed tab picks up where the user left off.
 
 import { t, lang, addBangla } from './i18n.js';
-import { DEFAULT_SETTINGS, MAX_CATEGORIES } from './store.js';
+import { DEFAULT_SETTINGS, categoryLimit } from './store.js';
 import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, BUSINESS_TYPES, POPULAR, searchProfessions, professionById } from './professions.js';
 
 // Bangla for these screens comes with them, so the main app stays small.
@@ -375,7 +375,7 @@ function chipPicker(key, pool, placeholder) {
 // Expense and income together stay within the free plan's limit.
 const usedCategories = () => (draft.expense?.length || 0) + (draft.income?.length || 0);
 const countText = (key) =>
-  `${t('{n} selected', { n: draft[key].length })} · ${t('{a} of {b} categories', { a: usedCategories(), b: MAX_CATEGORIES })}`;
+  `${t('{n} selected', { n: draft[key].length })} · ${(categoryLimit() === Infinity ? t('{n} categories', { n: usedCategories() }) : t('{a} of {b} categories', { a: usedCategories(), b: categoryLimit() }))}`;
 
 function totalBalance() {
   return draft.wallets.reduce((s, id) => s + (Number(draft.balances[id]) || 0), 0);
@@ -494,8 +494,8 @@ function bind(root, ctx, step) {
       (b.onclick = () => {
         const c = b.dataset.chip;
         const on = !draft[key].includes(c);
-        if (on && usedCategories() >= MAX_CATEGORIES) {
-          $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: MAX_CATEGORIES })}</span>`;
+        if (on && usedCategories() >= categoryLimit()) {
+          $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: categoryLimit() })}</span>`;
           return;
         }
         draft[key] = on ? [...draft[key], c] : draft[key].filter((x) => x !== c);
@@ -515,8 +515,8 @@ function bind(root, ctx, step) {
       const name = inp.value.trim().replace(/\s+/g, ' ');
       if (!name) return;
       const same = draft[key].find((x) => x.toLowerCase() === name.toLowerCase());
-      if (!same && usedCategories() >= MAX_CATEGORIES) {
-        $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: MAX_CATEGORIES })}</span>`;
+      if (!same && usedCategories() >= categoryLimit()) {
+        $('#ob-count', root).innerHTML = `<span class="limit-inline">🔒 ${t('Up to {n} categories in total on the free plan.', { n: categoryLimit() })}</span>`;
         return;
       }
       if (!same) draft[key] = [...draft[key], name];

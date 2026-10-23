@@ -5,3 +5,9 @@
 // While it still starts with "REPLACE" the app runs in demo mode and keeps
 // data in this browser only.
 export const googleClientId = '500818833749-s37cmbrjlrdeon2a44idf5ibhi70d5sl.apps.googleusercontent.com';
+
+// The AmrPotli team's Firebase project (team/config.js has the same one).
+// The app only reads the public notice and the scrambled list of people who
+// get more categories, and sends anonymous daily counts, plus contact details
+// or feedback when the user chooses to send them. null = not connected yet.
+export const firebaseProject = null; // { projectId: '…', apiKey: '…' }

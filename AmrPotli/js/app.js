@@ -5,7 +5,7 @@ import * as G from './guide.js';
 import * as Rc from './recurring.js';
 import { catIcon, accIcon, productIcon } from './icons.js';
 import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
-import { createStore, DEFAULT_SETTINGS, MAX_CATEGORIES, newId } from './store.js';
+import { createStore, DEFAULT_SETTINGS, FREE_CATEGORIES, categoryLimit, setCategoryLimit, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 
 // ---------------------------------------------------------------- helpers
@@ -292,6 +292,166 @@ const accName = (id) => accById(id)?.name ?? t('(deleted account)');
 // For loan wording: "Lent to JC vai" reads as "JC vai" in "JC vai paid back".
 const personName = (id) => accName(id).replace(/^(lent to|loan from|borrowed from|loan to)\s+/i, '');
 
+
+// ---------------------------------------------------------------- the AmrPotli team (company.js)
+// The notice under the top bar, extra categories for people the team chose,
+// and one anonymous count a day. Loaded a moment after the app is on screen.
+
+let companyMod = null;
+const company = () => (companyMod ||= import('./company.js'));
+let companyTimer = null;
+let companyChecked = false; // for this signed-in user
+
+// Once shortly after the app opens, and again when the user comes back to it.
+function companySoon() {
+  if (companyTimer) return;
+  companyTimer = setTimeout(() => {
+    companyTimer = null;
+    syncCompany();
+  }, 1500);
+}
+
+async function syncCompany() {
+  const C = await company();
+  if (!C.connected()) return;
+  const data = await C.loadPublic();
+  const before = categoryLimit();
+  setCategoryLimit(await C.categoryLimitFor(state.store.mode === 'drive' ? state.user?.email : null, data, FREE_CATEGORIES));
+  if (categoryLimit() !== before && state.view === 'setup') render();
+  showNotice(data.notice?.app);
+  C.sendDailyCount({
+    lang,
+    shop: isShopMode(),
+    simple: !!settings().simple,
+    lock: hasLock(),
+    drive: state.store.mode === 'drive',
+  });
+}
+
+function countsOn() {
+  try {
+    return !localStorage.getItem('mt:counts-off');
+  } catch {
+    return true;
+  }
+}
+
+// Feature use, counted (without any details) with the next daily count.
+function used(feature) {
+  try {
+    const list = JSON.parse(localStorage.getItem('mt:used')) || [];
+    if (!list.includes(feature)) localStorage.setItem('mt:used', JSON.stringify([...list, feature]));
+  } catch {}
+}
+
+const NOTICE_CLOSED = 'mt:notice-closed';
+function showNotice(n) {
+  const bar = $('#notice-bar');
+  let closed = null;
+  try {
+    closed = localStorage.getItem(NOTICE_CLOSED);
+  } catch {}
+  const text = n && (lang === 'bn' ? n.bn || n.en : n.en || n.bn);
+  if (!n?.on || !text || String(n.id) === closed) {
+    bar.hidden = true;
+    return;
+  }
+  bar.innerHTML = `<span>📣 ${esc(text)}${n.link && /^https:\/\//.test(n.link) ? ` <a href="${esc(n.link)}" target="_blank" rel="noopener">${t('More')}</a>` : ''}</span>
+    <button class="icon-btn" aria-label="${esc(t('Close'))}">✕</button>`;
+  bar.querySelector('button').onclick = () => {
+    try {
+      localStorage.setItem(NOTICE_CLOSED, String(n.id));
+    } catch {}
+    bar.hidden = true;
+  };
+  bar.hidden = false;
+}
+
+// ---- feedback and "stay in touch": sent only when the user taps Send
+async function openFeedback(from = 'setup') {
+  const C = await company();
+  if (!C.connected()) return window.open(G.feedbackUrl(from), '_blank', 'noopener');
+  $('#fb-form').reset();
+  $('#fb-form').dataset.from = from;
+  $('#fb-error').hidden = true;
+  $$('#fb-kind button').forEach((b, i) => b.classList.toggle('active', i === 0));
+  $('#fb-dialog').showModal();
+}
+
+async function openStayInTouch() {
+  const C = await company();
+  if (!C.connected()) return window.open(G.feedbackUrl('stay-in-touch'), '_blank', 'noopener');
+  $('#optin-form').reset();
+  $('#optin-error').hidden = true;
+  const drive = state.store.mode === 'drive';
+  $('#optin-name').value = drive ? state.user?.displayName || '' : settings().holderName || '';
+  $('#optin-email').value = drive ? state.user?.email || '' : '';
+  $('#optin-dialog').showModal();
+}
+
+function setupCompanyDialogs() {
+  $$('#fb-kind button').forEach((b) => (b.onclick = () => $$('#fb-kind button').forEach((x) => x.classList.toggle('active', x === b))));
+  const busy = (btn, on) => {
+    btn.disabled = on;
+    btn.textContent = on ? t('Sending…') : t('Send');
+  };
+  $('#fb-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const text = $('#fb-text').value.trim();
+    if (!text) return;
+    busy($('#fb-send'), true);
+    try {
+      const C = await company();
+      await C.sendFeedback({
+        kind: $('#fb-kind .active')?.dataset.kind || 'idea',
+        text,
+        contact: $('#fb-contact').value.trim(),
+        from: $('#fb-form').dataset.from || 'app',
+        app: G.APP_VERSION,
+        lang,
+      });
+      $('#fb-dialog').close();
+      toast(t('Thank you! The AmrPotli team will read it.'));
+    } catch {
+      $('#fb-error').textContent = t('Could not send. Check your internet and try again.');
+      $('#fb-error').hidden = false;
+    } finally {
+      busy($('#fb-send'), false);
+    }
+  };
+  $('#optin-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $('#optin-email').value.trim();
+    if (!$('#optin-name').value.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      $('#optin-error').textContent = t('Write your name and a valid email.');
+      $('#optin-error').hidden = false;
+      return;
+    }
+    busy($('#optin-send'), true);
+    try {
+      const C = await company();
+      await C.sendOptin({
+        name: $('#optin-name').value.trim(),
+        email,
+        phone: $('#optin-phone').value.trim(),
+        why: $('#optin-why').value,
+        code: $('#optin-code').value.trim(),
+        profession: settings().profession?.en || '',
+        lang,
+        mode: isShopMode() ? 'shop' : settings().simple ? 'home' : 'personal',
+        app: G.APP_VERSION,
+      });
+      $('#optin-dialog').close();
+      toast(t('Sent. The AmrPotli team will be in touch.'));
+    } catch {
+      $('#optin-error').textContent = t('Could not send. Check your internet and try again.');
+      $('#optin-error').hidden = false;
+    } finally {
+      busy($('#optin-send'), false);
+    }
+  };
+}
+
 // ---------------------------------------------------------------- boot
 
 async function boot() {
@@ -304,6 +464,7 @@ async function boot() {
     $('#login-error').textContent = error || '';
     $('#login-error').hidden = !error;
     unsub?.();
+    companyChecked = false;
     $('#loading').hidden = true;
     if (!user) {
       $('#login').hidden = false;
@@ -317,10 +478,16 @@ async function boot() {
     renderAvatar();
     unsub = state.store.subscribe((data) => {
       state.data = data;
-      if (data.loaded) render();
-      else renderLoading();
+      if (data.loaded) {
+        render();
+        if (!companyChecked) {
+          companyChecked = true;
+          companySoon();
+        }
+      } else renderLoading();
     });
   });
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && state.data?.loaded && companySoon());
 
   $('#btn-signin').onclick = async () => {
     $('#login-error').hidden = true;
@@ -365,6 +532,14 @@ async function boot() {
   setupTxnDialog();
   setupAccountDialog();
   setupDeleteDialog();
+  setupCompanyDialogs();
+  document.addEventListener('click', (e) => {
+    const fb = e.target.closest('[data-feedback]');
+    if (fb) {
+      e.preventDefault();
+      openFeedback(fb.dataset.feedback || 'app');
+    }
+  });
   setupShopDialogs();
   setupBakiDialogs();
 }
@@ -840,6 +1015,7 @@ function setupShopDialogs() {
     if (paid > 0)
       await state.store.saveTxn({ type: 'Transfer', amount: paid, date, category: 'Transfer', account: $('#buy-from').value, toAccount: sup, note: '', purchase: pid });
     $('#buy-dialog').close();
+    used('buy');
     toast(paid >= total ? t('Purchase saved, paid in full') : t('Purchase saved · {amount} on baki', { amount: money(total - paid) }));
   };
 
@@ -1194,6 +1370,7 @@ function setupBakiDialogs() {
     await state.store.saveTxn({ type: 'Income', amount: total, date, category, account: cust, note: [items, sum].filter(Boolean).join(' · '), baki: sale });
     if (paid > 0) await state.store.saveTxn({ type: 'Transfer', amount: paid, date, category: 'Transfer', account: cust, toAccount: $('#baki-into').value, note: '', baki: sale });
     $('#baki-dialog').close();
+    used('baki');
     toast(paid >= total ? t('Sale saved, paid in full') : t('Baki saved · {name} owes {amount}', { name: accName(cust), amount: money(owed(cust)) }));
   };
 
@@ -1936,6 +2113,7 @@ function receiptPicker(root) {
     async keep() {
       if (cur && !cur.saved) {
         await state.store.savePhoto(cur.id, cur.blob);
+        used('photo');
         cur.saved = true;
       }
       return cur?.id;
@@ -2057,6 +2235,7 @@ async function speakEntry() {
     $('#txn-note').value = r.note;
     updateTxnHint();
     showSmsInfo(`🎤 “${esc(heard)}”<br>✓ ${esc(t('Filled in. Check and tap Save.'))}`);
+    used('voice');
   } catch (e) {
     const msg = {
       'not-allowed': 'Allow the microphone for this site to use voice.',
@@ -2132,6 +2311,7 @@ function fillFromSms(text) {
     }
   }
   showSmsInfo(lines.map(esc).join('<br>'), warn);
+  used('sms');
 }
 
 // Category: a dropdown with all of the user's own categories, and below it
@@ -2457,6 +2637,7 @@ function noteWithSum() {
   const note = $('#txn-note').value.trim();
   const raw = $('#txn-amount').value;
   if (!evalExpr(raw).isSum) return note;
+  used('calc');
   const sum = prettyExpr(raw);
   // Voice already wrote the items with their amounts; don't repeat them.
   if ($('#txn-amount').dataset.itemized === sum) return note;
@@ -2535,6 +2716,7 @@ async function saveTxn(another) {
     x.receipt = await txnReceipt.keep();
     await state.store.saveTxn(x);
     await ensureFeeCategory(x);
+    if (every) used('repeat');
     if (every)
       await saveRules([
         ...rules(),
@@ -2933,7 +3115,10 @@ function renderReports() {
   on('#r-person', (e) => (report.person = e.target.value));
   on('#r-decl', (e) => (report.declaration = e.target.checked));
   on('#r-name', (e) => state.store.saveSettings({ ...settings(), holderName: e.target.value.trim() }));
-  $('#r-open', v).onclick = openReport;
+  $('#r-open', v).onclick = () => {
+    used('report');
+    openReport();
+  };
   if ($('#r-csv', v))
     $('#r-csv', v).onclick = () => {
       const range = reportRange();
@@ -2971,12 +3156,18 @@ function openReport() {
 
 // ---- the free plan's category limit (expense + income together)
 const categoryCount = () => settings().expenseCategories.length + settings().incomeCategories.length;
-const LIMIT_MSG = 'The free plan has up to {n} categories (expense and income together). Remove or rename one to make room. More will come with a paid plan.';
+const FREE_LIMIT_MSG = 'The free plan has up to {n} categories (expense and income together). Remove or rename one to make room. More will come with a paid plan.';
+const EXTRA_LIMIT_MSG = 'You can have up to {n} categories (expense and income together). Remove or rename one to make room.';
+const limitMsg = () => t(categoryLimit() > FREE_CATEGORIES ? EXTRA_LIMIT_MSG : FREE_LIMIT_MSG, { n: categoryLimit() });
 
 function categoryLimitRow(kind, placeholder) {
   const used = categoryCount();
-  const counter = `<p class="muted cat-count ${used >= MAX_CATEGORIES ? 'full' : ''}">${t('{a} of {b} categories used', { a: used, b: MAX_CATEGORIES })}</p>`;
-  if (used >= MAX_CATEGORIES) return `${counter}<p class="limit-note">🔒 ${t(LIMIT_MSG, { n: MAX_CATEGORIES })}</p>`;
+  const max = categoryLimit();
+  const counter =
+    max === Infinity
+      ? `<p class="muted cat-count">${t('{n} categories · no limit for you', { n: used })}</p>`
+      : `<p class="muted cat-count ${used >= max ? 'full' : ''}">${t('{a} of {b} categories used', { a: used, b: max })}</p>`;
+  if (used >= max) return `${counter}<p class="limit-note">🔒 ${limitMsg()}</p>`;
   return `<div class="add-row"><input id="new-${kind}" placeholder="${t(placeholder)}"><button class="btn" id="add-${kind}">${t('Add')}</button></div>${counter}`;
 }
 
@@ -3041,7 +3232,10 @@ function renderSetup() {
       <div class="card">
         <h3>${t('Help &amp; feedback')}</h3>
         <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
-        <a class="btn" href="${G.feedbackUrl('setup')}" target="_blank" rel="noopener">💬 ${t('Send feedback')}</a>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
+        <button class="btn" id="stay-in-touch">🤝 ${t('Stay in touch')}</button></div>
+        <label class="switch-row" style="margin-top:14px"><input type="checkbox" id="counts-on" ${countsOn() ? 'checked' : ''}>
+          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('Once a day the app sends an anonymous count: that it was used, the language, and which features (like voice). Never your name, email or money.')}</span></span></label>
         <p class="muted" style="margin:10px 0 0;font-size:13px"><a href="privacy.html">${t('Privacy')}</a> · <a href="terms.html">${t('Terms of use')}</a></p>
       </div>
 
@@ -3127,7 +3321,7 @@ function renderSetup() {
   $('#add-exp', v)?.addEventListener('click', () => {
     const name = $('#new-exp', v).value.trim();
     if (!name || s.expenseCategories.some((c) => c.name === name)) return;
-    if (categoryCount() >= MAX_CATEGORIES) return toast(t(LIMIT_MSG, { n: MAX_CATEGORIES }));
+    if (categoryCount() >= categoryLimit()) return toast(limitMsg());
     save({ expenseCategories: [...s.expenseCategories, { name, budget: 0 }] });
   });
 
@@ -3150,7 +3344,7 @@ function renderSetup() {
   $('#add-inc', v)?.addEventListener('click', () => {
     const name = $('#new-inc', v).value.trim();
     if (!name || s.incomeCategories.includes(name)) return;
-    if (categoryCount() >= MAX_CATEGORIES) return toast(t(LIMIT_MSG, { n: MAX_CATEGORIES }));
+    if (categoryCount() >= categoryLimit()) return toast(limitMsg());
     save({ incomeCategories: [...s.incomeCategories, name] });
   });
 
@@ -3171,6 +3365,14 @@ function renderSetup() {
     switchView('dashboard');
   });
   $$('[data-lang]', v).forEach((b) => (b.onclick = () => applyLang(b.dataset.lang)));
+  $('#stay-in-touch', v).onclick = openStayInTouch;
+  $('#counts-on', v).onchange = (e) => {
+    try {
+      if (e.target.checked) localStorage.removeItem('mt:counts-off');
+      else localStorage.setItem('mt:counts-off', '1');
+    } catch {}
+    toast(e.target.checked ? t('Thank you!') : t('Turned off. Nothing will be counted from this phone.'));
+  };
   $('#export', v).onclick = () => {
     exportJson();
     renderSetup();

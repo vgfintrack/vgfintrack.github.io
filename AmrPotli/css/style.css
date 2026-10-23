@@ -634,3 +634,11 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .photo-dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
 .photo-dialog img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .photo-close { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; background: rgba(0, 0, 0, 0.55); color: #fff; }
+
+/* the AmrPotli team's notice, under the top bar */
+.notice-bar { display: flex; align-items: center; gap: 10px; justify-content: space-between; background: color-mix(in srgb, var(--brand) 12%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+.notice-bar[hidden] { display: none; }
+.notice-bar a { font-weight: 600; }
+.switch-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.switch-row input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--brand); }
+.field textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 15px; resize: vertical; }
