@@ -109,7 +109,7 @@ section.alt .card { background: var(--bg); box-shadow: none; }
 .shots .shot { scroll-snap-align: center; width: 220px; }
 
 /* ---------- inner page hero */
-.page-hero { padding: 40px 0 28px; border-bottom: 1px solid var(--line); background: linear-gradient(120deg, color-mix(in srgb, var(--cream) 85%, var(--bg)), var(--bg) 70%); }
+.page-hero { padding: 40px 0 28px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 6%, var(--bg)), var(--bg)); }
 .page-hero h1 { font-size: clamp(30px, 5vw, 44px); margin: 8px 0 10px; }
 .crumbs { font-size: 14px; color: var(--muted); }
 .crumbs a { color: var(--muted); }
@@ -236,9 +236,8 @@ tr:last-child td { border-bottom: 0; }
 .final > .wrap > div > .sk { width: 64px; height: 64px; color: var(--icon); }
 
 /* ---------- round top-bar buttons: soft warm border, dark outline icon */
-:root { --ring: #dccdbf; --cream: #fbefe7; --icon: #c2410c; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ring: #3b4a45; --cream: #1d2a26; --icon: #fb923c; } }
-:root[data-theme="dark"] { --ring: #3b4a45; --cream: #1d2a26; --icon: #fb923c; }
+/* Icons and round buttons use the site's own colours. */
+:root { --ring: var(--line); --cream: var(--surface-2); --icon: var(--brand-text); }
 .theme-btn, .menu-btn { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--ring); color: var(--text); font-size: 0; }
 .theme-btn { background: var(--cream); }
 .menu-btn { background: var(--surface); }
