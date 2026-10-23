@@ -812,4 +812,7 @@ export const BN = {
   '+ New category…': '+ নতুন ক্যাটাগরি…',
   'Name of the new income source, for example Money from Family': 'নতুন আয়ের উৎসের নাম, যেমন Money from Family',
   'Name of the new category, for example Gym': 'নতুন ক্যাটাগরির নাম, যেমন Gym',
+  // ---- shared or copied SMS
+  'Add the SMS you copied?': 'কপি করা SMS-টি যোগ করবেন?',
+  'No thanks': 'না, থাক',
 };

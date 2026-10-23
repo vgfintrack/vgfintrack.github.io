@@ -525,6 +525,7 @@ async function boot() {
         if (!companyChecked) {
           companyChecked = true;
           companySoon();
+          setTimeout(checkClipboard, 800);
         }
       } else renderLoading();
     });
@@ -680,6 +681,7 @@ function render() {
   document.body.classList.toggle('onboarding', !!onboarding);
   showAddButton(!onboarding && (state.view === 'dashboard' || state.view === 'transactions'));
   if (onboarding) return renderWelcome();
+  setTimeout(takeSharedSms);
   $('.tabbar [data-view=reports]').hidden = helperLimited();
   if (helperLimited() && state.view === 'reports') state.view = 'dashboard';
   G.noticeProgress(state.data, guideFlags(), toast);
@@ -938,6 +940,7 @@ async function lockNow() {
   await L.showKeypad({ uid: state.user.uid, onForgot: forgotPin, demo: state.store.mode !== 'drive' });
   unlocked = true;
   markSeen();
+  takeSharedSms();
 }
 
 async function forgotPin() {
@@ -1472,6 +1475,7 @@ function renderSimple() {
         ${savings ? `<span>💎 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
       </div>
     </div>
+    ${clipCard()}
     ${tipsCard(1)}
     <div class="big-actions">
       <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
@@ -1493,6 +1497,7 @@ function renderSimple() {
   bindRecurring(v);
   bindTxnRows(v);
   bindTips(v);
+  bindClip(v);
   $('#see-all', v).onclick = () => switchView('transactions');
   $('#more-details', v).onclick = () => {
     detailsOnce = true;
@@ -1916,6 +1921,7 @@ function renderDashboard() {
   $('#view-dashboard').innerHTML = `
     ${settings().simple && detailsOnce ? `<button class="btn wide back-simple" id="back-simple">🏠 ${t('Back to simple view')}</button>` : ''}
     ${G.streakPill(txns, C.today())}
+    ${clipCard()}
     ${quickActions()}
     ${dueCard()}
     ${tipsCard()}
@@ -2039,6 +2045,7 @@ function renderDashboard() {
   bindBackup($('#view-dashboard'));
   bindDistrict($('#view-dashboard'));
   bindTips($('#view-dashboard'));
+  bindClip($('#view-dashboard'));
   $('#back-simple')?.addEventListener('click', backToSimple);
   bindShop($('#view-dashboard'));
   bindBaki($('#view-dashboard'));
@@ -3925,6 +3932,108 @@ function bindBackup(root) {
   };
   $('#backup-later', root).onclick = () => {
     backupMark({ later: Date.now() + 7 * 86400000 });
+    render();
+  };
+}
+
+// ---- SMS the user hands to the app: shared to AmrPotli (Android's Share
+// menu, see share_target in manifest.json) or copied before opening it.
+// The app never reads messages by itself; it only sees what is shared or
+// copied, and only after the user allowed pasting.
+
+const SHARED_KEY = 'mt:shared-sms';
+{
+  const q = new URLSearchParams(location.search);
+  if (q.has('share')) {
+    const text = ['title', 'text', 'url'].map((k) => q.get(k)).filter(Boolean).join(' ').trim();
+    try {
+      if (text) sessionStorage.setItem(SHARED_KEY, text);
+    } catch {}
+    history.replaceState(null, '', location.pathname);
+  }
+}
+
+// Opens a new entry filled from an SMS.
+function addFromSms(text) {
+  openTxn();
+  if (!$('#txn-dialog').open) return;
+  $('#sms-text').value = text;
+  fillFromSms(text);
+  if (!parseSms(text, accounts())) $('#sms-panel').hidden = false; // show what came in, to fix by hand
+}
+
+// A shared SMS waits until the app is open, signed in and unlocked.
+function takeSharedSms() {
+  let text = null;
+  try {
+    text = sessionStorage.getItem(SHARED_KEY);
+  } catch {}
+  if (!text || !state.data?.loaded || !unlocked || document.body.classList.contains('onboarding') || $('#txn-dialog').open) return;
+  try {
+    sessionStorage.removeItem(SHARED_KEY);
+  } catch {}
+  addFromSms(text);
+  used('sms');
+}
+
+// Smart paste: only where the user already allowed pasting (the phone asks the
+// first time Paste SMS is tapped), a copied money SMS is offered once.
+const CLIP_SEEN_KEY = 'mt:clip-seen';
+let clipOffer = null; // { text, r, key }
+const clipSeen = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CLIP_SEEN_KEY)) || [];
+  } catch {
+    return [];
+  }
+};
+const clipMark = (key) => {
+  try {
+    localStorage.setItem(CLIP_SEEN_KEY, JSON.stringify([key, ...clipSeen().filter((k) => k !== key)].slice(0, 30)));
+  } catch {}
+};
+async function checkClipboard() {
+  if (!state.data?.loaded) return;
+  try {
+    const perm = await navigator.permissions.query({ name: 'clipboard-read' });
+    if (perm.state !== 'granted') return;
+    const text = (await navigator.clipboard.readText())?.trim();
+    if (!text || text.length > 1000 || !/(?:Tk|BDT|৳)\s*[\d,]/i.test(text)) return;
+    const r = parseSms(text, accounts());
+    if (!r) return;
+    const key = r.ref || text.slice(0, 120);
+    if (clipSeen().includes(key) || (r.ref && state.data.transactions.some((x) => x.ref === r.ref))) return;
+    clipOffer = { text, r, key };
+    if (state.view === 'dashboard' && !document.body.classList.contains('onboarding')) render();
+  } catch {
+    // no permission API (Firefox, Safari) or no access: nothing happens
+  }
+}
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && setTimeout(checkClipboard, 400));
+addEventListener('focus', () => setTimeout(checkClipboard, 400));
+
+function clipCard() {
+  if (!clipOffer) return '';
+  const { r } = clipOffer;
+  const what = [`৳${moneyExact(r.amount)}`, r.counterparty].filter(Boolean).join(' · ');
+  return `<div class="card clip-card"><span class="big-ic" aria-hidden="true">📋</span>
+    <div><strong>${t('Add the SMS you copied?')}</strong><div class="muted" style="font-size:13px">${esc(t(r.kind))} · ${esc(what)}</div></div>
+    <div class="tip-actions"><button class="btn primary sm" data-clip-add>${t('Add')}</button><button class="btn sm" data-clip-no>${t('No thanks')}</button></div></div>`;
+}
+function bindClip(root) {
+  const add = $('[data-clip-add]', root);
+  if (!add) return;
+  add.onclick = () => {
+    const { text, key } = clipOffer;
+    clipMark(key);
+    clipOffer = null;
+    render();
+    addFromSms(text);
+    used('sms');
+  };
+  $('[data-clip-no]', root).onclick = () => {
+    clipMark(clipOffer.key);
+    clipOffer = null;
     render();
   };
 }

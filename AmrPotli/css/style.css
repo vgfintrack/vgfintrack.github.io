@@ -330,10 +330,10 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
 .error.warn { color: var(--warn); }
 
 /* backup reminder */
-.backup-tip, .district-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.backup-tip .big-ic, .district-tip .big-ic { font-size: 28px; flex: none; }
-.backup-tip > div:nth-child(2), .district-tip > div:nth-child(2) { flex: 1 1 180px; }
-.backup-tip .tip-actions, .district-tip .tip-actions { display: flex; gap: 8px; }
+.backup-tip, .district-tip, .clip-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.backup-tip .big-ic, .district-tip .big-ic, .clip-card .big-ic { font-size: 28px; flex: none; }
+.backup-tip > div:nth-child(2), .district-tip > div:nth-child(2), .clip-card > div:nth-child(2) { flex: 1 1 180px; }
+.backup-tip .tip-actions, .district-tip .tip-actions, .clip-card .tip-actions { display: flex; gap: 8px; }
 
 /* install tip on the Dashboard */
 .install-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
