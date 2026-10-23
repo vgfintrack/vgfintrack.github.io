@@ -9,6 +9,9 @@
 // Signing out removes the copy from this browser; signing in again on any
 // device brings everything back from Drive.
 //
+// Before signing in, the app works on this phone only ("local" user, see
+// createDriveStore). Signing in moves that data into the user's Drive.
+//
 // Without a Google client ID (see config.js) the app runs in demo mode and
 // keeps data in this browser only.
 
@@ -302,8 +305,16 @@ function loadGis() {
   });
 }
 
+// Someone using the app before signing in. Their data stays on this phone
+// until they sign in; then it moves into their Google Drive.
+const LOCAL_UID = 'local';
+const localUser = () => ({ uid: LOCAL_UID, local: true, email: '', displayName: '', photoURL: '' });
+const hasData = (doc) => !!doc.settings || live(doc.accounts).length > 0 || live(doc.transactions).length > 0;
+// Things kept per user on this phone that should follow the data on sign-in.
+const LOCAL_KEYS = ['mt:lock', 'mt:lock-seen', 'mt:backup'];
+
 async function createDriveStore() {
-  let user = load(LAST_USER_KEY); // { uid, email, displayName, photoURL }
+  let user = load(LAST_USER_KEY) || localUser(); // { uid, email, displayName, photoURL }
   let token = null; // { value, expiresAt }
   let engine = null;
   let fileId = null;
@@ -321,13 +332,14 @@ async function createDriveStore() {
   };
 
   const scheduleSync = () => {
+    if (user.local) return setStatus('local');
     if (engine?.dirty) setStatus(hasToken() ? 'syncing' : 'unsynced');
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => sync(), 1200);
   };
 
   const openEngine = () => {
-    engine = createEngine(`mt:data:${user.uid}`, scheduleSync, { readyWithoutCache: false });
+    engine = createEngine(`mt:data:${user.uid}`, scheduleSync, { readyWithoutCache: !!user.local });
     for (const [cb, off] of dataSubs) {
       off?.();
       dataSubs.set(cb, engine.subscribe(cb));
@@ -485,6 +497,7 @@ async function createDriveStore() {
   // Download, merge with local changes, upload if anything differs.
   async function sync() {
     if (!engine) return;
+    if (user.local) return setStatus('local');
     if (!hasToken()) return setStatus(engine.dirty ? 'unsynced' : 'tap');
     if (!navigator.onLine) return setStatus('offline');
     if (syncing) {
@@ -546,6 +559,41 @@ async function createDriveStore() {
     return reconnecting;
   }
 
+  // Moves what was done before signing in into the signed-in account.
+  // `remote` is that account's data in Drive (null if it has none yet).
+  async function adoptLocal(guest, remote) {
+    if (remote) engine.replace(mergeDocs(engine.doc, remote), engine.dirty);
+    if (hasData(guest)) {
+      const entries = live(guest.transactions).length;
+      if (!hasData(engine.doc)) engine.replace(mergeDocs(engine.doc, guest), true);
+      // The account already has data: the setup made on this phone is not
+      // needed, but entries are added if the user agrees.
+      else if (entries && confirm(t('This Google account already has AmrPotli data. Add the {n} entries made on this phone to it?', { n: entries })))
+        engine.mergeAll({ accounts: live(guest.accounts), transactions: live(guest.transactions), settings: guest.settings });
+    }
+    for (const k of LOCAL_KEYS) {
+      const v = load(`${k}:${LOCAL_UID}`);
+      if (v != null && load(`${k}:${user.uid}`) == null) save(`${k}:${user.uid}`, v);
+      save(`${k}:${LOCAL_UID}`, null);
+    }
+    save(`mt:data:${LOCAL_UID}`, null);
+    save(`mt:onb:${LOCAL_UID}`, null);
+    try {
+      const P = await photos();
+      const used = receiptIds(engine.doc);
+      for (const { id } of await P.list(LOCAL_UID)) {
+        const item = await P.getLocal(LOCAL_UID, id);
+        if (item && used.has(id)) {
+          await P.putLocal(user.uid, id, item.blob, true);
+          save(photoFlag(user.uid), 1);
+        }
+      }
+      await P.clearUser(LOCAL_UID);
+    } catch (e) {
+      console.warn('Could not move photos', e);
+    }
+  }
+
   // Signs this device out: revokes the token and drops the local copy.
   function forget() {
     if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token.value, () => {});
@@ -557,23 +605,51 @@ async function createDriveStore() {
       off?.();
       dataSubs.set(cb, null);
     }
-    user = null;
+    // Back to the start screen, where the app can be used without signing in.
+    user = localUser();
     save(LAST_USER_KEY, null);
-    setStatus('idle');
-    authCb(null);
+    openEngine();
+    setStatus('local');
+    authCb(user);
   }
 
   const mutate = (fn) => async (...args) => {
     if (!engine) throw new Error(t('Not signed in'));
     fn(...args);
-    if (!hasToken()) reconnect();
+    if (!user.local && !hasToken()) reconnect();
   };
 
+  // Called from a button tap.
+  async function signIn() {
+    await requestToken(true);
+    const profile = await fetchProfile();
+    const guest = user?.local ? engine.doc : null;
+    if (!user || user.uid !== profile.uid) fileId = null;
+    // Read the account's Drive first: if that fails, nothing has changed yet.
+    const remote = guest ? await readRemote() : null;
+    user = profile;
+    save(LAST_USER_KEY, user);
+    keepToken();
+    openEngine();
+    if (guest) await adoptLocal(guest, remote);
+    authCb(user);
+    await sync();
+  }
+
   return {
-    mode: 'drive',
+    // 'local' until the user signs in, then 'drive'.
+    get mode() {
+      return user?.local ? 'local' : 'drive';
+    },
     onAuth(cb) {
       authCb = cb;
-      if (user) {
+      if (user.local) {
+        openEngine();
+        cb(user);
+        setStatus('local');
+        // Ready for a quick sign-in on the next tap.
+        setTimeout(() => loadGis().catch(() => {}), 3000);
+      } else if (user) {
         token = load(tokenKey(user.uid));
         openEngine();
         cb(user);
@@ -588,20 +664,11 @@ async function createDriveStore() {
       statusListeners.add(cb);
       cb(status);
     },
-    // Called from a button tap.
-    async signIn() {
-      await requestToken(true);
-      const profile = await fetchProfile();
-      if (!user || user.uid !== profile.uid) fileId = null;
-      user = profile;
-      save(LAST_USER_KEY, user);
-      keepToken();
-      openEngine();
-      authCb(user);
-      await sync();
-    },
+    signIn,
     // Called from a button tap. Reconnects to Drive if needed, then syncs.
+    // Before signing in, it signs in.
     async syncNow() {
+      if (user.local) return signIn();
       if (!hasToken()) {
         try {
           await requestToken(true);
@@ -627,6 +694,13 @@ async function createDriveStore() {
     // Called from a button tap (it may need to sign in again first).
     async deleteMyData() {
       clearTimeout(syncTimer);
+      if (user.local) {
+        for (const k of ['mt:data', 'mt:onb', ...LOCAL_KEYS]) save(`${k}:${LOCAL_UID}`, null);
+        await (await photos()).clearUser(LOCAL_UID).catch(() => {});
+        engine.clear();
+        openEngine(); // empty again, back to the start
+        return;
+      }
       await syncing?.catch(() => {});
       if (!hasToken()) {
         await requestToken(true);
@@ -642,7 +716,7 @@ async function createDriveStore() {
     async savePhoto(id, blob) {
       if (!engine) throw new Error(t('Not signed in'));
       await (await photos()).putLocal(user.uid, id, blob, true);
-      save(photoFlag(user.uid), 1);
+      if (!user.local) save(photoFlag(user.uid), 1);
     },
     // From this browser, or downloaded from Drive (another phone took it).
     async photo(id) {
@@ -650,6 +724,7 @@ async function createDriveStore() {
       const uid = user.uid;
       const local = await P.getLocal(uid, id);
       if (local) return local.blob;
+      if (user.local) return null;
       if (!hasToken()) await reconnect();
       if (!hasToken()) throw new Error(t('Connect to Google Drive to see this photo.'));
       const [f] = await listFiles(`name='${photoName(id)}'`);

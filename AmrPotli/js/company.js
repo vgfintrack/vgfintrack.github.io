@@ -8,6 +8,8 @@
 // Sends:
 //   stats/<day>    once a day, +1 to "active" and to what was used. No id,
 //                  no email, no amounts. Can be turned off in Setup.
+//   profs/<day>~<profession>  the same day, +1 for the user's kind of work
+//                  (an id from the app's list, or "custom" if they typed it).
 //   optins, feedback  only what the user types and sends themself.
 
 // A namespace import: an older config.js without firebaseProject just means "not connected".
@@ -119,7 +121,7 @@ export function markUsed(feature) {
 export const countsOn = () => !get(COUNTS_OFF_KEY);
 export const setCountsOn = (on) => put(COUNTS_OFF_KEY, on ? null : 1);
 
-// facts: { lang, shop, simple, lock, drive }
+// facts: { lang, shop, simple, lock, drive, team, prof }
 export async function sendDailyCount(facts) {
   if (!connected() || !countsOn() || !navigator.onLine) return;
   const day = today();
@@ -127,12 +129,17 @@ export async function sendDailyCount(facts) {
   if (last === day) return;
   const used = (get(USED_KEY) || []).filter((f) => ['voice', 'sms', 'photo', 'calc', 'baki', 'buy', 'repeat', 'report'].includes(f));
   const keys = ['active', ...(last ? [] : ['new']), facts.lang === 'bn' ? 'bn' : 'en', facts.shop ? 'shop' : 'personal', ...(facts.simple ? ['simple'] : []),
-    ...(facts.lock ? ['lock'] : []), ...(facts.drive ? ['drive'] : []), ...used];
+    ...(facts.lock ? ['lock'] : []), ...(facts.drive ? ['drive'] : []), ...(facts.team ? ['team'] : []), ...used];
   try {
     await commit([{ transform: { document: docName(`stats/${day}`), fieldTransforms: keys.map((k) => ({ fieldPath: k, increment: { integerValue: '1' } })) } }]);
     put(SENT_KEY, day);
     put(USED_KEY, []);
-  } catch {}
+  } catch {
+    return;
+  }
+  // Separate, so the day's count above never depends on it.
+  if (/^[a-z]{2,20}$/.test(facts.prof || ''))
+    await commit([{ transform: { document: docName(`profs/${day}~${facts.prof}`), fieldTransforms: [{ fieldPath: 'n', increment: { integerValue: '1' } }] } }]).catch(() => {});
 }
 
 // ---------------------------------------------------------------- contact and feedback (only what the user sends)

@@ -105,6 +105,7 @@ nav a .count { margin-left: auto; background: var(--brand); color: #fff; border-
 .split .tr { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
 .split .tr i { display: block; height: 100%; background: var(--brand); }
 .split .ln b { text-align: right; font-variant-numeric: tabular-nums; }
+.split.wide .ln { grid-template-columns: minmax(120px, 1.4fr) 1fr 46px; }
 
 /* tables / lists */
 .table-wrap { overflow-x: auto; }

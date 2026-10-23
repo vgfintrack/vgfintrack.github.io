@@ -6,7 +6,7 @@
 
 import { t, lang, addBangla } from './i18n.js';
 import { DEFAULT_SETTINGS, categoryLimit } from './store.js';
-import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, BUSINESS_TYPES, POPULAR, searchProfessions, professionById } from './professions.js';
+import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, PROFESSIONS, POPULAR, searchProfessions, professionById } from './professions.js';
 
 // Bangla for these screens comes with them, so the main app stays small.
 addBangla({
@@ -91,6 +91,41 @@ addBangla({
   'How does money come into the business?': 'ব্যবসায় টাকা কীভাবে আসে?',
   'A healthy business writes down every sale and cost the same day. Start with one now.': 'ভালো ব্যবসা প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
   'A healthy shop writes down every sale and cost the same day. Start with one now.': 'ভালো দোকান প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
+  'Tap to start': 'শুরু করতে ট্যাপ করুন',
+  'How will you use AmrPotli?': 'আমার পোটলি কীভাবে ব্যবহার করবেন?',
+  'For personal use': 'ব্যক্তিগত ব্যবহারের জন্য',
+  'Income, spending, savings and family costs': 'আয়, খরচ, সঞ্চয় আর পরিবারের খরচ',
+  'For business': 'ব্যবসার জন্য',
+  'I already use AmrPotli': 'আমি আগে থেকেই আমার পোটলি ব্যবহার করি',
+  'Sign in with Google to get your data': 'আপনার তথ্য ফিরে পেতে Google দিয়ে সাইন ইন করুন',
+  'What is your business?': 'আপনার ব্যবসা কী?',
+  'Pick yours, or type it. I will set up the right categories and products.': 'আপনারটি বেছে নিন, বা লিখুন। মানানসই ক্যাটাগরি আর পণ্য সাজিয়ে দেব।',
+  'e.g. pharmacy, photocopy, grocery': 'যেমন ফার্মেসি, ফটোকপি, মুদি দোকান',
+  'Other business: “{name}”': 'অন্য ব্যবসা: “{name}”',
+  'Your own business': 'আপনার নিজের ব্যবসা',
+  'All businesses': 'সব ব্যবসা',
+  'Who works in the business?': 'ব্যবসায় কে কে কাজ করেন?',
+  'Pick one. You can change it later.': 'একটি বেছে নিন। পরে বদলানো যাবে।',
+  'Just me (solo)': 'শুধু আমি (একা)',
+  'I keep the accounts myself': 'হিসাব আমি নিজেই রাখি',
+  'A team': 'একটি টিম',
+  'Owner with employees, family or helpers': 'মালিকের সাথে কর্মচারী, আত্মীয় বা সহকারী',
+  'Who are you?': 'আপনি কে?',
+  'Owner': 'মালিক',
+  'I set up the shop and add helpers': 'আমি দোকান সেটআপ করি আর সহকারী যোগ করি',
+  'Employee or helper': 'কর্মচারী বা সহকারী',
+  "I work in someone else's shop": 'আমি অন্যের দোকানে কাজ করি',
+  "Helpers will join the owner's shop with their own Gmail. This is coming in the next update. Until then, the owner can set up AmrPotli and keep the accounts.":
+    'সহকারীরা নিজের Gmail দিয়ে মালিকের দোকানে যুক্ত হবেন। এটি পরের আপডেটে আসছে। ততদিন মালিক আমার পোটলি সেটআপ করে হিসাব রাখতে পারেন।',
+  'Adding helpers to your shop is coming in the next update.': 'দোকানে সহকারী যোগ করার সুবিধা পরের আপডেটে আসছে।',
+  'Install the app': 'অ্যাপটি ইনস্টল করুন',
+  'Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.':
+    'এটি আপনার নিজের Drive-এ সেভ করতে আর আমার পোটলি ব্যবহার শুরু করতে Google দিয়ে সাইন ইন করুন। শুধু আপনিই এটি দেখতে পারবেন।',
+  'Sign in with Google and start': 'Google দিয়ে সাইন ইন করে শুরু করুন',
+  'Start over': 'আবার শুরু করুন',
+  'Start over? The setup on this phone will be removed.': 'আবার শুরু করবেন? এই ফোনের সেটআপ মুছে যাবে।',
+  'You can answer the setup questions now; at the end you sign in with Google to save everything in your own Drive.':
+    'সেটআপের প্রশ্নগুলোর উত্তর এখনই দিতে পারেন; শেষে Google দিয়ে সাইন ইন করলে সব আপনার নিজের Drive-এ সেভ হবে।',
 });
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -107,7 +142,9 @@ const POPULAR_SUB = {
   home: 'Bazar, bills and family costs',
   business: 'Shop, farm, pharmacy, any trade',
 };
-const BTYPE_PROF = { other: 'otherbiz' }; // business type -> its profession entry
+// Every business the "For business" screen offers (the plain "Business owner"
+// is a personal-money choice).
+const BUSINESSES = PROFESSIONS.filter((p) => p.business);
 const profName = (p) => (lang === 'bn' ? p.bn : p.en);
 const isShop = () => draft?.persona === 'business' && draft.bizMode === 'shop' && !!draft.btype;
 const starter = () => (isShop() ? BUSINESS[draft.btype] : PERSONAL[draft.persona] || PERSONAL.other);
@@ -117,7 +154,15 @@ const resetLists = () => {
   draft.income = [...starter().income];
 };
 
+// Personal use: a shop owner's own money. Business: the business's money.
 function chooseProfession(p, customLabel = null) {
+  if (draft.track === 'business') {
+    draft.persona = 'business';
+    draft.bizMode = 'shop';
+    draft.prof = customLabel ? { id: 'custom', label: customLabel } : { id: p.id };
+    draft.btype = customLabel ? 'other' : p.business;
+    return resetLists();
+  }
   if (customLabel) {
     draft.prof = { id: 'custom', label: customLabel };
     draft.persona = 'other';
@@ -132,7 +177,8 @@ function chooseProfession(p, customLabel = null) {
       draft.btype = null;
     }
   }
-  draft.bizMode = null;
+  draft.bizMode = draft.persona === 'business' ? 'personal' : null;
+  draft.btype = null;
   resetLists();
 }
 
@@ -150,23 +196,36 @@ const WALLETS = [
 ];
 
 const GOALS = [0, 500, 1000, 2000, 5000, 10000];
-const STEPS = ['hello', 'who', 'where', 'amounts', 'spend', 'income', 'goal', 'done'];
+const ALL_STEPS = ['hello', 'who', 'team', 'where', 'amounts', 'spend', 'income', 'goal', 'done'];
+// "Solo or team?" is asked only for a business.
+const steps = () => ALL_STEPS.filter((s) => s !== 'team' || draft.track === 'business');
 
-const fresh = () => ({ step: 'hello', persona: null, prof: null, btype: null, bizMode: null, wallets: ['cash'], bankName: '', balances: {}, expense: null, income: null, goal: null });
+// track: 'personal' | 'business'; team: 'solo' | 'team'; role: 'owner' | 'helper'
+const fresh = () => ({ step: 'hello', track: null, team: null, role: null, persona: null, prof: null, btype: null, bizMode: null, wallets: ['cash'], bankName: '', balances: {}, expense: null, income: null, goal: null });
 let draft = null;
 let draftKey = 'mt:onb';
 let celebrating = false;
 let customGoal = false;
+let started = false; // "Tap to start" was tapped
 
 function loadDraft(uid) {
-  draftKey = `mt:onb:${uid}`;
-  if (draft) return;
+  const key = `mt:onb:${uid}`;
+  if (draft && key === draftKey) return;
+  draftKey = key;
   try {
     draft = { ...fresh(), ...JSON.parse(localStorage.getItem(draftKey) || '{}') };
   } catch {
     draft = fresh();
   }
   if (draft.step === 'done') draft.step = 'goal'; // the data was never saved
+  // A setup started before the "For personal use / For business" choice.
+  if (!draft.track && draft.step !== 'hello') {
+    draft.track = isShop() ? 'business' : 'personal';
+    if (isShop()) draft.team = 'solo';
+  }
+  // Back on the greeting after signing out; kept when signing in from it.
+  if (uid === 'local') started = false;
+  if (draft.step !== 'hello') started = true;
 }
 function saveDraft() {
   try {
@@ -179,7 +238,8 @@ export const isCelebrating = () => celebrating;
 
 const valid = {
   hello: () => true,
-  who: () => !!draft.prof && (draft.persona !== 'business' || draft.bizMode === 'personal' || (draft.bizMode === 'shop' && !!draft.btype)),
+  who: () => (draft.track === 'business' ? isShop() : !!draft.prof),
+  team: () => draft.team === 'solo' || (draft.team === 'team' && draft.role === 'owner'),
   where: () => draft.wallets.length > 0,
   amounts: () => draft.wallets.every((id) => !(Number(draft.balances[id]) < 0)),
   spend: () => draft.expense.length > 0,
@@ -193,10 +253,14 @@ export function renderWizard(root, ctx) {
   const p = draft.persona ? starter() : null;
   draft.expense ??= p ? [...p.expense] : null;
   draft.income ??= p ? [...p.income] : null;
-  const step = celebrating ? 'done' : draft.step;
+  // Not signed in yet but the setup is saved on this phone: sign in to go on.
+  const step = celebrating || ctx.gate ? 'done' : draft.step;
   // Saving redraws the app; keep the celebration (and its confetti) as it is.
-  if (step === 'done' && root.dataset.ob === `done|${lang}`) return;
-  root.dataset.ob = `${step}|${lang}`;
+  const tag = `${step}|${lang}|${ctx.local ? 'local' : ''}`;
+  if (step === 'done' && root.dataset.ob === tag) return;
+  root.dataset.ob = tag;
+  const shop = () => ctx.data?.settings?.mode === 'shop' || isShop();
+  const STEPS = steps();
   const idx = STEPS.indexOf(step);
   const first = ctx.user?.uid === 'demo' ? '' : (ctx.user?.displayName || '').split(' ')[0];
 
@@ -206,7 +270,7 @@ export function renderWizard(root, ctx) {
       <div class="ob-bubble"><strong>${msg}</strong>${sub ? `<span>${sub}</span>` : ''}</div>
     </div>`;
 
-  const bodies = {
+  const steps0 = {
     hello: () => `
       <div class="segmented lang-switch ob-lang">
         <button type="button" data-ob-lang="en" class="${lang === 'en' ? 'active' : ''}">English</button>
@@ -215,11 +279,47 @@ export function renderWizard(root, ctx) {
       <div class="ob-hero"><img src="icons/icon.svg" alt="" width="96" height="96"></div>
       <h1 class="ob-title">${first ? t('Hi {name}! 👋', { name: esc(first) }) : t('Hi! 👋')}</h1>
       <p class="ob-lead">${t("I'm your Potli. Let's set up your money in about 1 minute: where you keep it, and what you spend on.")}</p>
-      <ul class="ob-points">
-        <li>🔒 ${t('Only you can see your data. It is saved in your own Google Drive.')}</li>
-        <li>✏️ ${t('You can change every answer later in Setup.')}</li>
-      </ul>`,
-    who: () => {
+      ${
+        started
+          ? `<p class="ob-label">${t('How will you use AmrPotli?')}</p>
+            <div class="ob-options" role="group">
+              ${[
+                ['personal', '🧍', 'For personal use', 'Income, spending, savings and family costs', 'data-track="personal"'],
+                ['business', '🏪', 'For business', 'Shop, farm, pharmacy, any trade', 'data-track="business"'],
+                ...(ctx.local ? [['signin', '🔑', 'I already use AmrPotli', 'Sign in with Google to get your data', 'data-signin']] : []),
+              ]
+                .map(
+                  ([id, ic, l, sub, attrs]) => `<button type="button" class="ob-option ${draft.track === id ? 'on' : ''}" ${attrs}>
+                    <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(l)}</strong><small>${t(sub)}</small></span></button>`,
+                )
+                .join('')}
+            </div>`
+          : `<ul class="ob-points">
+              <li>🔒 ${t('Only you can see your data. It is saved in your own Google Drive.')}</li>
+              ${ctx.local ? `<li>🔑 ${t('You can answer the setup questions now; at the end you sign in with Google to save everything in your own Drive.')}` : ''}</li>
+              <li>✏️ ${t('You can change every answer later in Setup.')}</li>
+            </ul>`
+      }`,
+    who: () => (draft.track === 'business' ? businessBody() : personalBody()),
+    team: () => `
+      ${coach(t('Who works in the business?'), t('Pick one. You can change it later.'))}
+      <div class="ob-options" role="radiogroup">
+        ${option('team', 'solo', '🧍', 'Just me (solo)', 'I keep the accounts myself')}
+        ${option('team', 'team', '👥', 'A team', 'Owner with employees, family or helpers')}
+        ${
+          draft.team === 'team'
+            ? `<div class="ob-sub" role="radiogroup" aria-label="${esc(t('Who are you?'))}">
+                <p>${t('Who are you?')}</p>
+                ${option('role', 'owner', '🧑‍💼', 'Owner', 'I set up the shop and add helpers')}
+                ${option('role', 'helper', '🧑‍🔧', 'Employee or helper', "I work in someone else's shop")}
+                ${draft.role === 'helper' ? `<p class="ob-note">${t("Helpers will join the owner's shop with their own Gmail. This is coming in the next update. Until then, the owner can set up AmrPotli and keep the accounts.")}</p>` : ''}
+              </div>`
+            : ''
+        }
+      </div>`,
+  };
+  // The personal "what do you do?" screen.
+  function personalBody() {
       const chosen = draft.prof && (draft.prof.id === 'custom' ? null : professionById(draft.prof.id));
       const popular = POPULAR.includes(draft.prof?.id);
       const card = (p, attrs, sub) => `<button type="button" class="ob-option ${draft.prof?.id === p.id ? 'on' : ''}" role="radio" aria-checked="${draft.prof?.id === p.id}" ${attrs}>
@@ -237,14 +337,41 @@ export function renderWizard(root, ctx) {
               chosen
                 ? card(chosen, `data-prof-id="${chosen.id}"`)
                 : `<button type="button" class="ob-option on" role="radio" aria-checked="true"><span class="ob-ico">🧑</span><span class="ob-txt"><strong>${esc(draft.prof.label)}</strong><small>${t('Your own profession')}</small></span></button>`
-            }${subChoices()}</div>`
+            }</div>`
           : ''
       }
       <p class="ob-label">${t('Popular')}</p>
       <div class="ob-options" role="radiogroup">
-        ${POPULAR.map((id) => card(professionById(id), `data-persona="${id}"`, POPULAR_SUB[id]) + (draft.prof?.id === id ? subChoices() : '')).join('')}
+        ${POPULAR.map((id) => card(professionById(id), `data-persona="${id}"`, id === 'business' ? 'Your personal money, apart from the shop' : POPULAR_SUB[id])).join('')}
       </div>`;
-    },
+  }
+  // The "For business" screen: every kind of business, and a search box.
+  function businessBody() {
+    const custom = draft.prof?.id === 'custom';
+    return `
+      ${coach(t('What is your business?'), t('Pick yours, or type it. I will set up the right categories and products.'))}
+      <div class="prof-search">
+        <span aria-hidden="true">🔎</span>
+        <input id="prof-input" type="search" autocomplete="off" placeholder="${esc(t('e.g. pharmacy, photocopy, grocery'))}" aria-label="${esc(t('Your work'))}">
+      </div>
+      <div id="prof-results" class="prof-results" role="listbox"></div>
+      ${custom ? `<div class="ob-options"><button type="button" class="ob-option on" role="radio" aria-checked="true"><span class="ob-ico">🏪</span><span class="ob-txt"><strong>${esc(draft.prof.label)}</strong><small>${t('Your own business')}</small></span></button></div>` : ''}
+      <p class="ob-label">${t('All businesses')}</p>
+      <div class="ob-options grid biz-grid" role="radiogroup">
+        ${BUSINESSES.map((p) => {
+          const on = draft.prof?.id === p.id;
+          return `<button type="button" class="ob-option ${on ? 'on' : ''}" role="radio" aria-checked="${on}" data-prof-id="${p.id}">
+            <span class="ob-ico">${p.icon}</span><span class="ob-txt"><strong>${esc(profName(p))}</strong></span></button>`;
+        }).join('')}
+      </div>`;
+  }
+  function option(key, val, ic, label, sub) {
+    const on = draft[key] === val;
+    return `<button type="button" class="ob-option ${on ? 'on' : ''}" role="radio" aria-checked="${on}" data-${key}="${val}">
+      <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(label)}</strong><small>${t(sub)}</small></span></button>`;
+  }
+  const bodies = {
+    ...steps0,
     where: () => `
       ${coach(t('Where do you keep your money?'), t('Pick all that you use.'))}
       <div class="ob-options grid">
@@ -288,7 +415,7 @@ export function renderWizard(root, ctx) {
       </div>
       <div class="ob-money" id="ob-goal-box" ${customGoal ? '' : 'hidden'}><span>৳</span><input id="ob-goal" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${customGoal && draft.goal ? draft.goal : ''}"></div>`,
     done: () => {
-      const s = summary();
+      const s = summary(ctx.data);
       return `
       <div class="ob-confetti" aria-hidden="true">${confetti()}</div>
       <div class="ob-hero pop"><img src="icons/icon.svg" alt="" width="96" height="96"></div>
@@ -297,19 +424,25 @@ export function renderWizard(root, ctx) {
         <div><span>${t('Accounts')}</span><strong>${s.accounts}</strong></div>
         <div><span>${t('Total money')}</span><strong class="num">৳ ${nf.format(s.total)}</strong></div>
         <div><span>${t('Categories')}</span><strong>${s.cats}</strong></div>
-        <div><span>${isShop() ? t('Profit goal') : t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
+        <div><span>${shop() ? t('Profit goal') : t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
       </div>
-      <p class="ob-lead">${
-        isShop() ? t('A healthy business writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
+      ${ctx.local ? `<p class="ob-lead">${t('Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.')}</p>` : `<p class="ob-lead">${
+        shop() ? t('A healthy business writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
       }</p>
-      <p class="muted ob-small">${t('Owe someone, or lent money to someone? Add it later with + → Loan.')}</p>`;
+      ${ctx.data?.settings?.team ? `<p class="muted ob-small">👥 ${t('Adding helpers to your shop is coming in the next update.')}</p>` : ''}
+      <p class="muted ob-small">${t('Owe someone, or lent money to someone? Add it later with + → Loan.')}</p>`}`;
     },
   };
 
   const footer = {
-    hello: `<button class="btn primary wide ob-cta" data-next>${t("Let's start")}</button>
-      <label class="btn wide ob-alt">${t('I have a backup file (.json)')}<input type="file" accept=".json,application/json" id="welcome-import" hidden></label>`,
-    done: `<button class="btn primary wide ob-cta" data-finish="expense">${t('Add my first expense')}</button>
+    hello: started
+      ? `<label class="btn wide ob-alt">${t('I have a backup file (.json)')}<input type="file" accept=".json,application/json" id="welcome-import" hidden></label>`
+      : `<button class="btn primary wide ob-cta" data-start>${t('Tap to start')}</button>
+        ${ctx.install ? `<button class="btn wide ob-alt" data-install>📲 ${t('Install the app')}</button>` : ''}`,
+    done: ctx.local
+      ? `<button class="btn primary wide ob-cta" data-signin>${t('Sign in with Google and start')}</button>
+        <button class="btn wide ob-alt" data-restart>${t('Start over')}</button>`
+      : `<button class="btn primary wide ob-cta" data-finish="expense">${t('Add my first expense')}</button>
       <button class="btn wide ob-alt" data-finish="">${t('Go to Dashboard')}</button>`,
   }[step] ?? `${step === 'amounts' ? `<div class="ob-total"><span>${t('Total')}</span><strong class="num" id="ob-total">৳ ${nf.format(totalBalance())}</strong></div>` : ''}<button class="btn primary wide ob-cta" data-next ${valid[step]() ? '' : 'disabled'}>${t(step === 'goal' ? 'Finish' : 'Continue')}</button>`;
 
@@ -329,34 +462,6 @@ export function renderWizard(root, ctx) {
     </div>`;
 
   bind(root, ctx, step);
-}
-
-// Business owners choose whose money this potli is for; a plain "Business
-// owner" also picks the kind of business.
-function subChoices() {
-  if (draft.persona !== 'business') return '';
-  const modes = [
-    ['personal', '🧍', 'My personal money', 'Family, bills, savings'],
-    ['shop', '🏪', "My business's money", 'Sales, stock, business costs'],
-  ];
-  const kinds =
-    draft.bizMode === 'shop' && draft.prof?.id === 'business'
-      ? `<p>${t('What kind of business?')}</p>
-         <div class="ob-chips">${BUSINESS_TYPES.map((b) => {
-           const p = professionById(BTYPE_PROF[b] || b);
-           return `<button type="button" class="ob-chip ${draft.btype === b ? 'on' : ''}" aria-pressed="${draft.btype === b}" data-btype="${b}">${p.icon} ${esc(profName(p))}</button>`;
-         }).join('')}</div>`
-      : '';
-  return `<div class="ob-sub" role="radiogroup" aria-label="${esc(t('What will you track?'))}">
-      <p>${t('What will you track?')}</p>
-      ${modes
-        .map(
-          ([m, ic, l, sub]) => `<button type="button" class="ob-option ${draft.bizMode === m ? 'on' : ''}" role="radio" aria-checked="${draft.bizMode === m}" data-biz="${m}">
-            <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(l)}</strong><small>${t(sub)}</small></span></button>`,
-        )
-        .join('')}
-      ${kinds}
-    </div>`;
 }
 
 function chipPicker(key, pool, placeholder) {
@@ -381,7 +486,15 @@ function totalBalance() {
   return draft.wallets.reduce((s, id) => s + (Number(draft.balances[id]) || 0), 0);
 }
 
-function summary() {
+// From the saved data when there is some (it may be a reload), else the answers.
+function summary(data) {
+  if (data?.settings)
+    return {
+      accounts: data.accounts.length,
+      total: data.accounts.reduce((s, a) => s + (Number(a.opening) || 0), 0),
+      cats: data.settings.expenseCategories?.length || 0,
+      goal: Number(data.settings.savingsGoal) || 0,
+    };
   return {
     accounts: draft.wallets.length,
     total: totalBalance(),
@@ -419,12 +532,63 @@ function bind(root, ctx, step) {
   const imp = $('#welcome-import', root);
   if (imp) imp.onchange = (e) => e.target.files[0] && ctx.importFile(e.target.files[0]);
 
+  const STEPS = steps();
   $('[data-back]', root)?.addEventListener('click', () => go(root, ctx, STEPS[Math.max(0, STEPS.indexOf(step) - 1)]));
   nextBtn?.addEventListener('click', () => {
     if (!valid[step]()) return;
     if (step === 'goal') return finish(root, ctx);
     go(root, ctx, STEPS[STEPS.indexOf(step) + 1]);
   });
+
+  // The greeting: "Tap to start", then personal, business or sign in.
+  const start = $('[data-start]', root);
+  if (start)
+    start.onclick = () => {
+      started = true;
+      rerender();
+      root.querySelector('.ob')?.classList.add('enter');
+    };
+  const inst = $('[data-install]', root);
+  if (inst) inst.onclick = () => ctx.install();
+  $$('[data-track]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (draft.track !== b.dataset.track) {
+          const keep = { wallets: draft.wallets, bankName: draft.bankName, balances: draft.balances, goal: draft.goal };
+          draft = { ...fresh(), ...keep, track: b.dataset.track };
+        }
+        go(root, ctx, 'who');
+      }),
+  );
+  $$('[data-signin]', root).forEach((b) => (b.onclick = () => ctx.signIn()));
+  const restart = $('[data-restart]', root);
+  if (restart)
+    restart.onclick = () => {
+      if (!confirm(t('Start over? The setup on this phone will be removed.'))) return;
+      celebrating = false;
+      started = false;
+      draft = fresh();
+      saveDraft();
+      delete root.dataset.ob;
+      ctx.restart();
+    };
+  $$('[data-team]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        draft.team = b.dataset.team;
+        if (draft.team === 'solo') draft.role = null;
+        saveDraft();
+        rerender();
+      }),
+  );
+  $$('[data-role]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        draft.role = b.dataset.role;
+        saveDraft();
+        rerender();
+      }),
+  );
 
   const pick = (p, custom) => {
     if (custom || draft.prof?.id !== p.id) chooseProfession(p, custom);
@@ -438,32 +602,15 @@ function bind(root, ctx, step) {
   if (box)
     box.oninput = () => {
       const q = box.value.trim().replace(/\s+/g, ' ');
-      const found = searchProfessions(q);
+      const biz = draft.track === 'business';
+      const found = biz ? searchProfessions(q, 30).filter((p) => p.business).slice(0, 6) : searchProfessions(q);
       results.innerHTML =
         found.map((p) => `<button type="button" role="option" data-prof-id="${p.id}"><span>${p.icon}</span>${esc(profName(p))}<small>${esc(lang === 'bn' ? p.en : p.bn)}</small></button>`).join('') +
-        (q.length >= 2 ? `<button type="button" role="option" class="prof-other" data-prof-custom="${esc(q)}"><span>➕</span>${esc(t('Other profession: “{name}”', { name: q }))}</button>` : '');
+        (q.length >= 2 ? `<button type="button" role="option" class="prof-other" data-prof-custom="${esc(q)}"><span>➕</span>${esc(t(biz ? 'Other business: “{name}”' : 'Other profession: “{name}”', { name: q }))}</button>` : '');
       $$('[data-prof-id]', results).forEach((b) => (b.onclick = () => pick(professionById(b.dataset.profId))));
       $$('[data-prof-custom]', results).forEach((b) => (b.onclick = () => pick(null, b.dataset.profCustom.slice(0, 40))));
     };
   $$('.ob-options [data-prof-id]', root).forEach((b) => (b.onclick = () => pick(professionById(b.dataset.profId))));
-  $$('[data-biz]', root).forEach(
-    (b) =>
-      (b.onclick = () => {
-        draft.bizMode = b.dataset.biz;
-        resetLists();
-        saveDraft();
-        rerender();
-      }),
-  );
-  $$('[data-btype]', root).forEach(
-    (b) =>
-      (b.onclick = () => {
-        draft.btype = b.dataset.btype;
-        resetLists();
-        saveDraft();
-        rerender();
-      }),
-  );
   $$('[data-wallet]', root).forEach(
     (b) =>
       (b.onclick = () => {
@@ -579,6 +726,7 @@ async function finish(root, ctx) {
     ...(isShop() && { mode: 'shop', productGroups: [...BUSINESS[draft.btype].products], stockCategory: BUSINESS[draft.btype].stock }),
     profession: draft.prof.id === 'custom' ? { label: draft.prof.label } : { id: draft.prof.id, ...(isShop() && { business: draft.btype }) },
     ...(draft.persona === 'home' && { simple: true }), // the simple home screen
+    ...(isShop() && draft.team === 'team' && { team: { role: 'owner' } }),
   };
   // Show the celebration before the save finishes, so the screen does not jump.
   celebrating = true;

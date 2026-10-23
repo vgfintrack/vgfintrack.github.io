@@ -707,7 +707,7 @@ export const BN = {
   'Stay in touch': 'যোগাযোগে থাকুন',
   '🤝 Stay in touch': '🤝 যোগাযোগে থাকুন',
   'Help improve AmrPotli': 'আমার পোটলি আরও ভালো করতে সাহায্য করুন',
-  'Once a day the app sends an anonymous count: that it was used, the language, and which features (like voice). Never your name, email or money.': 'দিনে একবার অ্যাপ একটা নাম-পরিচয়হীন গণনা পাঠায়: অ্যাপ ব্যবহার হয়েছে কি না, ভাষা, আর কোন ফিচার (যেমন ভয়েস)। কখনো আপনার নাম, ইমেইল বা টাকার হিসাব নয়।',
+  'Once a day the app sends an anonymous count: that it was used, the language, your kind of work from the list, and which features (like voice). Never your name, email or money.': 'দিনে একবার অ্যাপ একটা নাম-পরিচয়হীন গণনা পাঠায়: অ্যাপ ব্যবহার হয়েছে কি না, ভাষা, তালিকা থেকে আপনার পেশার ধরন, আর কোন ফিচার (যেমন ভয়েস)। কখনো আপনার নাম, ইমেইল বা টাকার হিসাব নয়।',
   'Thank you!': 'ধন্যবাদ!',
   'Turned off. Nothing will be counted from this phone.': 'বন্ধ করা হয়েছে। এই ফোন থেকে কিছুই গোনা হবে না।',
   '💬 Send feedback': '💬 মতামত পাঠান',

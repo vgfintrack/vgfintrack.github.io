@@ -8,9 +8,10 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
   getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc,
-  serverTimestamp, Timestamp, query, orderBy, limit,
+  serverTimestamp, Timestamp, query, orderBy, limit, where, documentId,
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 import { firebaseConfig, OWNER } from './config.js';
+import { PROFESSIONS } from '../AmrPotli/js/professions.js';
 import { icon } from './icons.js';
 
 // ---------------------------------------------------------------- helpers
@@ -194,6 +195,8 @@ function start(role, sections) {
   listen('public', collection(db, 'public'));
   if (canRead('users')) {
     listen('stats', collection(db, 'stats'));
+    // One document per day and kind of work; the last 90 days are enough.
+    listen('profs', query(collection(db, 'profs'), where(documentId(), '>=', addDays(today(), -89))));
     listen('optins', query(collection(db, 'optins'), orderBy('at', 'desc'), limit(500)));
   }
   if (canRead('leads')) listen('leads', collection(db, 'leads'));
@@ -449,10 +452,31 @@ function taskForm(t = null) {
 // ---------------------------------------------------------------- App users: anonymous counts + opt-ins
 
 const COUNT_LABELS = {
-  bn: 'বাংলা', en: 'English', shop: 'Business (shop) mode', personal: 'Personal', simple: 'Simple home screen', lock: 'App lock on', drive: 'Signed in (Drive)',
+  bn: 'বাংলা', en: 'English', shop: 'Business (shop) mode', personal: 'Personal', simple: 'Simple home screen', lock: 'App lock on', drive: 'Signed in (Drive)', team: 'Shop with a team',
   voice: 'Used voice', sms: 'Pasted an SMS', photo: 'Added a receipt photo', calc: 'Used the calculator', baki: 'Baki khata', buy: 'Stock purchase', repeat: 'Regular payments', report: 'Made a report',
 };
 const WHY = { support: 'Wants help', updates: 'Wants news', tester: 'Wants to test', business: 'Business enquiry' };
+
+// Kinds of work: phone-days per profession in the range, most first.
+function professions(range) {
+  const from = addDays(today(), -(range - 1));
+  const by = {};
+  for (const d of list('profs')) {
+    const [day, prof] = d.id.split('~');
+    if (day >= from && prof) by[prof] = (by[prof] || 0) + (d.n || 0);
+  }
+  const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((s, [, n]) => s + n, 0);
+  if (!total) return empty('No counts yet. Each phone that has chosen its work adds 1 a day.');
+  const name = (id) => {
+    const p = PROFESSIONS.find((x) => x.id === id);
+    return id === 'custom' ? 'Own profession (typed)' : p ? `${p.icon} ${p.en}` : id;
+  };
+  return `<div class="split wide">${rows
+    .map(([id, n]) => `<div class="ln"><span>${esc(name(id))}</span><span class="tr"><i style="width:${(n / rows[0][1]) * 100}%"></i></span><b data-tip="${nf.format(n)} phone-days">${Math.round((n / total) * 100)}%</b></div>`)
+    .join('')}</div>
+    <p class="small muted" style="margin:8px 0 0">About ${nf.format(Math.max(1, Math.round(total / range)))} phones a day told their work. Shares are of phone-days.</p>`;
+}
 
 function users() {
   const range = Number(S.filters.range || 30);
@@ -474,7 +498,8 @@ function users() {
     </div>
     <div class="grid">
       <div class="card"><h3>${icon('smartphone')} Active each day</h3>${activeBars(range)}</div>
-      <div class="card"><h3>${icon('users')} Who uses it</h3>${split(['bn', 'en', 'shop', 'personal', 'simple', 'lock', 'drive'])}</div>
+      <div class="card"><h3>${icon('users')} Who uses it</h3>${split(['bn', 'en', 'shop', 'team', 'personal', 'simple', 'lock', 'drive'])}</div>
+      <div class="card"><h3>${icon('briefcase')} Kinds of work</h3>${professions(range)}</div>
       <div class="card"><h3>${icon('sparkles')} What they use</h3>${split(['voice', 'sms', 'calc', 'photo', 'baki', 'buy', 'repeat', 'report'])}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>${icon('mail')} People who shared their contact

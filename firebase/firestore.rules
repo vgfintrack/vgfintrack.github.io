@@ -9,7 +9,8 @@ rules_version = '2';
 //   guest     reads the sections they were given, until their end date.
 //
 // The app (no sign-in) may only: read the public notice and limits list,
-// add anonymous daily counts, and add an opt-in or a feedback message.
+// add anonymous daily counts (also per kind of work), and add an opt-in or
+// a feedback message.
 // It can never read anything else. Users' money stays in their own Drive.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -93,7 +94,7 @@ service cloud.firestore {
     // One document per day. Each phone adds 1 to "active" and to the
     // things it used, once a day. No ids, no emails, no amounts.
     function countKeys() {
-      return ['active', 'new', 'bn', 'en', 'shop', 'personal', 'simple', 'lock', 'drive',
+      return ['active', 'new', 'bn', 'en', 'shop', 'personal', 'simple', 'lock', 'drive', 'team',
               'voice', 'sms', 'photo', 'calc', 'baki', 'buy', 'repeat', 'report'];
     }
     function plusOne(k) {
@@ -107,9 +108,19 @@ service cloud.firestore {
         && request.resource.data.values().hasOnly([1]);
       allow update: if changed().hasOnly(countKeys()) && 'active' in changed()
         && plusOne('active') && plusOne('new') && plusOne('bn') && plusOne('en') && plusOne('shop')
-        && plusOne('personal') && plusOne('simple') && plusOne('lock') && plusOne('drive') && plusOne('voice')
+        && plusOne('personal') && plusOne('simple') && plusOne('lock') && plusOne('drive') && plusOne('team') && plusOne('voice')
         && plusOne('sms') && plusOne('photo') && plusOne('calc') && plusOne('baki') && plusOne('buy')
         && plusOne('repeat') && plusOne('report');
+    }
+
+    // Kinds of work, one document per day and profession ("2026-10-23~pharmacy"):
+    // each phone adds 1 to n once a day. The profession is an id from the
+    // app's list (or "custom"), never words the user typed.
+    match /profs/{id} {
+      allow read: if canRead('users');
+      allow create: if id.matches('20[0-9][0-9]-[01][0-9]-[0-3][0-9]~[a-z]{2,20}')
+        && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
+      allow update: if changed().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
     }
 
     // ------------------------------------------------------------ users who chose to share their contact

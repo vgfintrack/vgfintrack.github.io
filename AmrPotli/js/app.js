@@ -330,6 +330,9 @@ async function syncCompany() {
     simple: !!settings().simple,
     lock: hasLock(),
     drive: state.store.mode === 'drive',
+    team: !!settings().team,
+    // Only the id from the app's list; a profession the user typed is just "custom".
+    prof: settings().profession ? settings().profession.id || 'custom' : '',
   });
 }
 
@@ -528,12 +531,9 @@ async function boot() {
 
   $('#btn-signin').onclick = async () => {
     $('#login-error').hidden = true;
-    try {
-      await state.store.signIn();
-    } catch (e) {
-      if (e.type === 'popup_closed') return;
-      $('#login-error').textContent =
-        e.type === 'popup_failed_to_open' ? t('Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.') : e.message || String(e);
+    const msg = await signIn(false);
+    if (msg) {
+      $('#login-error').textContent = msg;
       $('#login-error').hidden = false;
     }
   };
@@ -581,9 +581,24 @@ async function boot() {
   setupBakiDialogs();
 }
 
+// Signs in with Google from a tap. Shows (or, with show = false, returns) a
+// message when it does not work.
+async function signIn(show = true) {
+  try {
+    await state.store.signIn();
+    return '';
+  } catch (e) {
+    if (e.type === 'popup_closed') return '';
+    const msg = e.type === 'popup_failed_to_open' ? t('Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.') : e.message || String(e);
+    if (show) toast(msg);
+    return msg;
+  }
+}
+
 function renderAvatar() {
   const u = state.user;
   const btn = $('#btn-user');
+  btn.hidden = !!u.local; // not signed in yet: only the setup is open
   btn.innerHTML = u.photoURL
     ? `<img src="${esc(u.photoURL)}" alt="" referrerpolicy="no-referrer">`
     : esc((u.displayName || u.email || '?')[0].toUpperCase());
@@ -650,7 +665,8 @@ function switchView(v) {
 
 function render() {
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
-  const onboarding = empty || wizard?.isCelebrating();
+  // Without signing in, only the setup is open; the app itself needs Google sign-in.
+  const onboarding = empty || wizard?.isCelebrating() || state.store.mode === 'local';
   document.body.classList.toggle('onboarding', !!onboarding);
   showAddButton(!onboarding && (state.view === 'dashboard' || state.view === 'transactions'));
   if (onboarding) return renderWelcome();
@@ -677,6 +693,15 @@ async function renderWelcome() {
   }
   wizard.renderWizard($('#view-dashboard'), {
     user: state.user,
+    local: state.store.mode === 'local',
+    gate: state.store.mode === 'local' && !!state.data.settings,
+    data: state.data,
+    signIn: () => signIn(),
+    restart: async () => {
+      await state.store.deleteMyData();
+      render();
+    },
+    install: isInstalled() ? null : openInstall,
     save: (d) => state.store.importAll(d),
     importFile,
     setLang: applyLang,
@@ -727,7 +752,7 @@ async function lockNow() {
   unlocked = false;
   document.documentElement.classList.add('locked'); // hide the app before the keypad loads
   const L = await lockModule();
-  await L.showKeypad({ uid: state.user.uid, onForgot: forgotPin, demo: state.store.mode === 'demo' });
+  await L.showKeypad({ uid: state.user.uid, onForgot: forgotPin, demo: state.store.mode !== 'drive' });
   unlocked = true;
   markSeen();
 }
@@ -3294,7 +3319,7 @@ function renderSetup() {
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
         <button class="btn" id="stay-in-touch">🤝 ${t('Stay in touch')}</button></div>
         <label class="switch-row" style="margin-top:14px"><input type="checkbox" id="counts-on" ${countsOn() ? 'checked' : ''}>
-          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('Once a day the app sends an anonymous count: that it was used, the language, and which features (like voice). Never your name, email or money.')}</span></span></label>
+          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('Once a day the app sends an anonymous count: that it was used, the language, your kind of work from the list, and which features (like voice). Never your name, email or money.')}</span></span></label>
         <p class="muted" style="margin:10px 0 0;font-size:13px"><a href="privacy.html">${t('Privacy')}</a> · <a href="terms.html">${t('Terms of use')}</a></p>
       </div>
 
@@ -3553,7 +3578,7 @@ function setupDeleteDialog() {
     $('#delete-go').disabled = true;
     $('#delete-go').textContent = t('Deleting…');
     try {
-      const demo = state.store.mode === 'demo';
+      const demo = state.store.mode !== 'drive';
       await state.store.deleteMyData();
       $('#delete-dialog').close();
       if (demo) return location.reload();
@@ -3602,14 +3627,14 @@ function backupCard() {
     backupMark({ since: Date.now() });
     return '';
   }
-  const every = state.store.mode === 'demo' ? 7 : 30;
+  const every = state.store.mode === 'drive' ? 30 : 7;
   const days = Math.floor((Date.now() - (info.last || info.since)) / 86400000);
   if (days < every || Date.now() < (info.later || 0)) return '';
   return `<div class="card backup-tip">
     <span class="big-ic" aria-hidden="true">💾</span>
     <div><strong>${t('Keep a spare copy')}</strong>
       <div class="muted" style="font-size:13px">${
-        state.store.mode === 'demo'
+        state.store.mode !== 'drive'
           ? t('Your data is only in this browser. Save a backup file in case the browser is cleared.')
           : t('Your data is safe in Google Drive. A backup file on this phone is a second copy.')
       } ${info.last ? tn(days, 'Last backup: {n} day ago.', 'Last backup: {n} days ago.') : t('No backup yet.')}</div></div>
