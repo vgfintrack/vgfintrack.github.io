@@ -653,5 +653,20 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .team-bar .btn { flex: none; }
 .helper-hello h3 { margin: 0 0 4px; }
 #team-card .li .name small { font-weight: 400; }
+/* Potli tips */
+.potli-tips { display: grid; gap: 10px; border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+.pt-head { display: flex; gap: 10px; align-items: center; }
+.pt-head img { flex: none; }
+.pt-head strong { display: block; }
+.pt-head small { color: var(--muted); font-size: 12px; }
+.pt-tip { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--brand) 7%, var(--surface)); }
+.pt-tip p { margin: 0; flex: 1; font-size: 14px; line-height: 1.45; }
+.pt-ic { font-size: 18px; line-height: 1.3; flex: none; }
+.pt-hide { flex: none; width: 28px; height: 28px; font-size: 13px; opacity: 0.6; }
+.pt-foot { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.help-results { display: grid; gap: 8px; margin-top: 8px; }
+.help-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
+.help-item summary { font-weight: 600; cursor: pointer; }
+.help-item p { margin: 8px 0 0; font-size: 14px; }
 /* optional district */
 .district-select { width: 100%; margin-top: 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 15px; }

@@ -793,4 +793,16 @@ export const BN = {
   'Choose your district first.': 'আগে আপনার জেলা বেছে নিন।',
   'District saved': 'জেলা সেভ হয়েছে',
   'District removed': 'জেলা সরানো হয়েছে',
+  // ---- Potli tips and help
+  'Potli says': 'পোটলি বলছে',
+  'From your own entries, worked out on this phone.': 'আপনার নিজের এন্ট্রি থেকে, এই ফোনেই হিসাব করা।',
+  'Not useful, hide this tip': 'কাজের না, এই পরামর্শ লুকান',
+  'Fewer tips': 'কম পরামর্শ',
+  'More tips ({n})': 'আরও পরামর্শ ({n})',
+  'How do I…?': 'কীভাবে করব…?',
+  'Got it. Potli will show fewer tips like this.': 'বুঝেছি। পোটলি এমন পরামর্শ কম দেখাবে।',
+  'Step by step on the website →': 'ওয়েবসাইটে ধাপে ধাপে →',
+  'Nothing found. Try other words, or tell us what you were looking for.': 'কিছু পাওয়া যায়নি। অন্য শব্দে খুঁজুন, বা কী খুঁজছিলেন আমাদের জানান।',
+  'e.g. loan, SMS, backup, বাকি': 'যেমন লোন, SMS, ব্যাকআপ, বাকি',
+  'Search help': 'সাহায্য খুঁজুন',
 };

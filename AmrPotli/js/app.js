@@ -1472,6 +1472,7 @@ function renderSimple() {
         ${savings ? `<span>💎 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
       </div>
     </div>
+    ${tipsCard(1)}
     <div class="big-actions">
       <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
       <button data-simple-act="Expense"><span>🛒</span>${t('Spent')}</button>
@@ -1491,6 +1492,7 @@ function renderSimple() {
   const v = $('#view-dashboard');
   bindRecurring(v);
   bindTxnRows(v);
+  bindTips(v);
   $('#see-all', v).onclick = () => switchView('transactions');
   $('#more-details', v).onclick = () => {
     detailsOnce = true;
@@ -1916,6 +1918,7 @@ function renderDashboard() {
     ${G.streakPill(txns, C.today())}
     ${quickActions()}
     ${dueCard()}
+    ${tipsCard()}
     ${guide}
     ${districtCard()}
     ${guide ? '' : installTip()}
@@ -2035,6 +2038,7 @@ function renderDashboard() {
   bindRecurring($('#view-dashboard'));
   bindBackup($('#view-dashboard'));
   bindDistrict($('#view-dashboard'));
+  bindTips($('#view-dashboard'));
   $('#back-simple')?.addEventListener('click', backToSimple);
   bindShop($('#view-dashboard'));
   bindBaki($('#view-dashboard'));
@@ -3536,7 +3540,7 @@ function renderSetup() {
       <div class="card">
         <h3>${t('Help &amp; feedback')}</h3>
         <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Found a problem, or have an idea? Tell us in a short form. Please don't write amounts, balances or account numbers.")}</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-help-open>❓ ${t('How do I…?')}</button><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
         <button class="btn" id="stay-in-touch">🤝 ${t('Stay in touch')}</button></div>
         <label class="switch-row" style="margin-top:14px"><input type="checkbox" id="counts-on" ${countsOn() ? 'checked' : ''}>
           <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('The app sends anonymous counts: once a day that it was used, the language, your kind of work from the list and which features (like voice); once a month your country (from the phone’s time zone) and your district if you chose one. Never your name, email or money.')}</span></span></label>
@@ -3687,6 +3691,7 @@ function renderSetup() {
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
   bindTeam(v);
   bindDistrict(v);
+  $$('[data-help-open]', v).forEach((b) => (b.onclick = () => openHelp()));
   $('#delete-account', v).onclick = openDelete;
 }
 
@@ -3880,6 +3885,126 @@ function bindBackup(root) {
     backupMark({ later: Date.now() + 7 * 86400000 });
     render();
   };
+}
+
+// ---- Potli tips (tips.js): insights from the user's own entries, worked
+// out on this phone. Loaded after the dashboard is first drawn.
+
+let tipsMod = null;
+let tipsMore = false;
+const TIPS_KEY = 'mt:tips-hidden'; // { ids: { id: until }, kinds: { kind: { n, until } } }
+function tipsHidden() {
+  try {
+    return JSON.parse(localStorage.getItem(TIPS_KEY)) || { ids: {}, kinds: {} };
+  } catch {
+    return { ids: {}, kinds: {} };
+  }
+}
+function currentTips() {
+  if (!tipsMod) {
+    import('./tips.js').then((m) => {
+      tipsMod = m;
+      if (state.data?.loaded && state.view === 'dashboard') render();
+    });
+    return [];
+  }
+  const hidden = tipsHidden();
+  const now = Date.now();
+  return tipsMod
+    .potliTips({
+      accounts: accounts(),
+      transactions: state.data.transactions,
+      settings: settings(),
+      money,
+      dayName: (wd) => new Date(2026, 0, 4 + wd).toLocaleDateString(dateLocale(), { weekday: 'long' }),
+    })
+    .filter((x) => !(hidden.ids[x.id] > now) && !(hidden.kinds[x.kind]?.until > now));
+}
+
+// max: how many to show before "More tips".
+function tipsCard(max = 2) {
+  if (helperLimited()) return '';
+  const list = currentTips();
+  if (!list.length) return '';
+  const shown = tipsMore ? list : list.slice(0, max);
+  return `<div class="card potli-tips">
+    <div class="pt-head"><img src="icons/icon.svg" alt="" width="34" height="34">
+      <div><strong>${t('Potli says')}</strong><small>${t('From your own entries, worked out on this phone.')}</small></div></div>
+    ${shown
+      .map(
+        (x) => `<div class="pt-tip"><span class="pt-ic" aria-hidden="true">${x.icon}</span>
+          <p>${esc(x.text)}${x.action ? ` <button class="linkish" data-tip-act="${esc(x.action.kind)}" data-tip-arg="${esc(x.action.id || '')}">${esc(x.action.label)}</button>` : ''}</p>
+          <button class="icon-btn pt-hide" data-tip-hide="${esc(x.id)}" aria-label="${esc(t('Not useful, hide this tip'))}" title="${esc(t('Not useful, hide this tip'))}">✕</button></div>`,
+      )
+      .join('')}
+    <div class="pt-foot">
+      ${list.length > max ? `<button class="linkish" data-tips-more>${tipsMore ? t('Fewer tips') : t('More tips ({n})', { n: list.length - max })}</button>` : '<span></span>'}
+      <button class="linkish" data-help-open>❓ ${t('How do I…?')}</button>
+    </div>
+  </div>`;
+}
+
+function bindTips(root) {
+  $$('[data-tip-hide]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        const id = b.dataset.tipHide;
+        const kind = id.split(':')[0];
+        const h = tipsHidden();
+        h.ids[id] = Date.now() + 90 * 86400000;
+        // Hidden three times: that kind of tip rests for two months.
+        const k = (h.kinds[kind] ||= { n: 0, until: 0 });
+        if (++k.n >= 3) Object.assign(k, { n: 0, until: Date.now() + 60 * 86400000 });
+        try {
+          localStorage.setItem(TIPS_KEY, JSON.stringify(h));
+        } catch {}
+        toast(t('Got it. Potli will show fewer tips like this.'));
+        render();
+      }),
+  );
+  $$('[data-tip-act]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (b.dataset.tipAct === 'add') {
+          txnType = 'Expense';
+          openTxn();
+        }
+        if (b.dataset.tipAct === 'customer') openCustomerView(b.dataset.tipArg);
+      }),
+  );
+  const more = $('[data-tips-more]', root);
+  if (more)
+    more.onclick = () => {
+      tipsMore = !tipsMore;
+      render();
+    };
+  $$('[data-help-open]', root).forEach((b) => (b.onclick = () => openHelp()));
+}
+
+// ---- "How do I…?" (help.js): short answers on the phone, guides on the website
+
+async function openHelp() {
+  const { searchHelp } = await import('./help.js');
+  const dlg = $('#help-dialog');
+  const box = $('#help-q');
+  const draw = () => {
+    const found = searchHelp(box.value);
+    const L = lang === 'bn' ? 'bn' : 'en';
+    $('#help-results').innerHTML = found.length
+      ? found
+          .map(
+            (h, i) => `<details class="help-item" ${i === 0 && box.value.trim() ? 'open' : ''}><summary>${esc(h[L].q)}</summary>
+              <p>${esc(h[L].a)}</p><p><a href="${esc(h.link)}" target="_blank" rel="noopener">${t('Step by step on the website →')}</a></p></details>`,
+          )
+          .join('')
+      : `<p class="muted">${t('Nothing found. Try other words, or tell us what you were looking for.')}</p>
+         <button class="btn" data-feedback="help">💬 ${t('Send feedback')}</button>`;
+  };
+  box.value = '';
+  box.placeholder = t('e.g. loan, SMS, backup, বাকি');
+  box.oninput = draw;
+  draw();
+  dlg.showModal();
 }
 
 // ---- optional district, for the anonymous monthly count (company.js)
