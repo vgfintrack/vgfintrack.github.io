@@ -87,7 +87,10 @@ def head(meta, root):
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
   <script>
 {redirect}    // Language: saved choice (shared with the app), else the browser language.
+    // Day / night: saved choice (shared with the app), else the phone's setting.
     try {{
+      const th = localStorage.getItem('mt:theme');
+      if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
       const l = localStorage.getItem('mt:lang') || ((navigator.language || '').toLowerCase().startsWith('bn') ? 'bn' : 'en');
       document.documentElement.lang = l === 'bn' ? 'bn' : 'en';
     }} catch {{}}
@@ -114,6 +117,7 @@ def nav(meta, root):
         <button type="button" data-l="en">EN</button>
         <button type="button" data-l="bn">বাং</button>
       </div>
+      <button type="button" class="theme-btn" aria-label="Day or night">🌙</button>
       <a class="btn primary sm" href="{root}AmrPotli/">{bi('Open app', 'অ্যাপ খুলুন')}</a>
       <button type="button" class="menu-btn" aria-label="Menu" aria-expanded="false">☰</button>
     </div>

@@ -12,6 +12,26 @@
   buttons.forEach((b) => (b.onclick = () => setLang(b.dataset.l)));
   setLang(html.lang === 'bn' ? 'bn' : 'en');
 
+  // Day / night: the button switches to the other one; the choice is shared with the app.
+  const themeBtn = document.querySelector('.theme-btn');
+  const dark = () => html.dataset.theme === 'dark' || (!html.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+  const drawTheme = () => {
+    if (!themeBtn) return;
+    const bn = html.lang === 'bn';
+    themeBtn.textContent = dark() ? '☀️' : '🌙';
+    themeBtn.title = dark() ? (bn ? 'দিনের মোড' : 'Day mode') : bn ? 'রাতের মোড' : 'Night mode';
+    themeBtn.setAttribute('aria-label', themeBtn.title);
+  };
+  if (themeBtn)
+    themeBtn.onclick = () => {
+      html.dataset.theme = dark() ? 'light' : 'dark';
+      try { localStorage.setItem('mt:theme', html.dataset.theme); } catch {}
+      drawTheme();
+    };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawTheme);
+  buttons.forEach((b) => b.addEventListener('click', drawTheme));
+  drawTheme();
+
   const nav = document.querySelector('.site-nav');
   const menu = document.querySelector('.menu-btn');
   if (menu) {
