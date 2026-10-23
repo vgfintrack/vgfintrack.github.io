@@ -187,7 +187,8 @@ async function boot() {
       return;
     }
     $('#login').hidden = true;
-    if (hasLock()) lockNow();
+    if (hasLock() && lockDue()) lockNow();
+    else unlocked = true;
     $('#app').hidden = false;
     renderAvatar();
     unsub = state.store.subscribe((data) => {
@@ -354,10 +355,32 @@ function lockCfg() {
 const hasLock = () => !!state.user && !!lockCfg();
 const lockModule = () => import('./lock.js');
 
+// The last moment the app was open and unlocked. It survives a refresh, so a
+// reload within the "Lock after" time does not ask again; closing the app for
+// longer does. Never written while the keypad is up.
+let unlocked = false;
+const seenKey = () => `mt:lock-seen:${state.user?.uid}`;
+function markSeen() {
+  if (!unlocked || !state.user) return;
+  try {
+    localStorage.setItem(seenKey(), String(Date.now()));
+  } catch {}
+}
+function lockDue() {
+  let seen = 0;
+  try {
+    seen = Number(localStorage.getItem(seenKey())) || 0;
+  } catch {}
+  return Date.now() - seen >= (lockCfg()?.after ?? 60) * 1000;
+}
+
 async function lockNow() {
+  unlocked = false;
   document.documentElement.classList.add('locked'); // hide the app before the keypad loads
   const L = await lockModule();
   await L.showKeypad({ uid: state.user.uid, onForgot: forgotPin, demo: state.store.mode === 'demo' });
+  unlocked = true;
+  markSeen();
 }
 
 async function forgotPin() {
@@ -371,12 +394,11 @@ async function forgotPin() {
 }
 
 // Lock again after the app was in the background for the chosen time.
-let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return (hiddenAt = Date.now());
-  const cfg = hasLock() && lockCfg();
-  if (cfg && hiddenAt && Date.now() - hiddenAt >= (cfg.after ?? 60) * 1000) lockNow();
+  if (document.hidden) return markSeen();
+  if (unlocked && hasLock() && lockDue()) lockNow();
 });
+addEventListener('pagehide', markSeen); // a refresh or closing the tab
 
 function lockCard() {
   const cfg = lockCfg();
@@ -463,9 +485,12 @@ const QUICK = [
   ['report', '📄', 'Statement'],
 ];
 
+const SHOP_WORDS = { Expense: 'Cost', Income: 'Sale' };
+
 function quickActions() {
+  const shop = settings().mode === 'shop';
   return `<nav class="quick" aria-label="${esc(t('Quick actions'))}">${QUICK.map(
-    ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${icon}</span><span>${t(label)}</span></button>`,
+    ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${shop && id === 'Income' ? '🛍️' : icon}</span><span>${t((shop && SHOP_WORDS[label]) || label)}</span></button>`,
   ).join('')}</nav>`;
 }
 
@@ -562,7 +587,10 @@ function renderDashboard() {
 
   const rateText =
     st.savingsRate == null ? '—' : st.savingsRate < -1 ? t('below −100%') : pct(st.savingsRate);
-  const rateSub = isWeek ? t('Tuition is paid monthly, so check the month view') : t('of income kept');
+  // A shop's potli speaks of sales, costs and profit.
+  const shop = s.mode === 'shop';
+  const W = (personal, forShop) => t(shop ? forShop : personal);
+  const rateSub = isWeek ? t('Tuition is paid monthly, so check the month view') : W('of income kept', 'of sales kept');
 
   const byType = (t) => accs.filter((a) => a.type === t);
   const accRows = (list, sign = '') =>
@@ -607,20 +635,20 @@ function renderDashboard() {
     </div>
 
     <div class="kpis">
-      <div class="kpi"><div class="k">${t('Income')}</div><div class="v num income">${money(st.income)}</div>
+      <div class="kpi"><div class="k">${W('Income', 'Sales')}</div><div class="v num income">${money(st.income)}</div>
         <div class="s">${tn(Object.keys(income).length, '{n} source', '{n} sources')}</div></div>
-      <div class="kpi"><div class="k">${t('Expenses')}</div><div class="v num expense">${money(st.expenses)}</div>
+      <div class="kpi"><div class="k">${W('Expenses', 'Costs')}</div><div class="v num expense">${money(st.expenses)}</div>
         <div class="s">${t('{amount} / day', { amount: money(st.avgPerDay) })}</div></div>
-      <div class="kpi"><div class="k">${t('Net saved')}</div><div class="v num">${money(st.net)}</div>
+      <div class="kpi"><div class="k">${W('Net saved', 'Profit')}</div><div class="v num">${money(st.net)}</div>
         <div class="s">${st.toInvestments ? t('{amount} into investments', { amount: money(st.toInvestments) }) : t('Income minus expenses')}</div></div>
-      <div class="kpi"><div class="k">${t('Savings rate')}</div><div class="v num">${rateText}</div>
+      <div class="kpi"><div class="k">${W('Savings rate', 'Profit margin')}</div><div class="v num">${rateText}</div>
         <div class="s">${rateSub}</div></div>
     </div>
 
     ${
       goal > 0
         ? `<div class="card">
-      <h3>${isWeek ? t('Weekly savings goal') : t('Monthly savings goal')} <small class="num">${t('{a} of {b}', { a: money(Math.max(st.net, 0)), b: money(goal) })}</small></h3>
+      <h3>${isWeek ? W('Weekly savings goal', 'Weekly profit goal') : W('Monthly savings goal', 'Monthly profit goal')} <small class="num">${t('{a} of {b}', { a: money(Math.max(st.net, 0)), b: money(goal) })}</small></h3>
       <div class="progress ${goalRatio >= 1 ? 'ok' : ''}"><div style="width:${Math.max(0, Math.min(100, (goalRatio || 0) * 100))}%"></div></div>
       <div class="muted" style="font-size:12px;margin-top:6px">${
         goalRatio >= 1 ? t('Goal reached 🎉') : st.net < 0 ? t('Spending more than earning in this period') : t('{pct} there, {amount} to go', { pct: pct(goalRatio), amount: money(goal - st.net) })

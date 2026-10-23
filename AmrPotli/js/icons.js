@@ -4,6 +4,12 @@
 
 const CATEGORY = [
   [/service charge/i, '🧾'],
+  [/stock|purchase|\bmal\b|goods|wholesale/i, '📦'],
+  [/repair/i, '🔧'],
+  [/licen|trade fee|tax/i, '📜'],
+  [/packag/i, '🛍️'],
+  [/staff|employee|worker/i, '👷'],
+  [/^sales?$|cash sale|\bsales\b/i, '💵'],
   [/interest/i, '📈'],
   [/dining|food|meal|lunch|breakfast|dinner|snack|tea|restaurant|khabar/i, '🍛'],
   [/bazar|grocer|market/i, '🛒'],

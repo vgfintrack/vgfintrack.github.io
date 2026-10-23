@@ -474,4 +474,14 @@ export const BN = {
   '+ 🧾 Service charge': '+ 🧾 সার্ভিস চার্জ',
   'Only you can see your data. It is in a private folder in your Google Drive.': 'আপনার তথ্য শুধু আপনিই দেখতে পারেন। এটি আপনার Google Drive-এর একটি ব্যক্তিগত ফোল্ডারে থাকে।',
   'Rent, tuition, DPS… Add a transaction and choose Repeat.': 'ভাড়া, টিউশন, DPS… লেনদেন যোগ করে পুনরাবৃত্তি বেছে নিন।',
+  // ---- shop mode
+  'Sales': 'বিক্রি',
+  'Costs': 'খরচ',
+  'Profit': 'লাভ',
+  'Profit margin': 'লাভের হার',
+  'of sales kept': 'বিক্রির কত অংশ লাভ',
+  'Monthly profit goal': 'মাসিক লাভের লক্ষ্য',
+  'Weekly profit goal': 'সাপ্তাহিক লাভের লক্ষ্য',
+  'Cost': 'খরচ',
+  'Sale': 'বিক্রি',
 };

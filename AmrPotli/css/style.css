@@ -514,3 +514,5 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .li-ic { display: inline-block; width: 1.6em; }
 .amount-field input::-webkit-outer-spin-button, .amount-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .amount-field input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.ob-sub { display: grid; gap: 8px; margin: -2px 0 6px 28px; padding-left: 12px; border-left: 3px solid var(--brand); }
+.ob-sub p { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }

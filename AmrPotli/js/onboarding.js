@@ -59,6 +59,22 @@ addBangla({
   'Owe someone, or lent money to someone? Add it later with + → Loan.': 'কারও কাছে ধার আছে, বা কাউকে ধার দিয়েছেন? পরে + → লোন দিয়ে যোগ করুন।',
   'Add my first expense': 'আমার প্রথম খরচ যোগ করি',
   'Go to Dashboard': 'Dashboard-এ যাই',
+  'A shop, trade or small business': 'দোকান, ব্যবসা বা ছোট প্রতিষ্ঠান',
+  'What will you track?': 'কীসের হিসাব রাখবেন?',
+  'My personal money': 'আমার নিজের টাকা',
+  'Family, bills, savings': 'পরিবার, বিল, সঞ্চয়',
+  "My shop's money": 'আমার দোকানের টাকা',
+  'Sales, stock, shop costs': 'বিক্রি, মাল কেনা, দোকানের খরচ',
+  'Cash box': 'ক্যাশ বাক্স',
+  "The shop's cash drawer": 'দোকানের টাকার ড্রয়ার',
+  'What does the shop spend money on?': 'দোকানের টাকা কীসে কীসে খরচ হয়?',
+  'Add your own, for example Ice': 'নিজের মতো যোগ করুন, যেমন Ice',
+  'How does money come into the shop?': 'দোকানে টাকা কীভাবে আসে?',
+  'Add your own, for example Flexiload': 'নিজের মতো যোগ করুন, যেমন Flexiload',
+  'How much profit do you aim for each month?': 'প্রতি মাসে কত লাভ করতে চান?',
+  'Profit = sales minus costs.': 'লাভ = বিক্রি বাদ খরচ।',
+  'Profit goal': 'লাভের লক্ষ্য',
+  'A healthy shop writes down every sale and cost the same day. Start with one now.': 'ভালো দোকান প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
 });
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -84,7 +100,7 @@ const PERSONAS = {
     income: ['Client Payment', 'Upwork / Fiverr', 'Other Income'],
   },
   business: {
-    icon: '🏪', label: 'Business owner', sub: 'Your personal money, apart from the shop',
+    icon: '🏪', label: 'Business owner', sub: 'A shop, trade or small business',
     expense: ['Food', 'Transport', 'House Rent', 'Utility Bills', 'Mobile & Internet', 'Family Support', 'Children\'s Education', 'Medical', 'Other'],
     income: ['Business Profit', 'Rent Received', 'Other Income'],
   },
@@ -96,6 +112,20 @@ const PERSONAS = {
 };
 const ALL_EXPENSE = [...new Set(Object.values(PERSONAS).flatMap((p) => p.expense).concat(['Gifts & Dawat', 'Clothing', 'Personal Care', 'Savings (DPS)']))];
 const ALL_INCOME = [...new Set(Object.values(PERSONAS).flatMap((p) => p.income).concat(['Salary', 'Tuition', 'Gift Received']))];
+
+// A business owner tracks either their own money (above) or the shop's.
+// Shop mode keeps the shop's money apart: sales in, stock and running costs out.
+const SHOP = {
+  expense: ['Stock Purchase', 'Shop Rent', 'Electricity', 'Staff Salary', 'Transport & Delivery', 'Packaging', 'Mobile & Internet', 'Other'],
+  income: ['Sales', 'Other Income'],
+};
+const SHOP_EXPENSE = [...SHOP.expense, 'Shop Repairs', 'Snacks & Tea', 'Licence & Fees', 'Donation', 'Loan Installment'];
+const SHOP_INCOME = [...SHOP.income, 'Commission', 'Service Income'];
+const isShop = () => draft?.persona === 'business' && draft.bizMode === 'shop';
+const starter = () => (isShop() ? SHOP : PERSONAS[draft.persona]);
+
+const walletLabel = (w) => (w.id === 'cash' && isShop() ? 'Cash box' : w.label);
+const walletSub = (w) => (w.id === 'cash' && isShop() ? "The shop's cash drawer" : w.sub);
 
 // Ids match the earlier default accounts and help the SMS reader find them.
 const WALLETS = [
@@ -137,7 +167,7 @@ export const isCelebrating = () => celebrating;
 
 const valid = {
   hello: () => true,
-  who: () => !!draft.persona,
+  who: () => !!draft.persona && (draft.persona !== 'business' || !!draft.bizMode),
   where: () => draft.wallets.length > 0,
   amounts: () => draft.wallets.every((id) => !(Number(draft.balances[id]) < 0)),
   spend: () => draft.expense.length > 0,
@@ -148,7 +178,7 @@ const valid = {
 // ctx: { user, save(data), importFile(file), setLang(l), done(next) }
 export function renderWizard(root, ctx) {
   loadDraft(ctx.user?.uid || 'me');
-  const p = PERSONAS[draft.persona];
+  const p = draft.persona ? starter() : null;
   draft.expense ??= p ? [...p.expense] : null;
   draft.income ??= p ? [...p.income] : null;
   const step = celebrating ? 'done' : draft.step;
@@ -183,7 +213,23 @@ export function renderWizard(root, ctx) {
         ${Object.entries(PERSONAS)
           .map(
             ([id, x]) => `<button type="button" class="ob-option ${draft.persona === id ? 'on' : ''}" role="radio" aria-checked="${draft.persona === id}" data-persona="${id}">
-              <span class="ob-ico">${x.icon}</span><span class="ob-txt"><strong>${t(x.label)}</strong><small>${t(x.sub)}</small></span></button>`,
+              <span class="ob-ico">${x.icon}</span><span class="ob-txt"><strong>${t(x.label)}</strong><small>${t(x.sub)}</small></span></button>
+              ${
+                id === 'business' && draft.persona === 'business'
+                  ? `<div class="ob-sub" role="radiogroup" aria-label="${esc(t('What will you track?'))}">
+                      <p>${t('What will you track?')}</p>
+                      ${[
+                        ['personal', '🧍', 'My personal money', 'Family, bills, savings'],
+                        ['shop', '🏪', "My shop's money", 'Sales, stock, shop costs'],
+                      ]
+                        .map(
+                          ([m, ic, l, sub]) => `<button type="button" class="ob-option ${draft.bizMode === m ? 'on' : ''}" role="radio" aria-checked="${draft.bizMode === m}" data-biz="${m}">
+                            <span class="ob-ico">${ic}</span><span class="ob-txt"><strong>${t(l)}</strong><small>${t(sub)}</small></span></button>`,
+                        )
+                        .join('')}
+                    </div>`
+                  : ''
+              }`,
           )
           .join('')}
       </div>`,
@@ -194,7 +240,7 @@ export function renderWizard(root, ctx) {
           const on = draft.wallets.includes(w.id);
           return `<button type="button" class="ob-option ${on ? 'on' : ''}" role="checkbox" aria-checked="${on}" data-wallet="${w.id}">
             <span class="ob-ico" ${w.color ? `style="--c:${w.color}"` : ''}>${w.color ? `<i class="ob-dot"></i>` : w.icon}</span>
-            <span class="ob-txt"><strong>${t(w.label)}</strong>${w.sub ? `<small>${t(w.sub)}</small>` : ''}</span>
+            <span class="ob-txt"><strong>${t(walletLabel(w))}</strong>${walletSub(w) ? `<small>${t(walletSub(w))}</small>` : ''}</span>
             <span class="ob-check" aria-hidden="true">✓</span></button>`;
         }).join('')}
       </div>`,
@@ -205,7 +251,7 @@ export function renderWizard(root, ctx) {
           .map((id) => {
             const w = WALLETS.find((x) => x.id === id);
             return `<div class="ob-amount">
-              <label for="ob-bal-${id}">${id === 'bank' ? t('Bank') : t(w.label)}</label>
+              <label for="ob-bal-${id}">${id === 'bank' ? t('Bank') : t(walletLabel(w))}</label>
               ${id === 'bank' ? `<input id="ob-bank-name" class="ob-bank-name" placeholder="${esc(t('Bank name, for example Sonali Bank'))}" value="${esc(draft.bankName)}" maxlength="40" autocomplete="off">` : ''}
               <div class="ob-money"><span>৳</span><input id="ob-bal-${id}" data-bal="${id}" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${draft.balances[id] ?? ''}"></div>
             </div>`;
@@ -213,13 +259,17 @@ export function renderWizard(root, ctx) {
           .join('')}
       </div>`,
     spend: () => `
-      ${coach(t('What do you usually spend on?'), t('Tap to add or remove. These become your budget categories.'))}
-      ${chipPicker('expense', ALL_EXPENSE, t('Add your own, for example Gym'))}`,
+      ${coach(isShop() ? t('What does the shop spend money on?') : t('What do you usually spend on?'), t('Tap to add or remove. These become your budget categories.'))}
+      ${chipPicker('expense', isShop() ? SHOP_EXPENSE : ALL_EXPENSE, isShop() ? t('Add your own, for example Ice') : t('Add your own, for example Gym'))}`,
     income: () => `
-      ${coach(t('Where does your money come from?'), t('Pick all that apply.'))}
-      ${chipPicker('income', ALL_INCOME, t('Add your own, for example Pocket Money'))}`,
+      ${coach(isShop() ? t('How does money come into the shop?') : t('Where does your money come from?'), t('Pick all that apply.'))}
+      ${chipPicker('income', isShop() ? SHOP_INCOME : ALL_INCOME, isShop() ? t('Add your own, for example Flexiload') : t('Add your own, for example Pocket Money'))}`,
     goal: () => `
-      ${coach(t('How much do you want to save each month?'), t('Saving = income minus spending. A small goal is a great start.'))}
+      ${
+        isShop()
+          ? coach(t('How much profit do you aim for each month?'), t('Profit = sales minus costs.'))
+          : coach(t('How much do you want to save each month?'), t('Saving = income minus spending. A small goal is a great start.'))
+      }
       <div class="ob-goals">
         ${GOALS.map((g) => `<button type="button" class="ob-chip big ${draft.goal === g && !customGoal ? 'on' : ''}" data-goal="${g}">${g ? `৳ ${nf.format(g)}` : t('Not now')}</button>`).join('')}
         <button type="button" class="ob-chip big ${customGoal ? 'on' : ''}" data-goal-custom>${t('Other amount')}</button>
@@ -235,9 +285,11 @@ export function renderWizard(root, ctx) {
         <div><span>${t('Accounts')}</span><strong>${s.accounts}</strong></div>
         <div><span>${t('Total money')}</span><strong class="num">৳ ${nf.format(s.total)}</strong></div>
         <div><span>${t('Categories')}</span><strong>${s.cats}</strong></div>
-        <div><span>${t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
+        <div><span>${isShop() ? t('Profit goal') : t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
       </div>
-      <p class="ob-lead">${t("Now the most important habit: write down what you spend, every day. Let's add your first one.")}</p>
+      <p class="ob-lead">${
+        isShop() ? t('A healthy shop writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
+      }</p>
       <p class="muted ob-small">${t('Owe someone, or lent money to someone? Add it later with + → Loan.')}</p>`;
     },
   };
@@ -334,9 +386,20 @@ function bind(root, ctx, step) {
       (b.onclick = () => {
         if (draft.persona !== b.dataset.persona) {
           draft.persona = b.dataset.persona;
-          draft.expense = [...PERSONAS[draft.persona].expense];
-          draft.income = [...PERSONAS[draft.persona].income];
+          draft.bizMode = null;
+          draft.expense = [...starter().expense];
+          draft.income = [...starter().income];
         }
+        saveDraft();
+        rerender();
+      }),
+  );
+  $$('[data-biz]', root).forEach(
+    (b) =>
+      (b.onclick = () => {
+        draft.bizMode = b.dataset.biz;
+        draft.expense = [...starter().expense];
+        draft.income = [...starter().income];
         saveDraft();
         rerender();
       }),
@@ -436,7 +499,7 @@ function bind(root, ctx, step) {
 async function finish(root, ctx) {
   const accounts = draft.wallets.map((id, i) => {
     const w = WALLETS.find((x) => x.id === id);
-    const name = id === 'bank' ? draft.bankName.trim() || 'Bank' : w.name;
+    const name = id === 'bank' ? draft.bankName.trim() || 'Bank' : id === 'cash' && isShop() ? 'Cash Box' : w.name;
     return { id, name, type: 'Liquid', opening: Math.max(0, Number(draft.balances[id]) || 0), order: i + 1 };
   });
   const settings = {
@@ -444,7 +507,8 @@ async function finish(root, ctx) {
     savingsGoal: draft.goal || 0,
     incomeCategories: [...draft.income],
     expenseCategories: draft.expense.map((name) => ({ name, budget: 0 })),
-    onboarding: { persona: draft.persona, hidden: false, done: {} },
+    onboarding: { persona: isShop() ? 'shop' : draft.persona, hidden: false, done: {} },
+    ...(isShop() && { mode: 'shop' }),
   };
   // Show the celebration before the save finishes, so the screen does not jump.
   celebrating = true;
