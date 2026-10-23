@@ -55,6 +55,7 @@
     <div id="demo-banner" class="banner" hidden data-i18n="Demo mode: data is saved in this browser only. Add a Google client ID in js/config.js to sync with Google Drive.">
       Demo mode: data is saved in this browser only. Add a Google client ID in js/config.js to sync with Google Drive.
     </div>
+    <div id="team-bar" class="banner team-bar" role="alert" hidden></div>
     <div id="notice-bar" class="banner notice-bar" role="status" hidden></div>
     <div id="gift-bar" class="banner gift-bar" role="status" hidden></div>
 
@@ -382,6 +383,27 @@
       </div>
       <div id="custv-body"></div>
     </div>
+  </dialog>
+
+  <dialog id="helper-dialog" class="sheet">
+    <form id="helper-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 data-i18n="Add a helper">Add a helper</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
+      </div>
+      <p class="muted" id="helper-intro" style="margin:0;font-size:14px"></p>
+      <div class="field" id="helper-shop-field"><label for="helper-shop" data-i18n="Shop name">Shop name</label>
+        <input id="helper-shop" maxlength="40" autocomplete="off" placeholder="Rahim Store" /></div>
+      <div class="field"><label for="helper-email" data-i18n="Helper's Gmail">Helper's Gmail</label>
+        <input id="helper-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" placeholder="name@gmail.com" /></div>
+      <div class="field"><label for="helper-name" data-i18n="Name (optional)">Name (optional)</label>
+        <input id="helper-name" maxlength="40" autocomplete="off" /></div>
+      <p id="helper-error" class="error" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn" data-close data-i18n="Cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="helper-go" data-i18n="Add">Add</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="delete-dialog" class="sheet">

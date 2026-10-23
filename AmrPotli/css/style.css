@@ -646,3 +646,10 @@ html.locked #app, html.locked #login { visibility: hidden; }
   background: color-mix(in srgb, var(--brand) 16%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
 .gift-bar[hidden] { display: none; }
 .gift-bar .btn { flex: none; }
+/* team shops */
+.team-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.team-bar[hidden] { display: none; }
+.team-bar span { flex: 1 1 220px; }
+.team-bar .btn { flex: none; }
+.helper-hello h3 { margin: 0 0 4px; }
+#team-card .li .name small { font-weight: 400; }

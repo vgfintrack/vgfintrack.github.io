@@ -330,7 +330,7 @@ async function syncCompany() {
     simple: !!settings().simple,
     lock: hasLock(),
     drive: state.store.mode === 'drive',
-    team: !!settings().team,
+    team: !!settings().team || !!shopLink(),
     // Only the id from the app's list; a profession the user typed is just "custom".
     prof: settings().profession ? settings().profession.id || 'custom' : '',
   });
@@ -539,6 +539,11 @@ async function boot() {
   };
 
   state.store.onStatus(renderSync);
+  state.store.team?.onChange((info) => {
+    if (info.lost) return showTeamLost(info.role);
+    $('#team-bar').hidden = true;
+    if (state.data?.loaded) render();
+  });
   $('#sync').onclick = async () => {
     try {
       await state.store.syncNow();
@@ -579,13 +584,16 @@ async function boot() {
   });
   setupShopDialogs();
   setupBakiDialogs();
+  setupTeamDialog();
 }
 
 // Signs in with Google from a tap. Shows (or, with show = false, returns) a
 // message when it does not work.
-async function signIn(show = true) {
+// returning: also asks for the shop book permission, in case this person
+// owns or helps in a team shop (it reaches only files the app made or they pick).
+async function signIn(show = true, { returning = false } = {}) {
   try {
-    await state.store.signIn();
+    await state.store.signIn(returning ? { file: true } : undefined);
     return '';
   } catch (e) {
     if (e.type === 'popup_closed') return '';
@@ -670,12 +678,184 @@ function render() {
   document.body.classList.toggle('onboarding', !!onboarding);
   showAddButton(!onboarding && (state.view === 'dashboard' || state.view === 'transactions'));
   if (onboarding) return renderWelcome();
+  $('.tabbar [data-view=reports]').hidden = helperLimited();
+  if (helperLimited() && state.view === 'reports') state.view = 'dashboard';
   G.noticeProgress(state.data, guideFlags(), toast);
   $$('.view').forEach((s) => (s.hidden = s.id !== `view-${state.view}`));
-  if (state.view === 'dashboard') (simpleOn() ? renderSimple() : renderDashboard());
+  if (state.view === 'dashboard') (helperLimited() ? renderHelperHome() : simpleOn() ? renderSimple() : renderDashboard());
   if (state.view === 'transactions') renderTransactions();
   if (state.view === 'reports') renderReports();
   if (state.view === 'setup') renderSetup();
+}
+
+// ---------------------------------------------------------------- team shops
+
+// A helper's home: the shop's quick buttons and today's entries, no totals.
+function renderHelperHome() {
+  const link = shopLink();
+  const today = state.data.transactions.filter((x) => x.date === C.today()).sort(txnSort);
+  const owner = link.owner?.name || link.owner?.email || '';
+  $('#view-dashboard').innerHTML = `
+    <div class="card helper-hello"><h3>🏪 ${esc(link.name)}</h3>
+      <p class="muted" style="margin:0">${t("You help in {owner}'s shop. Add each sale, purchase and cost as it happens.", { owner: esc(owner) })}</p></div>
+    ${quickActions()}
+    <div class="card"><h3>${t("Today's entries")} <small class="num">${today.length}</small></h3>
+      <div class="list">${today.map(txnRow).join('') || `<p class="muted">${t('Nothing added today yet.')}</p>`}</div></div>`;
+  const v = $('#view-dashboard');
+  $$('[data-quick]', v).forEach((b) => (b.onclick = () => quickAction(b.dataset.quick)));
+  bindTxnRows(v);
+}
+
+function teamCard() {
+  const link = shopLink();
+  if (isHelper()) {
+    const o = link.owner || {};
+    return `<div class="card" id="team-card"><h3>👥 ${t('Team')}</h3>
+      <p style="margin:0 0 6px">${t('You help in {shop}.', { shop: `<b>${esc(link.name)}</b>` })}<br><span class="muted">${t('Owner: {name}', { name: esc(o.name ? `${o.name} (${o.email})` : o.email || '') })}</span></p>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${t("Your entries go into the owner's shop book. Leaving or deleting your account never deletes the shop book.")}</p>
+      <button class="btn" id="team-leave">${t('Leave this shop')}</button></div>`;
+  }
+  if (!isShopMode()) return '';
+  const team = teamData() || {};
+  const members = team.members || [];
+  return `<div class="card" id="team-card"><h3>👥 ${t('Team')}</h3>
+    ${
+      link
+        ? `<div class="list">${members
+            .map(
+              (m, i) => `<div class="li"><span class="name">🧑‍🔧 ${esc(m.name || m.email.split('@')[0])}<br><small class="muted">${esc(m.email)}</small></span>
+              <button class="btn sm" data-helper-remove="${i}">${t('Remove')}</button></div>`,
+            )
+            .join('') || `<p class="muted">${t('No helpers yet.')}</p>`}</div>
+          <label class="switch-row" style="margin:12px 0"><input type="checkbox" id="helpers-money" ${team.helpersSeeMoney ? 'checked' : ''}>
+            <span><b>${t('Helpers can see totals, profit and reports')}</b><br><span class="muted" style="font-size:13px">${t("Off: helpers add sales, purchases, costs and baki, and see today's entries.")}</span></span></label>
+          <p class="muted" style="margin:0 0 10px;font-size:13px">🔒 ${t('The shop book is a file in your Google Drive, shared only with these people. Hiding screens in the app is not strict secrecy: a helper can still open the file from their Drive. Receipt photos stay with the person who took them. Deleting your account also deletes the shop book.')}</p>`
+        : `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Run the shop with helpers: employees, family or relatives. Each helper uses their own Gmail and phone, and adds to the same shop book.')}</p>`
+    }
+    <button class="btn primary" id="helper-add">+ ${t('Add a helper')}</button></div>`;
+}
+
+function bindTeam(root) {
+  const add = $('#helper-add', root);
+  if (add) add.onclick = () => openHelperDialog();
+  const money = $('#helpers-money', root);
+  if (money)
+    money.onchange = () =>
+      state.store.team.save({ ...teamData(), helpersSeeMoney: money.checked }).then(() => toast(money.checked ? t('Helpers can now see totals') : t('Totals are hidden from helpers')));
+  $$('[data-helper-remove]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const team = teamData();
+        const m = team.members[Number(b.dataset.helperRemove)];
+        if (!confirm(t('Remove {name}? They will no longer see the shop book. Their entries stay.', { name: m.name || m.email }))) return;
+        try {
+          await state.store.team.unshare(m.permissionId);
+          await state.store.team.save({ ...team, members: team.members.filter((x) => x.email !== m.email) });
+          toast(t('{name} was removed', { name: m.name || m.email }));
+        } catch (e) {
+          if (e.type !== 'popup_closed') toast(e.message || String(e));
+        }
+      }),
+  );
+  const leave = $('#team-leave', root);
+  if (leave)
+    leave.onclick = async () => {
+      if (!confirm(t('Leave {shop}? You go back to your own AmrPotli. The shop keeps your entries.', { shop: shopLink().name }))) return;
+      await state.store.team.leave().catch((e) => toast(e.message || String(e)));
+    };
+  const join = $('#team-join', root);
+  if (join) join.onclick = () => joinShop();
+}
+
+function openHelperDialog() {
+  const first = !shopLink();
+  $('#helper-shop-field').hidden = !first;
+  $('#helper-intro').textContent = first
+    ? t("AmrPotli will make a shop book in your Google Drive and share it with your helper. Google asks you once to allow this, and emails the helper.")
+    : t('Google emails the helper. On their phone they open AmrPotli and choose the shop book.');
+  $('#helper-shop').value = '';
+  $('#helper-email').value = '';
+  $('#helper-name').value = '';
+  $('#helper-error').hidden = true;
+  $('#helper-dialog').showModal();
+}
+
+function setupTeamDialog() {
+  $('#helper-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => {
+      $('#helper-error').textContent = m;
+      $('#helper-error').hidden = false;
+    };
+    const email = $('#helper-email').value.trim().toLowerCase();
+    const name = $('#helper-name').value.trim().slice(0, 40);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err(t("Write the helper's Gmail address."));
+    if (email === myEmail()) return err(t('That is your own email. Write the helper’s.'));
+    if (teamData()?.members?.some((m) => m.email === email)) return err(t('{email} is already a helper.', { email }));
+    const go = $('#helper-go');
+    go.disabled = true;
+    try {
+      if (!shopLink()) await state.store.team.start($('#helper-shop').value.trim().slice(0, 40) || t('My shop'));
+      const permissionId = await state.store.team.share(
+        email,
+        t('You are added as a helper in {shop} on AmrPotli. On your phone open vgfintrack.github.io/AmrPotli → Tap to start → For business → A team → Employee or helper, and choose this shop book.', { shop: shopLink().name }),
+      );
+      const team = teamData() || {};
+      await state.store.team.save({ helpersSeeMoney: false, ...team, members: [...(team.members || []), { email, name, permissionId, addedAt: C.today() }] });
+      $('#helper-dialog').close();
+      toast(t('{name} can now open the shop book. Google has emailed them.', { name: name || email }));
+    } catch (e2) {
+      if (e2.type !== 'popup_closed') err(e2.message || String(e2));
+    } finally {
+      go.disabled = false;
+    }
+  };
+}
+
+// A helper opens the shop book the owner shared: sign in (with the file
+// permission), then pick it in Google's file picker. Called from a tap.
+async function joinShop() {
+  try {
+    const token = await state.store.team.pickerToken();
+    const { pickShopBook } = await import('./picker.js');
+    const id = await pickShopBook(token);
+    if (!id) return;
+    await state.store.team.join(id);
+    switchView('dashboard');
+    toast(t('You joined {shop}.', { shop: shopLink().name }));
+  } catch (e) {
+    if (e.type !== 'popup_closed') toast(e.message || String(e));
+  }
+}
+
+// Removed from a shop, or the owner's shop book is gone from Drive.
+function showTeamLost(role) {
+  const bar = $('#team-bar');
+  const link = shopLink();
+  if (!link) return (bar.hidden = true);
+  bar.innerHTML =
+    role === 'helper'
+      ? `<span>${t('You can no longer open {shop}. The owner may have removed you.', { shop: esc(link.name) })}</span><button class="btn sm" data-team-back>${t('Back to my own AmrPotli')}</button>`
+      : `<span>${t('The shop book is missing from your Google Drive, so helpers cannot see the shop.')}</span><button class="btn sm" data-team-again>${t('Make it again')}</button>`;
+  bar.hidden = false;
+  const back = $('[data-team-back]', bar);
+  if (back) back.onclick = () => state.store.team.leave().then(() => (bar.hidden = true)).catch((e) => toast(e.message || String(e)));
+  const again = $('[data-team-again]', bar);
+  if (again)
+    again.onclick = async () => {
+      try {
+        const team = teamData() || {};
+        await state.store.team.start(link.name);
+        // The new book is shared with the same helpers again.
+        const members = [];
+        for (const m of team.members || []) members.push({ ...m, permissionId: await state.store.team.share(m.email, t('The shop book of {shop} was made again. Open AmrPotli and choose it.', { shop: link.name })) });
+        await state.store.team.save({ ...team, members });
+        bar.hidden = true;
+        toast(t('The shop book is back'));
+      } catch (e) {
+        if (e.type !== 'popup_closed') toast(e.message || String(e));
+      }
+    };
 }
 
 // ---------------------------------------------------------------- welcome
@@ -696,7 +876,8 @@ async function renderWelcome() {
     local: state.store.mode === 'local',
     gate: state.store.mode === 'local' && !!state.data.settings,
     data: state.data,
-    signIn: () => signIn(),
+    signIn: (opts) => signIn(true, opts),
+    joinShop,
     restart: async () => {
       await state.store.deleteMyData();
       render();
@@ -854,6 +1035,23 @@ const SUPPLIER_KINDS = { company: ['🏭', 'Company'], distributor: ['🚚', 'Di
 const DEFAULT_PRODUCTS = ['Rice & Grains', 'Oil & Ghee', 'Spices', 'Tea & Sugar', 'Biscuits & Snacks', 'Drinks', 'Soap & Detergent', 'Toiletries', 'Eggs & Dairy', 'Cigarettes', 'Stationery', 'Other goods'];
 const STOCK_CATEGORY = 'Stock Purchase';
 const isShopMode = () => settings().mode === 'shop';
+
+// ---- team shops: one shop book in the owner's Drive, shared with helpers
+const shopLink = () => state.store?.team?.link || null; // { fileId, role, name, owner }
+const isHelper = () => shopLink()?.role === 'helper';
+const teamData = () => state.data?.team || null; // { members, helpersSeeMoney }
+// Helpers see totals, profit and reports only when the owner allows it.
+const helperLimited = () => isHelper() && !teamData()?.helpersSeeMoney;
+const myEmail = () => state.user?.email || '';
+function whoName(email) {
+  if (!email) return '';
+  if (email === myEmail()) return t('you');
+  const m = teamData()?.members?.find((x) => x.email === email);
+  if (m?.name) return m.name;
+  const o = shopLink()?.owner;
+  if (o?.email === email && o.name) return o.name.split(' ')[0];
+  return email.split('@')[0];
+}
 const suppliers = () => accounts().filter((a) => a.supplier);
 const productGroups = () => settings().productGroups || DEFAULT_PRODUCTS;
 const kindIcon = (a) => SUPPLIER_KINDS[a?.supplier?.kind]?.[0] || '🏭';
@@ -1576,7 +1774,7 @@ const QUICK_SHOP = [
 ];
 
 function quickActions() {
-  const list = isShopMode() ? QUICK_SHOP : QUICK;
+  const list = (isShopMode() ? QUICK_SHOP : QUICK).filter(([id]) => !(helperLimited() && id === 'report'));
   return `<nav class="quick" aria-label="${esc(t('Quick actions'))}">${list.map(
     ([id, icon, label]) => `<button data-quick="${id}"><span class="qi" aria-hidden="true">${icon}</span><span>${t(label)}</span></button>`,
   ).join('')}</nav>`;
@@ -2041,20 +2239,29 @@ function txnRow(t) {
             ? '💎'
             : '🔁'
         : catIcon(t.category);
+  const by = shopLink() && t.by ? ` · ${whoName(t.by)}` : '';
   return `<button class="txn" data-id="${esc(t.id)}">
     <span class="ic ${cls}">${icon}</span>
-    <span class="mid"><div class="t">${esc(title)}</div><div class="sub">${esc(sub)}</div></span>
+    <span class="mid"><div class="t">${esc(title)}</div><div class="sub">${esc(sub + by)}</div></span>
     <span class="amt num ${cls}">${sign}${money(t.amount)}</span></button>`;
 }
 
 function bindTxnRows(root) {
-  $$('.txn', root).forEach((el) => (el.onclick = () => openTxn(state.data.transactions.find((t) => t.id === el.dataset.id))));
+  $$('.txn', root).forEach(
+    (el) =>
+      (el.onclick = () => {
+        const x = state.data.transactions.find((t) => t.id === el.dataset.id);
+        if (isHelper() && x?.by && x.by !== myEmail()) return toast(t('Only the owner can change entries added by others.'));
+        openTxn(x);
+      }),
+  );
 }
 
 function renderTransactions() {
   const f = state.txFilter;
   const q = f.q.trim().toLowerCase();
   const list = state.data.transactions
+    .filter((t) => !helperLimited() || t.date === C.today() || t.by === myEmail())
     .filter((t) => !f.month || t.date.startsWith(f.month))
     .filter((t) => !f.type || (f.type === 'Loan' ? !!loanActionOf(t) : t.type === f.type))
     .filter((t) => !f.account || t.account === f.account || t.toAccount === f.account)
@@ -3259,9 +3466,12 @@ function renderSetup() {
   const s = settings();
   const w = C.worth(accounts(), state.data.transactions);
   const u = state.user;
+  // Helpers do not change the shop's setup; those cards stay hidden for them.
+  const own = isHelper() ? 'hidden' : '';
   $('#view-setup').innerHTML = `
     <div class="grid2">
-      <div class="card">
+      ${teamCard()}
+      <div class="card" ${own}>
         <h3>${t('Accounts')} <button class="btn sm" id="add-acc">${t('+ Add account')}</button></h3>
         <div class="list">
           ${accounts()
@@ -3275,13 +3485,13 @@ function renderSetup() {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" ${own}>
         <h3>${t('Monthly savings goal')}</h3>
         <div class="field"><label for="goal">${t('Income minus expenses, per month (BDT)')}</label>
           <input type="number" id="goal" inputmode="decimal" value="${Number(s.savingsGoal) || 0}"></div>
       </div>
 
-      <div class="card" id="budgets-card">
+      <div class="card" id="budgets-card" ${own}>
         <h3>${t('Expense categories &amp; monthly budgets')}
           <small class="num">${t('total {amount}', { amount: money(s.expenseCategories.reduce((a, c) => a + (Number(c.budget) || 0), 0)) })}</small></h3>
         ${s.expenseCategories
@@ -3295,7 +3505,7 @@ function renderSetup() {
         ${categoryLimitRow('exp', 'New expense category')}
       </div>
 
-      <div class="card">
+      <div class="card" ${own}>
         <h3>${t('Income sources')}</h3>
         <div class="chips">
           ${s.incomeCategories
@@ -3305,9 +3515,9 @@ function renderSetup() {
         ${categoryLimitRow('inc', 'New income source')}
       </div>
 
-      ${isShopMode() ? productsCard() : ''}
+      ${isShopMode() && !isHelper() ? productsCard() : ''}
 
-      ${rulesCard()}
+      ${isHelper() ? '' : rulesCard()}
 
       ${lockCard()}
 
@@ -3346,7 +3556,7 @@ function renderSetup() {
         <button class="btn" id="guide-show">${t('Show the getting-started guide')}</button>`}
       </div>
 
-      <div class="card">
+      <div class="card" ${own}>
         <h3>${t('Backup &amp; data')}</h3>
         <div style="display:grid;gap:8px">
           <button class="btn" id="export">${t('Download backup (.json)')}</button>
@@ -3363,7 +3573,8 @@ function renderSetup() {
         ${
           state.store.mode === 'drive'
             ? `<p class="muted" style="margin:0 0 10px;font-size:13px">🔒 ${t('Only you can see your data. It is in a private folder in your Google Drive.')}</p>
-               <button class="btn" id="signout">${t('Sign out')}</button>`
+               <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="signout">${t('Sign out')}</button>
+               ${shopLink() ? '' : `<button class="btn" id="team-join">🧑‍🔧 ${t("Help in someone's shop")}</button>`}</div>`
             : `<p class="muted" style="margin:0;font-size:13px">${t('Demo mode. Add a Google client ID to <code>js/config.js</code> to sign in and sync.')}</p>`
         }
         <button class="linkish danger-link" id="delete-account">${t('Delete my account')}</button>
@@ -3464,6 +3675,7 @@ function renderSetup() {
   $('#export-csv', v).onclick = exportCsv;
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
+  bindTeam(v);
   $('#delete-account', v).onclick = openDelete;
 }
 

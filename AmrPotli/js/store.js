@@ -12,6 +12,12 @@
 // Before signing in, the app works on this phone only ("local" user, see
 // createDriveStore). Signing in moves that data into the user's Drive.
 //
+// A shop run by a team keeps its data in a "shop book" instead: a file in the
+// owner's own Drive, shared through Google with the helpers the owner adds.
+// For that the app also asks for drive.file, which only reaches files the app
+// made or the user picked. A small note in each person's app data folder says
+// which shop book they use.
+//
 // Without a Google client ID (see config.js) the app runs in demo mode and
 // keeps data in this browser only.
 
@@ -20,7 +26,10 @@ import { t } from './i18n.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
+const FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'; // shop books only
 const FILE_NAME = 'amrpotli.json';
+const TEAM_NOTE = 'amrpotli-team.json'; // { fileId, role: 'owner' | 'helper', name, owner }
+const teamKey = (uid) => `mt:team:${uid}`;
 const LAST_USER_KEY = 'mt:last-user';
 // Google access token for the signed-in user. It lasts about an hour and only
 // allows this app's Drive folder and basic profile, so keeping it across page
@@ -96,7 +105,8 @@ function save(key, value) {
 // of each item, which lets two devices edit offline and sync later.
 
 export function emptyDoc() {
-  return { version: 2, accounts: {}, transactions: {}, settings: null, settingsUpdatedAt: 0 };
+  // team: { members: [{ email, name, permissionId, addedAt }], helpersSeeMoney } in a shop book
+  return { version: 2, accounts: {}, transactions: {}, settings: null, settingsUpdatedAt: 0, team: null, teamUpdatedAt: 0 };
 }
 
 export function mergeDocs(a, b) {
@@ -111,6 +121,9 @@ export function mergeDocs(a, b) {
   const useB = (b.settingsUpdatedAt || 0) > (a.settingsUpdatedAt || 0) || (!a.settings && b.settings);
   out.settings = useB ? b.settings : a.settings;
   out.settingsUpdatedAt = useB ? b.settingsUpdatedAt || 0 : a.settingsUpdatedAt || 0;
+  const teamB = (b.teamUpdatedAt || 0) > (a.teamUpdatedAt || 0) || (!a.team && b.team);
+  out.team = (teamB ? b.team : a.team) || null;
+  out.teamUpdatedAt = (teamB ? b.teamUpdatedAt : a.teamUpdatedAt) || 0;
   return out;
 }
 
@@ -142,6 +155,7 @@ function createEngine(cacheKey, onChanged, { readyWithoutCache = true } = {}) {
     accounts: live(doc.accounts),
     transactions: live(doc.transactions),
     settings: doc.settings,
+    team: doc.team || null,
     loaded: ready,
   });
   const persist = () => cacheKey && save(cacheKey, { doc, dirty });
@@ -202,6 +216,12 @@ function createEngine(cacheKey, onChanged, { readyWithoutCache = true } = {}) {
       change((now) => {
         doc.settings = clean(s);
         doc.settingsUpdatedAt = now;
+      });
+    },
+    saveTeam(team) {
+      change((now) => {
+        doc.team = clean(team);
+        doc.teamUpdatedAt = now;
       });
     },
     // Restoring a backup replaces everything, on every device.
@@ -315,9 +335,13 @@ const LOCAL_KEYS = ['mt:lock', 'mt:lock-seen', 'mt:backup'];
 
 async function createDriveStore() {
   let user = load(LAST_USER_KEY) || localUser(); // { uid, email, displayName, photoURL }
-  let token = null; // { value, expiresAt }
+  let token = null; // { value, expiresAt, file }
   let engine = null;
   let fileId = null;
+  // The shop book this account uses, if any (see TEAM_NOTE); checked in Drive once a session.
+  let team = user.local ? null : load(teamKey(user.uid));
+  let teamChecked = false;
+  let teamCb = () => {};
   let status = 'idle';
   let syncing = null;
   let again = false;
@@ -339,14 +363,17 @@ async function createDriveStore() {
   };
 
   const openEngine = () => {
-    engine = createEngine(`mt:data:${user.uid}`, scheduleSync, { readyWithoutCache: !!user.local });
+    // A shop book has its own copy here, so a helper's own data never mixes into it.
+    const key = team ? `mt:data:${user.uid}:shop:${team.fileId}` : `mt:data:${user.uid}`;
+    engine = createEngine(key, scheduleSync, { readyWithoutCache: !!user.local });
     for (const [cb, off] of dataSubs) {
       off?.();
       dataSubs.set(cb, engine.subscribe(cb));
     }
   };
 
-  const hasToken = () => token && Date.now() < token.expiresAt - 60_000;
+  // A shop book also needs the drive.file permission.
+  const hasToken = () => token && Date.now() < token.expiresAt - 60_000 && (!team || token.file);
   const keepToken = () => user && save(tokenKey(user.uid), token);
   const dropToken = () => {
     token = null;
@@ -356,7 +383,7 @@ async function createDriveStore() {
   // --- Google sign-in (needs a tap, because it may open a popup)
   let tokenClient = null;
   let pending = null;
-  async function requestToken(interactive) {
+  async function requestToken(interactive, file = !!team) {
     await loadGis();
     tokenClient ||= google.accounts.oauth2.initTokenClient({
       client_id: googleClientId,
@@ -367,15 +394,19 @@ async function createDriveStore() {
     const resp = await new Promise((resolve, reject) => {
       pending = { resolve, reject };
       tokenClient.requestAccessToken({
-        prompt: interactive && !user ? 'select_account' : '',
+        prompt: interactive && (!user || user.local) ? 'select_account' : '',
         ...(user?.email && { login_hint: user.email }),
+        ...(file && { scope: `${SCOPES} ${FILE_SCOPE}` }),
       });
     });
     if (resp.error) throw new Error(resp.error_description || resp.error);
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE_SCOPE)) {
       throw new Error(t('Please tick the box that lets the app keep its data in your Google Drive. That is where your data is stored.'));
     }
-    token = { value: resp.access_token, expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000 };
+    if (file && !google.accounts.oauth2.hasGrantedAllScopes(resp, FILE_SCOPE)) {
+      throw new Error(t('Please tick the box that lets AmrPotli open the shop book it shares. It reaches only files the app made or you choose.'));
+    }
+    token = { value: resp.access_token, expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000, file };
   }
 
   async function api(url, opts = {}) {
@@ -384,7 +415,7 @@ async function createDriveStore() {
       dropToken();
       throw Object.assign(new Error(t('Google sign-in expired')), { needsAuth: true });
     }
-    if (!res.ok) throw new Error(`Google Drive error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) throw Object.assign(new Error(`Google Drive error ${res.status}: ${(await res.text()).slice(0, 200)}`), { status: res.status });
     return res;
   }
 
@@ -394,6 +425,7 @@ async function createDriveStore() {
   }
 
   async function readRemote() {
+    if (!fileId && team) fileId = team.fileId;
     if (!fileId) {
       const q = encodeURIComponent(`name='${FILE_NAME}'`);
       const list = await (
@@ -507,6 +539,7 @@ async function createDriveStore() {
     syncing = (async () => {
       setStatus('syncing');
       try {
+        if (!teamChecked) await checkTeam();
         const base = engine.doc;
         const startRev = engine.rev;
         const remote = await readRemote();
@@ -524,6 +557,8 @@ async function createDriveStore() {
         if (changedMeanwhile) again = true;
       } catch (e) {
         console.error(e);
+        // Removed from the shop, or the shop book was deleted.
+        if (team && e.status === 404) teamCb({ lost: true, role: team.role });
         setStatus(e.needsAuth ? 'tap' : navigator.onLine ? 'error' : 'offline');
       } finally {
         syncing = null;
@@ -537,6 +572,8 @@ async function createDriveStore() {
   }
 
   window.addEventListener('online', () => engine && sync());
+  // A shop book changes on other phones too: look for their entries every minute.
+  setInterval(() => team && engine && document.visibilityState === 'visible' && hasToken() && sync(), 60_000);
   // Coming back to the app: pick up changes made on other devices.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && engine && hasToken()) sync();
@@ -557,6 +594,109 @@ async function createDriveStore() {
       })
       .finally(() => (reconnecting = null));
     return reconnecting;
+  }
+
+  // ---- shop books
+  const validTeam = (x) => (x && typeof x.fileId === 'string' && ['owner', 'helper'].includes(x.role) ? x : null);
+
+  async function noteFile() {
+    const q = encodeURIComponent(`name='${TEAM_NOTE}'`);
+    const list = await (await api(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)&orderBy=modifiedTime desc`)).json();
+    return list.files?.[0]?.id || null;
+  }
+
+  // Which data file this account uses: another phone may have started or
+  // joined a shop, or left one.
+  async function checkTeam() {
+    const id = await noteFile();
+    let found = null;
+    if (id) found = validTeam(await (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json().catch(() => null));
+    teamChecked = true;
+    if ((found?.fileId || null) !== (team?.fileId || null)) {
+      // An owner's own data became the shop book, so changes not yet saved go with it.
+      switchTeam(found, found?.role === 'owner');
+      if (found && !token.file) throw Object.assign(new Error(t('Tap to connect to the shop book')), { needsAuth: true });
+    } else if (found) {
+      team = found;
+      save(teamKey(user.uid), team);
+    }
+  }
+
+  function switchTeam(next, carry = false) {
+    const old = engine;
+    team = next;
+    save(teamKey(user.uid), team);
+    fileId = null;
+    openEngine();
+    if (carry && old) engine.replace(mergeDocs(engine.doc, old.doc), true);
+    teamCb({ changed: true, role: team?.role || null });
+  }
+
+  async function writeNote(note) {
+    const id = await noteFile();
+    if (id) await api(`https://www.googleapis.com/drive/v3/files/${id}`, { method: 'DELETE' });
+    if (!note) return;
+    const boundary = 'mt' + newId();
+    const meta = JSON.stringify({ name: TEAM_NOTE, parents: ['appDataFolder'], mimeType: 'application/json' });
+    await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(note)}\r\n--${boundary}--`,
+    });
+  }
+
+  // The drive.file permission, asked for during a tap.
+  async function fileAccess() {
+    if (user.local) return signIn({ file: true });
+    if (!token?.file || !hasToken()) {
+      await requestToken(true, true);
+      keepToken();
+    }
+  }
+
+  // Owner: makes the shop book in the owner's Drive from this potli.
+  async function startShop(name) {
+    await fileAccess();
+    const boundary = 'mt' + newId();
+    const meta = JSON.stringify({
+      name: `AmrPotli shop book - ${name}.json`,
+      mimeType: 'application/json',
+      description: 'The shop book of AmrPotli, shared with the helpers you add in the app. Please do not edit or delete it.',
+      appProperties: { amrpotli: 'shop' },
+    });
+    const res = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(engine.doc)}\r\n--${boundary}--`,
+    });
+    const note = { fileId: (await res.json()).id, role: 'owner', name, owner: { email: user.email, name: user.displayName } };
+    await writeNote(note);
+    teamChecked = true;
+    switchTeam(note, true);
+    await sync();
+  }
+
+  // Helper: uses the shop book the owner shared (picked in Google's file picker).
+  async function joinShop(id) {
+    const meta = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,owners(displayName,emailAddress),capabilities(canEdit)`)).json();
+    const book = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json().catch(() => null);
+    if (!book || typeof book.accounts !== 'object' || typeof book.transactions !== 'object' || Array.isArray(book.accounts))
+      throw new Error(t('This file is not an AmrPotli shop book.'));
+    if (!meta.capabilities?.canEdit) throw new Error(t('The owner shared this shop book without letting you add to it. Ask them to add you again in AmrPotli.'));
+    const o = meta.owners?.[0] || {};
+    const note = { fileId: id, role: 'helper', name: meta.name.replace(/^AmrPotli shop book - |\.json$/g, ''), owner: { email: o.emailAddress || '', name: o.displayName || '' } };
+    await writeNote(note);
+    teamChecked = true;
+    switchTeam(note);
+    await sync();
+  }
+
+  // Helper: back to their own data. The shop book is not touched.
+  async function leaveShop() {
+    await writeNote(null).catch(() => {});
+    save(`mt:data:${user.uid}:shop:${team.fileId}`, null);
+    switchTeam(null);
+    await sync();
   }
 
   // Moves what was done before signing in into the signed-in account.
@@ -600,6 +740,13 @@ async function createDriveStore() {
     dropToken();
     fileId = null;
     engine?.clear();
+    // Every copy on this phone: the account's own data and any shop book.
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith(`mt:data:${user.uid}:`)) localStorage.removeItem(k);
+    } catch {}
+    save(teamKey(user.uid), null);
+    team = null;
+    teamChecked = false;
     engine = null;
     for (const [cb, off] of dataSubs) {
       off?.();
@@ -620,14 +767,16 @@ async function createDriveStore() {
   };
 
   // Called from a button tap.
-  async function signIn() {
-    await requestToken(true);
+  async function signIn({ file = false } = {}) {
+    await requestToken(true, file);
     const profile = await fetchProfile();
     const guest = user?.local ? engine.doc : null;
     if (!user || user.uid !== profile.uid) fileId = null;
     // Read the account's Drive first: if that fails, nothing has changed yet.
     const remote = guest ? await readRemote() : null;
     user = profile;
+    team = load(teamKey(user.uid));
+    teamChecked = false;
     save(LAST_USER_KEY, user);
     keepToken();
     openEngine();
@@ -665,6 +814,39 @@ async function createDriveStore() {
       cb(status);
     },
     signIn,
+    // Shop books (see the top of this file). Calls marked "tap" may open a Google window.
+    team: {
+      get link() {
+        return team;
+      },
+      onChange(cb) {
+        teamCb = cb;
+      },
+      start: (name) => startShop(name), // tap
+      // A token for Google's file picker. Tap.
+      async pickerToken() {
+        await fileAccess();
+        return token.value;
+      },
+      join: (id) => joinShop(id),
+      leave: () => leaveShop(),
+      // Lets one person (an email) add to the shop book. Google emails them.
+      async share(email, message) {
+        await fileAccess();
+        const res = await api(
+          `https://www.googleapis.com/drive/v3/files/${team.fileId}/permissions?sendNotificationEmail=true&emailMessage=${encodeURIComponent(message)}&fields=id`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'user', role: 'writer', emailAddress: email }) },
+        );
+        return (await res.json()).id;
+      },
+      async unshare(permissionId) {
+        await fileAccess();
+        await api(`https://www.googleapis.com/drive/v3/files/${team.fileId}/permissions/${permissionId}`, { method: 'DELETE' }).catch((e) => {
+          if (e.status !== 404) throw e; // already gone
+        });
+      },
+      save: mutate((x) => engine.saveTeam(x)),
+    },
     // Called from a button tap. Reconnects to Drive if needed, then syncs.
     // Before signing in, it signs in.
     async syncNow() {
@@ -706,6 +888,8 @@ async function createDriveStore() {
         await requestToken(true);
         keepToken();
       }
+      // An owner's shop book goes too; a helper's leaves the owner's book alone.
+      if (team?.role === 'owner') await api(`https://www.googleapis.com/drive/v3/files/${team.fileId}`, { method: 'DELETE' }).catch((e) => { if (e.status !== 404) throw e; });
       for (const f of await listFiles('')) await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' });
       const uid = user.uid;
       forget();
@@ -740,7 +924,8 @@ async function createDriveStore() {
         dataSubs.delete(cb);
       };
     },
-    saveTxn: mutate((t) => engine.saveTxn(t)),
+    // In a shop book every entry remembers who added it.
+    saveTxn: mutate((t) => engine.saveTxn(team ? { ...t, by: engine.doc.transactions[t.id]?.by || t.by || user.email } : t)),
     deleteTxn: mutate((id) => engine.deleteTxn(id)),
     saveAccount: mutate((a) => engine.saveAccount(a)),
     deleteAccount: mutate((id) => engine.deleteAccount(id)),

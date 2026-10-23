@@ -11,3 +11,9 @@ export const googleClientId = '500818833749-s37cmbrjlrdeon2a44idf5ibhi70d5sl.app
 // get more categories, and sends anonymous daily counts, plus contact details
 // or feedback when the user chooses to send them. null = not connected yet.
 export const firebaseProject = { projectId: 'vgfintrack-11a9c', apiKey: 'AIzaSyA72Snb52RhFTMfcwm5Me3GJ6WMf0GEsrA' };
+
+// Google's file picker, used once by a helper to open the shop book the owner
+// shared (team shops). The key works only on this website and only for the
+// picker; the number is the Google Cloud project's.
+export const pickerKey = 'AIzaSyDEMzZXWN2fhiquB83dL0NXHQ56TXn-wwk';
+export const googleProjectNumber = '500818833749';

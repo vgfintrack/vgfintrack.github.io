@@ -115,9 +115,10 @@ addBangla({
   'I set up the shop and add helpers': 'আমি দোকান সেটআপ করি আর সহকারী যোগ করি',
   'Employee or helper': 'কর্মচারী বা সহকারী',
   "I work in someone else's shop": 'আমি অন্যের দোকানে কাজ করি',
-  "Helpers will join the owner's shop with their own Gmail. This is coming in the next update. Until then, the owner can set up AmrPotli and keep the accounts.":
-    'সহকারীরা নিজের Gmail দিয়ে মালিকের দোকানে যুক্ত হবেন। এটি পরের আপডেটে আসছে। ততদিন মালিক আমার পোটলি সেটআপ করে হিসাব রাখতে পারেন।',
-  'Adding helpers to your shop is coming in the next update.': 'দোকানে সহকারী যোগ করার সুবিধা পরের আপডেটে আসছে।',
+  'Ask the shop owner to add your Gmail in their AmrPotli (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.':
+    'দোকানের মালিককে বলুন তাঁর আমার পোটলিতে আপনার Gmail যোগ করতে (Setup → টিম → সহকারী যোগ করুন)। তারপর নিচে চাপুন, সেই Gmail দিয়ে সাইন ইন করে দোকানের খাতাটি বেছে নিন।',
+  'Open the shop book': 'দোকানের খাতা খুলুন',
+  'Add your helpers in Setup → Team.': 'Setup → টিম থেকে আপনার সহকারীদের যোগ করুন।',
   'Install the app': 'অ্যাপটি ইনস্টল করুন',
   'Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.':
     'এটি আপনার নিজের Drive-এ সেভ করতে আর আমার পোটলি ব্যবহার শুরু করতে Google দিয়ে সাইন ইন করুন। শুধু আপনিই এটি দেখতে পারবেন।',
@@ -312,7 +313,12 @@ export function renderWizard(root, ctx) {
                 <p>${t('Who are you?')}</p>
                 ${option('role', 'owner', '🧑‍💼', 'Owner', 'I set up the shop and add helpers')}
                 ${option('role', 'helper', '🧑‍🔧', 'Employee or helper', "I work in someone else's shop")}
-                ${draft.role === 'helper' ? `<p class="ob-note">${t("Helpers will join the owner's shop with their own Gmail. This is coming in the next update. Until then, the owner can set up AmrPotli and keep the accounts.")}</p>` : ''}
+                ${
+                  draft.role === 'helper'
+                    ? `<p class="ob-note">${t('Ask the shop owner to add your Gmail in their AmrPotli (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.')}</p>
+                       <button type="button" class="btn primary wide" data-join>📒 ${t('Open the shop book')}</button>`
+                    : ''
+                }
               </div>`
             : ''
         }
@@ -429,7 +435,7 @@ export function renderWizard(root, ctx) {
       ${ctx.local ? `<p class="ob-lead">${t('Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.')}</p>` : `<p class="ob-lead">${
         shop() ? t('A healthy business writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
       }</p>
-      ${ctx.data?.settings?.team ? `<p class="muted ob-small">👥 ${t('Adding helpers to your shop is coming in the next update.')}</p>` : ''}
+      ${ctx.data?.settings?.team ? `<p class="muted ob-small">👥 ${t('Add your helpers in Setup → Team.')}</p>` : ''}
       <p class="muted ob-small">${t('Owe someone, or lent money to someone? Add it later with + → Loan.')}</p>`}`;
     },
   };
@@ -560,7 +566,10 @@ function bind(root, ctx, step) {
         go(root, ctx, 'who');
       }),
   );
-  $$('[data-signin]', root).forEach((b) => (b.onclick = () => ctx.signIn()));
+  // "I already use AmrPotli" on the greeting; "Sign in and start" after the setup.
+  $$('[data-signin]', root).forEach((b) => (b.onclick = () => ctx.signIn({ returning: step === 'hello' })));
+  const join = $('[data-join]', root);
+  if (join) join.onclick = () => ctx.joinShop();
   const restart = $('[data-restart]', root);
   if (restart)
     restart.onclick = () => {
