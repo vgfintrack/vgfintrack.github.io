@@ -79,6 +79,9 @@ ok(f.feeShown && f.info.includes('সার্ভিস চার্জ'), 'serv
 f = await say('1000 taka from bkash to cash service charge 18.5');
 ok(f.type === 'Transfer' && f.amount === '1000' && f.fee === '18.5', 'service charge 18.5: amount 1000, charge 18.5 ' + JSON.stringify(f));
 
+f = await say('bahut half kg sugar and a cake for 100 taka');
+ok(f.type === 'Expense' && f.amount === '100' && f.category === 'Food', '“half kg sugar and a cake for 100 taka”: ৳100, Food ' + f.category);
+
 f = await say('2 kg rice 120');
 ok(f.amount === '120', '“2 kg rice 120”: ৳120, the 2 kg is not money ' + f.amount);
 
