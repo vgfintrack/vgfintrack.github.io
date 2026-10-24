@@ -1,5 +1,5 @@
-// AmrPotli became FinnBlu: the new name, logo and colours, and a one-time note
-// for people who used the app before. The web address stays /AmrPotli/.
+// AmrPotli became FinnBlu: the new name, logo and colours. The old name is not
+// shown anywhere, also to people who used the app before. The address stays /AmrPotli/.
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
@@ -26,7 +26,7 @@ async function phone({ lang = 'en', dark = false } = {}) {
 }
 const oldName = /AmrPotli|আমার পোটলি|Potli|পোটলি/;
 
-// 2. someone with entries from before the new name sees the note once
+// 2. someone with entries from before the new name: FinnBlu only, no notice
 for (const lang of ['en', 'bn']) {
   const { ctx, p } = await phone({ lang });
   ok((await p.title()) === 'FinnBlu', `${lang}: page title`);
@@ -34,16 +34,13 @@ for (const lang of ['en', 'bn']) {
   if (await p.$('[data-start]')) await p.click('[data-start]');
   await p.setInputFiles('#welcome-import', '../fixtures/demo.json');
   await p.waitForSelector('.kpis');
-  const note = await p.textContent('.renamed-card').catch(() => '');
-  ok(lang === 'en' ? note.includes('AmrPotli is now FinnBlu') && note.includes('Same app, same data') : note.includes('AmrPotli এখন FinnBlu') && note.includes('একই হিসাব'), `${lang}: old user is told about the new name`);
-  ok(!(await p.$('.clip-card')), `${lang}: the note is not an SMS offer`);
-  const rest = await p.evaluate(() => { const c = document.querySelector('.renamed-card'); const t = document.body.innerText; return c ? t.replace(c.innerText, '') : t; });
-  ok(!oldName.test(rest), `${lang}: no old name anywhere else on the Dashboard`);
+  ok(!oldName.test(await p.evaluate(() => document.body.innerText)), `${lang}: no old name on the Dashboard, and no rename notice`);
+  ok(!(await p.$('.clip-card')), `${lang}: no other card in its place`);
   ok((await p.getAttribute('.topbar .brand img', 'alt')) === 'FinnBlu' && (await p.getAttribute('.topbar .brand img', 'src')).endsWith('lockup.svg'), `${lang}: FinnBlu logo in the top bar`);
-  await p.click('[data-renamed-ok]');
-  ok(!(await p.$('.renamed-card')), `${lang}: OK hides it`);
-  await p.reload(); await p.waitForSelector('.kpis');
-  ok(!(await p.$('.renamed-card')), `${lang}: and it stays hidden`);
+  for (const v of ['transactions', 'reports', 'setup']) {
+    await p.click(`.tabbar button[data-view=${v}]`); await p.waitForTimeout(300);
+    ok(!oldName.test(await p.evaluate(() => document.body.innerText)), `${lang}: no old name on ${v}`);
+  }
   ok(!p.errs.length, `${lang}: no errors ` + p.errs.join('|'));
   await ctx.close();
 }
@@ -60,7 +57,6 @@ for (const lang of ['en', 'bn']) {
   await p.click('[data-goal="0"]'); await p.click('[data-next]');
   ok((await p.textContent('.ob-title')).includes('FinnBlu is ready'), 'last step: “FinnBlu is ready”');
   await p.click('[data-finish=""]'); await p.waitForSelector('.kpis');
-  ok(!(await p.$('.renamed-card')), 'a new user is not told about the old name');
   await ctx.close();
 }
 
