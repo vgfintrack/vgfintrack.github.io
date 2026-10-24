@@ -2579,7 +2579,17 @@ async function speakEntry() {
       }
     }
     $('#txn-note').value = r.note;
+    // "service charge 18.5", or just "service charge": use the last rate, or ask.
+    if (r.fee != null && txnType !== 'Income') {
+      feeOpen = true;
+      $('#txn-fee').value = r.fee;
+    } else if (r.feeAsk && txnType !== 'Income') feeOpen = true;
     updateTxnHint();
+    if (r.feeAsk && txnType !== 'Income') {
+      if (!$('#txn-fee-suggest').hidden) $('#txn-fee-suggest').click();
+      else next = 'Filled in. Add the service charge, then tap Save.';
+      showFee();
+    }
     showSmsInfo(`🎤 “${esc(heard)}”<br>✓ ${esc(t(next))}`);
     used('voice');
   } catch (e) {

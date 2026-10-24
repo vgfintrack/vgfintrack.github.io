@@ -817,4 +817,5 @@ export const BN = {
   'No thanks': 'না, থাক',
   'Filled in. Pick the right category, then tap Save.': 'পূরণ হয়েছে। ঠিক ক্যাটাগরি বেছে নিয়ে সেভ চাপুন।',
   'Filled in. Check who it is with, then tap Save.': 'পূরণ হয়েছে। কার সাথে লেনদেন, দেখে নিয়ে সেভ চাপুন।',
+  'Filled in. Add the service charge, then tap Save.': 'পূরণ হয়েছে। সার্ভিস চার্জ লিখে সেভ চাপুন।',
 };

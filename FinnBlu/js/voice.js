@@ -18,6 +18,7 @@ const LAKH = /^(লাখ|লক্ষ|lakh|lac)$/;
 const FILLER = new Set(['টাকা', 'টাকার', 'টাকায়', 'tk', 'taka', 'takar', 'আর', 'এবং', 'and', 'plus', 'দিয়ে', 'হলো', 'হল', 'খরচ', 'লাগলো', 'লাগল', 'কিনলাম', 'দিলাম', 'আয়', 'ইনকাম', 'income'].map(nfc));
 
 const ONE = nfc('এক');
+const UNIT = new RegExp(nfc('^(?:kg|kgs|কেজি|কেজির|কেজিতে|g|gm|gram|grams|গ্রাম|litre|liter|litres|liters|লিটার|pcs|pc|piece|pieces|পিস|ডজন|dozen|হালি|packet|packets|প্যাকেট)$'), 'i');
 const TAKA = new RegExp(nfc('^(?:টাকা|টাকার|টাকায়|tk|taka|takar)$'), 'i');
 
 const BN = '০১২৩৪৫৬৭৮৯';
@@ -51,6 +52,10 @@ function findNumbers(words) {
     let t = numberWord(w);
     // "অন্য এক বন্ধু" (another friend): এক is a word, not ৳1, unless an amount follows.
     if (t && w === ONE && i + 1 < words.length && !numberWord(words[i + 1]) && !TAKA.test(words[i + 1])) t = null;
+    // "২ কেজি চাল ১২০": a quantity, not taka, when another amount is said.
+    if (t && i + 1 < words.length && UNIT.test(words[i + 1]) && words.some((x, j) => j > i + 1 && numberWord(x))) t = null;
+    // English speech writes "to" and "for" as 2 and 4: "from Bikash 2 cash".
+    if (t && (w === '2' || w === '4') && i > 0 && i + 1 < words.length && !numberWord(words[i - 1]) && !numberWord(words[i + 1]) && !TAKA.test(words[i + 1]) && words.some((x, j) => j !== i && (numberWord(x)?.n ?? 0) >= 10)) t = null;
     if (!t) return flush(i);
     if (start < 0) start = i;
     if (t.half) return (half = true);
@@ -117,7 +122,7 @@ const MONEY = [
   ['nagad', 'nagad'],
   ['upay', 'upay'],
   ['bank', 'ব্যাংক|ব্যাঙ্ক|bank'],
-  ['cash', 'ক্যাশ|cash|হাতে'],
+  ['cash', 'ক্যাশ|cash|হাতে|hand'],
 ].map(([k, re]) => [k, new RegExp(nfc(`^(?:${re})`), 'i')]);
 const MINE = new RegExp(nfc('^(?:আমার|my)$'), 'i');
 const FROM = new RegExp(nfc('^(?:থেকে|from)$'), 'i');
@@ -130,11 +135,21 @@ function moneyHits(words) {
     if (!m) return;
     let j = i + 1;
     while (j < words.length && ACCOUNT_WORD.test(words[j])) j++; // "ব্যাংক অ্যাকাউন্ট থেকে"
-    hits.push({ kind: m[0], mine: i > 0 && MINE.test(words[i - 1]), from: j < words.length && FROM_WORD.test(words[j]), into: INTO.test(w) });
+    // English puts the word first: "from Bikash to cash". Skip "my": "from my bank".
+    let k = i - 1;
+    while (k >= 0 && MINE.test(words[k])) k--;
+    const before = k >= 0 ? words[k].toLowerCase() : '';
+    hits.push({
+      kind: m[0],
+      mine: i > 0 && MINE.test(words[i - 1]),
+      from: (j < words.length && FROM_WORD.test(words[j])) || before === 'from',
+      into: INTO.test(w) || ['to', '2', 'into', 'in'].includes(before),
+    });
   });
   return hits;
 }
 const INTO = new RegExp(nfc('[েএ]$')); // "বিকাশে": into bKash
+const CHARGE = new RegExp(nfc('^(?:charge|charges|চার্জ|চার্জসহ|fee|ফি)$'), 'i');
 const TRANSFER_WORD = new RegExp(nfc('ট্রান্সফার|ট্রান্সফার|transfer|মুভ'), 'i');
 // Between the user's own accounts: "ব্যাংক থেকে বিকাশে পাঠালাম", "ব্যাংক অ্যাকাউন্ট থেকে
 // বিকাশে ট্রান্সফার করেছি", "ব্যাংক থেকে বিকাশ করেছি". Not when someone else is in it.
@@ -171,6 +186,17 @@ export function parseSpeech(raw, { expense = [], income = [] } = {}) {
     // amount-first speech for several items: shift labels left
     for (let i = 0; i < items.length; i++) items[i].label = label(nums[i].end, nums[i + 1]?.start ?? words.length);
   }
+  // "… service charge 18.5": the number after the charge word is the charge.
+  const ci = words.findIndex((w) => CHARGE.test(w));
+  let fee = null;
+  if (ci >= 0) {
+    const k = nums.findIndex((n) => n.start > ci);
+    if (k > 0) {
+      fee = nums[k].value;
+      nums.splice(k, 1);
+      items.splice(k, 1);
+    }
+  }
   const loan = LOANS.find(([, re]) => re.test(text))?.[0] || null;
   const transfer = loan ? null : ownTransfer(words, text);
   const type = loan ? 'Loan' : transfer ? 'Transfer' : !SPENT.test(text) && (INCOME.test(text) || words.some((w) => INCOME_WORD.test(w))) ? 'Income' : 'Expense';
@@ -194,6 +220,8 @@ export function parseSpeech(raw, { expense = [], income = [] } = {}) {
     category,
     loan,
     transfer,
+    fee,
+    feeAsk: ci >= 0 && fee == null,
     money: moneyHint(words, type === 'Income' || loan === 'borrow' || loan === 'collect'),
     words,
     heard: raw,
