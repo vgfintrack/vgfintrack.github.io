@@ -15,7 +15,7 @@ const HALF = nfc('সাড়ে');
 const HUNDRED = /^(শো|শ|শত|hundred)$/;
 const THOUSAND = /^(হাজার|thousand)$/;
 const LAKH = /^(লাখ|লক্ষ|lakh|lac)$/;
-const FILLER = new Set(['টাকা', 'টাকার', 'টাকায়', 'tk', 'taka', 'takar', 'আর', 'এবং', 'and', 'plus', 'দিয়ে', 'হলো', 'হল', 'খরচ', 'লাগলো', 'লাগল', 'কিনলাম', 'দিলাম'].map(nfc));
+const FILLER = new Set(['টাকা', 'টাকার', 'টাকায়', 'tk', 'taka', 'takar', 'আর', 'এবং', 'and', 'plus', 'দিয়ে', 'হলো', 'হল', 'খরচ', 'লাগলো', 'লাগল', 'কিনলাম', 'দিলাম', 'আয়', 'ইনকাম', 'income'].map(nfc));
 
 const BN = '০১২৩৪৫৬৭৮৯';
 const toLatin = (s) => s.replace(/[০-৯]/g, (d) => BN.indexOf(d));
@@ -92,7 +92,11 @@ const HINTS = [
 ].map(([phrases, words, names]) => [phrases?.map(nfc), words ? new Set(nfc(words).toLowerCase().split(' ')) : null, names]);
 const ENDING = /(গুলো|গুলি|টা|টি|ের|ে|র|য়|ও|s)$/;
 const hasWord = (set, w) => set.has(w) || set.has(w.replace(ENDING, ''));
-const INCOME = /পেলাম|পেয়েছি|পাইছি|পাইলাম|পেয়েছি|আসছে|এসেছে|received|got|salary|বেতন/i;
+// Income: "পেলাম", "বেতন", "ইনকাম ৪০০"… unless the words say the money went out
+// ("বেতন দিলাম" is paying a salary).
+const INCOME = new RegExp(nfc('পেলাম|পেয়েছি|পাইছি|পাইলাম|আসছে|এসেছে|পাঠিয়েছে|পাঠাইছে|received|got|salary|বেতন'), 'i');
+const INCOME_WORD = new RegExp(nfc('^(?:আয়|ইনকাম|income|earned|earning|bonus|বোনাস)$'), 'i');
+const SPENT = new RegExp(nfc('দিলাম|দিয়েছি|দিছি|পাঠালাম|পাঠাইলাম|পাঠিয়েছি|কিনলাম|কিনেছি|কিনছি|খরচ|expense|spent|paid|bought'), 'i');
 
 export function parseSpeech(raw, { expense = [], income = [] } = {}) {
   const text = nfc(raw).replace(/[,।?!]/g, ' ');
@@ -107,7 +111,7 @@ export function parseSpeech(raw, { expense = [], income = [] } = {}) {
     // amount-first speech for several items: shift labels left
     for (let i = 0; i < items.length; i++) items[i].label = label(nums[i].end, nums[i + 1]?.start ?? words.length);
   }
-  const type = INCOME.test(text) ? 'Income' : 'Expense';
+  const type = !SPENT.test(text) && (INCOME.test(text) || words.some((w) => INCOME_WORD.test(w))) ? 'Income' : 'Expense';
   const list = type === 'Income' ? income : expense;
   let category = null;
   const lower = words.map((w) => w.toLowerCase());
