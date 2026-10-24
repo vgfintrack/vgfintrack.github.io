@@ -1475,7 +1475,7 @@ function renderSimple() {
         ${savings ? `<span>💎 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
       </div>
     </div>
-    ${renamedCard()}${clipCard()}
+    ${clipCard()}
     ${tipsCard(1)}
     <div class="big-actions">
       <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
@@ -1921,7 +1921,7 @@ function renderDashboard() {
   $('#view-dashboard').innerHTML = `
     ${settings().simple && detailsOnce ? `<button class="btn wide back-simple" id="back-simple">🏠 ${t('Back to simple view')}</button>` : ''}
     ${G.streakPill(txns, C.today())}
-    ${renamedCard()}${clipCard()}
+    ${clipCard()}
     ${quickActions()}
     ${dueCard()}
     ${tipsCard()}
@@ -4012,20 +4012,6 @@ async function checkClipboard() {
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && setTimeout(checkClipboard, 400));
 addEventListener('focus', () => setTimeout(checkClipboard, 400));
 
-// Once, for people who used the app before it was renamed (24 Oct 2026).
-const RENAMED_KEY = 'mt:finnblu-seen';
-function renamedCard() {
-  try {
-    if (localStorage.getItem(RENAMED_KEY)) return '';
-  } catch {
-    return '';
-  }
-  if (!state.data.transactions.some((x) => x.date < '2026-10-24')) return '';
-  return `<div class="card renamed-card"><img src="icons/symbol.svg" alt="" width="34" height="34">
-    <div><strong>${t('AmrPotli is now FinnBlu')}</strong><div class="muted" style="font-size:13px">${t('Same app, same data, a new name and look.')}</div></div>
-    <div class="tip-actions"><button class="btn primary sm" data-renamed-ok>${t('OK')}</button></div></div>`;
-}
-
 function clipCard() {
   if (!clipOffer) return '';
   const { r } = clipOffer;
@@ -4035,14 +4021,6 @@ function clipCard() {
     <div class="tip-actions"><button class="btn primary sm" data-clip-add>${t('Add')}</button><button class="btn sm" data-clip-no>${t('No thanks')}</button></div></div>`;
 }
 function bindClip(root) {
-  const ok = $('[data-renamed-ok]', root);
-  if (ok)
-    ok.onclick = () => {
-      try {
-        localStorage.setItem(RENAMED_KEY, '1');
-      } catch {}
-      render();
-    };
   const add = $('[data-clip-add]', root);
   if (!add) return;
   add.onclick = () => {

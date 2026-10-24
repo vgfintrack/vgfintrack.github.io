@@ -4,7 +4,7 @@
 // connection) the saved copy is used. Google sign-in and Google Drive calls
 // are never touched: they always go straight to Google.
 
-const CACHE = 'amrpotli-app-v32';
+const CACHE = 'amrpotli-app-v33';
 const FONTS = 'amrpotli-fonts-1'; // kept across versions
 const NETWORK_TIMEOUT_MS = 4000;
 

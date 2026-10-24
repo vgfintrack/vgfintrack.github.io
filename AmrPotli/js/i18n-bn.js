@@ -815,7 +815,4 @@ export const BN = {
   // ---- shared or copied SMS
   'Add the SMS you copied?': 'কপি করা SMS-টি যোগ করবেন?',
   'No thanks': 'না, থাক',
-  // the new name
-  'AmrPotli is now FinnBlu': 'AmrPotli এখন FinnBlu',
-  'Same app, same data, a new name and look.': 'একই অ্যাপ, একই হিসাব, নতুন নাম আর চেহারা।',
 };
