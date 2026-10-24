@@ -212,7 +212,7 @@ def build():
         print('wrote', meta['out'])
     (ROOT / 'sitemap.xml').write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + ''.join(f'  <url><loc>{u}</loc></url>\n' for u in urls + [SITE + 'FinnBlu/privacy.html', SITE + 'FinnBlu/terms.html'])
+        + ''.join(f'  <url><loc>{u}</loc></url>\n' for u in urls + [SITE + 'FinnBlu/', SITE + 'FinnBlu/privacy.html', SITE + 'FinnBlu/terms.html'])
         + '</urlset>\n',
         encoding='utf-8',
     )
