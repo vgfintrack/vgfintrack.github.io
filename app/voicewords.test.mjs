@@ -30,6 +30,8 @@ async function say(sentence) {
       to: opt('#txn-to'),
       loan: document.querySelector('#txn-loan').value,
       info: document.querySelector('#sms-info').textContent,
+      fee: document.querySelector('#txn-fee').value,
+      feeShown: !document.querySelector('#txn-fee-field').hidden,
     };
   });
   f.errs = p.errs;
@@ -68,6 +70,17 @@ ok(f.type === 'Transfer' && f.amount === '10000' && /bank/i.test(f.account) && /
 
 f = await say('ব্যাংক তো বিকাশ করেছি ৫০০ টাকা');
 ok(f.type === 'Transfer' && f.amount === '500' && /bank/i.test(f.account) && /bkash/i.test(f.to), '“ব্যাংক তো বিকাশ করেছি” (থেকে misheard): Bank → bKash ' + JSON.stringify(f));
+
+f = await say('1000 Taka shot from Bikash 2 cast in hand service charges');
+ok(f.type === 'Transfer' && f.amount === '1000', '“…from Bikash 2 cast in hand…”: Transfer ৳1000, the “2” (to) not added: ' + f.amount);
+ok(/bkash/i.test(f.account) && /cash|hand/i.test(f.to), 'from bKash to Cash in Hand ' + f.account + ' → ' + f.to);
+ok(f.feeShown && f.info.includes('সার্ভিস চার্জ'), 'service charge said: the charge box is open and asks for it');
+
+f = await say('1000 taka from bkash to cash service charge 18.5');
+ok(f.type === 'Transfer' && f.amount === '1000' && f.fee === '18.5', 'service charge 18.5: amount 1000, charge 18.5 ' + JSON.stringify(f));
+
+f = await say('2 kg rice 120');
+ok(f.amount === '120', '“2 kg rice 120”: ৳120, the 2 kg is not money ' + f.amount);
 
 f = await say('আম্মুকে বিকাশ থেকে দুই হাজার পাঠালাম');
 ok(f.type === 'Expense' && /bkash/i.test(f.account), 'to Ammu from bKash: spending, paid from bKash ' + JSON.stringify(f));
