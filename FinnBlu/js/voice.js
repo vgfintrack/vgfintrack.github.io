@@ -110,10 +110,10 @@ const INCOME = new RegExp(nfc('পেলাম|পেয়েছি|পাই�
 const INCOME_WORD = new RegExp(nfc('^(?:আয়|ইনকাম|income|earned|earning|bonus|বোনাস)$'), 'i');
 // Loans. Order matters: "ফেরত দিলাম" (I paid back) before "ফেরত দিল" (they paid me back).
 const LOANS = [
-  ['repay', 'শোধ করলাম|শোধ করেছি|শোধ দিলাম|শোধ দিয়েছি|ফেরত দিলাম|ফেরত দিয়েছি|কিস্তি দিলাম|কিস্তি দিয়েছি|repaid|paid back'],
-  ['collect', 'ফেরত পেলাম|ফেরত পেয়েছি|ফেরত দিল|ফেরত দিয়েছে|ফেরত দিছে|শোধ করল|শোধ করেছে|শোধ দিল|শোধ দিয়েছে|paid me back|got back'],
-  ['lend', '(?:ধার|লোন|কর্জ|হাওলাত) ?(?:দিলাম|দিয়েছি|দিছি)|\\blent\\b|\\blend\\b'],
-  ['borrow', '(?:ধার|লোন|কর্জ|হাওলাত) ?(?:নিলাম|নিয়েছি|নিছি|পেলাম|পেয়েছি|আনলাম|এনেছি)|borrowed|\\bborrow\\b'],
+  ['repay', 'শোধ করলাম|শোধ করেছি|শোধ দিলাম|শোধ দিয়েছি|শোধ করা হয়েছে|শোধ হয়েছে|শোধ হলো|ফেরত দিলাম|ফেরত দিয়েছি|কিস্তি দিলাম|কিস্তি দিয়েছি|কিস্তি দেওয়া হয়েছে|কিস্তি পরিশোধ|repaid|paid back|loan paid|paid (?:the |my )?(?:loan|installment|instalment|emi)|(?:emi|installment|instalment) paid'],
+  ['collect', 'ফেরত পেলাম|ফেরত পেয়েছি|ফেরত দিল|ফেরত দিয়েছে|ফেরত দিছে|শোধ করল|শোধ করেছে|শোধ দিল|শোধ দিয়েছে|শোধ পেলাম|শোধ পেয়েছি|paid me back|got back'],
+  ['lend', '(?:ধার|লোন|কর্জ|হাওলাত|ঋণ) ?(?:দিলাম|দিয়েছি|দিছি)|\\blent\\b|\\blend\\b'],
+  ['borrow', '(?:ধার|লোন|কর্জ|হাওলাত|ঋণ) ?(?:নিলাম|নিয়েছি|নিছি|পেলাম|পেয়েছি|আনলাম|এনেছি)|borrowed|\\bborrow\\b|took (?:a )?loan'],
 ].map(([k, re]) => [k, new RegExp(nfc(re), 'i')]);
 // Where the money was: "আমার বিকাশে এসেছে", "ব্যাংক থেকে দিলাম".
 const MONEY = [
