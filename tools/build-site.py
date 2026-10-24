@@ -86,9 +86,9 @@ def expand(body, root):
 def head(meta, root):
     is_home = meta['out'] == 'index.html'
     redirect = (
-        "    // A home-screen install from before the app moved to /AmrPotli/ opens here\n"
+        "    // A home-screen install from before the app moved to /FinnBlu/ opens here\n"
         "    // in app mode: send it straight to the app.\n"
-        "    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) location.replace('AmrPotli/');\n"
+        "    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) location.replace('FinnBlu/');\n"
         if is_home else ''
     )
     url = SITE + meta['out'].replace('index.html', '')
@@ -149,7 +149,7 @@ def nav(meta, root):
         <button type="button" data-l="bn">বাং</button>
       </div>
       <button type="button" class="theme-btn" aria-label="Day or night">{icon('moon', 'sk to-dark')}{icon('sun', 'sk to-light')}</button>
-      <a class="btn primary sm" href="{root}AmrPotli/">{bi('Open app', 'অ্যাপ খুলুন')}</a>
+      <a class="btn primary sm" href="{root}FinnBlu/">{bi('Open app', 'অ্যাপ খুলুন')}</a>
       <button type="button" class="menu-btn" aria-label="Menu" aria-expanded="false">{icon('menu', 'sk to-open')}{icon('x', 'sk to-close')}</button>
     </div>
   </div>
@@ -171,9 +171,9 @@ def foot(root):
         <a class="logo" href="{root}./" aria-label="FinnBlu home"><img class="lockup" src="{root}assets/brand/finnblu-lockup-primary.svg" alt="FinnBlu" width="135" height="35"></a>
         <p>{bi('A private money tracker for life and small business in Bangladesh.', 'বাংলাদেশের জীবন আর ছোট ব্যবসার জন্য প্রাইভেট টাকার হিসাব।')}</p>
       </div>
-      {col(bi('App', 'অ্যাপ'), [(f'{root}AmrPotli/', bi('Open FinnBlu', 'FinnBlu খুলুন')), (f'{root}AmrPotli/?install', bi(icon('smartphone') + ' Install', icon('smartphone') + ' ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
+      {col(bi('App', 'অ্যাপ'), [(f'{root}FinnBlu/', bi('Open FinnBlu', 'FinnBlu খুলুন')), (f'{root}FinnBlu/?install', bi(icon('smartphone') + ' Install', icon('smartphone') + ' ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
       {col(bi('Guides', 'গাইড'), [(f'{root}guides/start.html', bi('Get started', 'শুরু করুন')), (f'{root}guides/', bi('Guide for you', 'আপনার গাইড')), (f'{root}guides/how-to.html', bi('How to…', 'কীভাবে করবেন')), (f'{root}faq.html', bi('Questions', 'প্রশ্নোত্তর'))])}
-      {col(bi('FinnBlu', 'FinnBlu'), [(f'{root}about.html', bi('About us', 'আমাদের কথা')), (feedback, bi('Send feedback', 'মতামত পাঠান')), (f'{root}AmrPotli/privacy.html', bi('Privacy', 'প্রাইভেসি')), (f'{root}AmrPotli/terms.html', bi('Terms of use', 'ব্যবহারের শর্তাবলি'))])}
+      {col(bi('FinnBlu', 'FinnBlu'), [(f'{root}about.html', bi('About us', 'আমাদের কথা')), (feedback, bi('Send feedback', 'মতামত পাঠান')), (f'{root}FinnBlu/privacy.html', bi('Privacy', 'প্রাইভেসি')), (f'{root}FinnBlu/terms.html', bi('Terms of use', 'ব্যবহারের শর্তাবলি'))])}
     </div>
     <div class="foot-base">
       <span>© 2026 vgfintrack · FinnBlu</span>
@@ -212,7 +212,7 @@ def build():
         print('wrote', meta['out'])
     (ROOT / 'sitemap.xml').write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + ''.join(f'  <url><loc>{u}</loc></url>\n' for u in urls + [SITE + 'AmrPotli/privacy.html', SITE + 'AmrPotli/terms.html'])
+        + ''.join(f'  <url><loc>{u}</loc></url>\n' for u in urls + [SITE + 'FinnBlu/privacy.html', SITE + 'FinnBlu/terms.html'])
         + '</urlset>\n',
         encoding='utf-8',
     )

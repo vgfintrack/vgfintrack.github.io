@@ -767,7 +767,7 @@ export const BN = {
   'That is your own email. Write the helper’s.': 'এটা আপনার নিজের ইমেইল। সহকারীরটা লিখুন।',
   '{email} is already a helper.': '{email} আগে থেকেই সহকারী।',
   'My shop': 'আমার দোকান',
-  'You are added as a helper in {shop} on FinnBlu. On your phone open vgfintrack.github.io/AmrPotli → Tap to start → For business → A team → Employee or helper, and choose this shop book.': 'FinnBlu-তে আপনাকে {shop}-এর সহকারী হিসেবে যোগ করা হয়েছে। ফোনে vgfintrack.github.io/AmrPotli খুলুন → শুরু করতে ট্যাপ করুন → ব্যবসার জন্য → একটি টিম → কর্মচারী বা সহকারী, তারপর এই দোকানের খাতাটি বেছে নিন।',
+  'You are added as a helper in {shop} on FinnBlu. On your phone open vgfintrack.github.io/FinnBlu → Tap to start → For business → A team → Employee or helper, and choose this shop book.': 'FinnBlu-তে আপনাকে {shop}-এর সহকারী হিসেবে যোগ করা হয়েছে। ফোনে vgfintrack.github.io/FinnBlu খুলুন → শুরু করতে ট্যাপ করুন → ব্যবসার জন্য → একটি টিম → কর্মচারী বা সহকারী, তারপর এই দোকানের খাতাটি বেছে নিন।',
   '{name} can now open the shop book. Google has emailed them.': '{name} এখন দোকানের খাতা খুলতে পারবেন। Google তাঁকে ইমেইল পাঠিয়েছে।',
   'You joined {shop}.': 'আপনি {shop}-এ যুক্ত হয়েছেন।',
   'You can no longer open {shop}. The owner may have removed you.': 'আপনি আর {shop} খুলতে পারছেন না। মালিক হয়তো আপনাকে বাদ দিয়েছেন।',

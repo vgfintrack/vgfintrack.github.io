@@ -169,7 +169,7 @@ function page(ctx, { title, subtitle, body, declaration }) {
          <div class="sign"><div>Signature</div><div>Date</div></div></div>`
       : ''
   }
-  <footer>Prepared by the holder from their own records in FinnBlu (vgfintrack.github.io/AmrPotli). It is not issued or verified by a bank,
+  <footer>Prepared by the holder from their own records in FinnBlu (vgfintrack.github.io/FinnBlu). It is not issued or verified by a bank,
   mobile financial service or the National Board of Revenue. Where an official document is required (for example a bank-certified
   statement for a visa), attach that as well.</footer>
 </div>

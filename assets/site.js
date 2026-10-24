@@ -45,7 +45,7 @@
 
   // ---- the FinnBlu team: website notice and the contact forms (company.js is shared with the app)
   const root = new URL('..', document.currentScript?.src || location.href);
-  const company = () => import(new URL('AmrPotli/js/company.js', root).href);
+  const company = () => import(new URL('FinnBlu/js/company.js', root).href);
   const bn = () => html.lang === 'bn';
   company()
     .then(async (C) => {

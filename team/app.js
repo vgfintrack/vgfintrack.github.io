@@ -11,8 +11,8 @@ import {
   serverTimestamp, Timestamp, query, orderBy, limit, where, documentId,
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 import { firebaseConfig, OWNER } from './config.js';
-import { PROFESSIONS } from '../AmrPotli/js/professions.js';
-import { DISTRICTS, DIVISIONS } from '../AmrPotli/js/districts.js';
+import { PROFESSIONS } from '../FinnBlu/js/professions.js';
+import { DISTRICTS, DIVISIONS } from '../FinnBlu/js/districts.js';
 import { icon } from './icons.js';
 
 // ---------------------------------------------------------------- helpers

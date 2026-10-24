@@ -28,6 +28,6 @@ Use the project the app already uses: **vgfintrack-11a9c**, signed in as
    messagingSenderId, appId) and send it to whoever updates the code. These values are not secret.
 7. In the code:
    - `team/config.js`: `export const firebaseConfig = { …the whole config… };`
-   - `AmrPotli/js/config.js`: `export const firebaseProject = { projectId: '…', apiKey: '…' };`
+   - `FinnBlu/js/config.js`: `export const firebaseProject = { projectId: '…', apiKey: '…' };`
 
 Then open <https://vgfintrack.github.io/team/> and sign in with vgfintrack@gmail.com.

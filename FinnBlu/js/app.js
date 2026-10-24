@@ -802,7 +802,7 @@ function setupTeamDialog() {
       if (!shopLink()) await state.store.team.start($('#helper-shop').value.trim().slice(0, 40) || t('My shop'));
       const permissionId = await state.store.team.share(
         email,
-        t('You are added as a helper in {shop} on FinnBlu. On your phone open vgfintrack.github.io/AmrPotli → Tap to start → For business → A team → Employee or helper, and choose this shop book.', { shop: shopLink().name }),
+        t('You are added as a helper in {shop} on FinnBlu. On your phone open vgfintrack.github.io/FinnBlu → Tap to start → For business → A team → Employee or helper, and choose this shop book.', { shop: shopLink().name }),
       );
       const team = teamData() || {};
       await state.store.team.save({ helpersSeeMoney: false, ...team, members: [...(team.members || []), { email, name, permissionId, addedAt: C.today() }] });
