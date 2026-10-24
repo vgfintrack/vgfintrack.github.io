@@ -45,6 +45,12 @@ async function run(said, { support = true, fail = null, lang = 'bn' } = {}) {
   ok(await p.$eval('#txn-type button[data-type=Income]', (e) => e.classList.contains('active')) && (await p.inputValue('#txn-amount')) === '5000' && (await p.inputValue('#txn-category')) === 'Household Money', 'পেলাম: income 5000, Household Money');
   await ctx.close();
 }
+for (const [said, type, amt] of [['ইনকাম ৪০০ টাকা', 'Income', '400'], ['income 400', 'Income', '400'], ['বেতন দিলাম ৮০০০', 'Expense', '8000']]) {
+  const { ctx, p } = await run(said);
+  await p.click('#voice-btn'); await p.waitForFunction(() => !document.querySelector('#voice-btn').classList.contains('listening'));
+  ok((await p.$eval(`#txn-type button[data-type=${type}]`, (e) => e.classList.contains('active'))) && (await p.inputValue('#txn-amount')) === amt, `“${said}”: ${type} ${amt}`);
+  await ctx.close();
+}
 {
   const { ctx, p } = await run('', { fail: 'not-allowed' });
   await p.click('#voice-btn'); await p.waitForFunction(() => !document.querySelector('#voice-btn').classList.contains('listening'));
