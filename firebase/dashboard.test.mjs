@@ -223,6 +223,6 @@ ok(!(await p.$('[data-act="fb-status"]')) , 'guest cannot change feedback');
 await G.ctx.close();
 const X = await open('random@gmail.com');
 await X.p.waitForTimeout(800);
-ok(!(await X.p.isHidden('#gate')) && (await X.p.textContent('#gate-error')).includes('not on the AmrPotli team'), 'a stranger is told to ask the owner');
+ok(!(await X.p.isHidden('#gate')) && (await X.p.textContent('#gate-error')).includes('not on the FinnBlu team'), 'a stranger is told to ask the owner');
 await X.ctx.close();
 await b.close();

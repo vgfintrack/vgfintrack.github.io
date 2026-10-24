@@ -1,4 +1,4 @@
-// Runs the AmrPotli tests against a checkout of the site (the main branch).
+// Runs the FinnBlu tests against a checkout of the site (the main branch).
 //
 //   node run.mjs              everything
 //   node run.mjs app          the app's browser tests
@@ -19,7 +19,7 @@ const KIT = dirname(fileURLToPath(import.meta.url));
 const SITE = resolve(process.env.AMRPOTLI_SITE || join(KIT, '..', 'vgfintrack.github.io'));
 const OUT = join(KIT, 'out'); // screenshots and the site copy; not kept in git
 if (!existsSync(join(SITE, 'AmrPotli', 'index.html'))) {
-  console.error(`No AmrPotli site at ${SITE}. Set AMRPOTLI_SITE to the main branch checkout.`);
+  console.error(`No FinnBlu site at ${SITE}. Set AMRPOTLI_SITE to the main branch checkout.`);
   process.exit(1);
 }
 mkdirSync(OUT, { recursive: true });

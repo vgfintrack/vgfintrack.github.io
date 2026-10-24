@@ -38,8 +38,8 @@ ok(await p.isVisible('#helper-shop'), 'first helper: asks the shop name');
 await p.fill('#helper-shop', 'Rahim Store'); await p.fill('#helper-email', 'Karim@Gmail.com'); await p.fill('#helper-name', 'Karim');
 await p.click('#helper-go');
 await p.waitForFunction(() => !document.querySelector('#helper-dialog').open, null, { timeout: 8000 });
-const [bookId, book] = files().find(([, f]) => f.name.startsWith('AmrPotli shop book')) || [];
-ok(book && book.name === 'AmrPotli shop book - Rahim Store.json' && book.owner === 'rahim' && !book.parents.includes('appDataFolder'), 'the shop book is a file in Rahim’s own Drive: ' + book?.name);
+const [bookId, book] = files().find(([, f]) => f.name.startsWith('FinnBlu shop book')) || [];
+ok(book && book.name === 'FinnBlu shop book - Rahim Store.json' && book.owner === 'rahim' && !book.parents.includes('appDataFolder'), 'the shop book is a file in Rahim’s own Drive: ' + book?.name);
 ok(book.perms.length === 1 && book.perms[0].email === 'karim@gmail.com' && book.perms[0].role === 'writer', 'shared with Karim only, who can add to it');
 ok(drive.mails[0]?.to === 'karim@gmail.com' && drive.mails[0].message.includes('Employee or helper'), 'Google emails Karim how to join');
 ok(files().some(([, f]) => f.owner === 'rahim' && f.name === 'amrpotli-team.json'), 'a note in Rahim’s app folder says which book he uses');
@@ -111,7 +111,7 @@ ok((await q.textContent('#team-bar')).includes('can no longer open Rahim Store')
 await q.click('[data-team-back]');
 const gone = await q.waitForFunction(() => !Object.keys(localStorage).some((k) => k.includes(':shop:')) && !document.querySelector('.helper-hello'), null, { timeout: 8000 }).then(() => true, () => false);
 await q.waitForTimeout(2000); // and it stays gone after the next syncs
-ok(gone && (await q.evaluate(() => !Object.keys(localStorage).some((k) => k.includes(':shop:')))), 'Karim back to his own AmrPotli; no copy of the shop left on his phone');
+ok(gone && (await q.evaluate(() => !Object.keys(localStorage).some((k) => k.includes(':shop:')))), 'Karim back to his own FinnBlu; no copy of the shop left on his phone');
 await q.waitForTimeout(2500);
 const own = files().find(([, f]) => f.owner === 'karim' && f.name === 'amrpotli.json');
 ok(!own || !Object.keys(JSON.parse(own[1].content).transactions || {}).length, 'and the shop’s entries did not land in Karim’s own Drive file');

@@ -10,7 +10,7 @@ await p.screenshot({ path: 'home.png', fullPage: true });
 await p.click('.hero .btn.primary');
 await p.waitForURL('**/AmrPotli/');
 await p.waitForSelector('#login:not([hidden]), #app:not([hidden])');
-ok(p.url().endsWith('/AmrPotli/'), 'Open AmrPotli goes to /AmrPotli/');
+ok(p.url().endsWith('/AmrPotli/'), 'Open FinnBlu goes to /AmrPotli/');
 const icon = await p.evaluate(async () => (await fetch('icons/icon-192.png')).status);
 const man = await p.evaluate(async () => (await (await fetch('manifest.json')).json()).start_url);
 ok(icon === 200 && man === './', 'app files load from the new folder (icon, manifest start_url ./)');

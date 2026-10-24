@@ -17,7 +17,7 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(db, 'public/limits'), { salt, free: 24, grants: { [h('rina@gmail.com')]: { limit: 0 }, [h('sabbir@gmail.com')]: { limit: 40 }, [h('old@gmail.com')]: { limit: 0, until: '2020-01-01' } } });
   await setDoc(doc(db, 'public/notice'), {
     app: { on: true, en: 'New: receipt photos', bn: 'নতুন: রসিদের ছবি', link: 'https://vgfintrack.github.io/guides/how-to.html#receipt', id: 11 },
-    site: { on: true, en: 'AmrPotli is looking for testers in Polashi', bn: 'পলাশীতে টেস্টার খুঁজছি', link: 'https://vgfintrack.github.io/contact.html#tester', id: 12 },
+    site: { on: true, en: 'FinnBlu is looking for testers in Polashi', bn: 'পলাশীতে টেস্টার খুঁজছি', link: 'https://vgfintrack.github.io/contact.html#tester', id: 12 },
   });
 });
 const read = async (fn) => { let out; await env.withSecurityRulesDisabled(async (c) => { out = await fn(c.firestore()); }); return out; };

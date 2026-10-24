@@ -1,4 +1,4 @@
-// Potli tips and the "How do I…?" help. Made-up people, fixed dates.
+// FinnBlu tips and the "How do I…?" help. Made-up people, fixed dates.
 import { chromium } from 'playwright';
 import { personal, shop } from '../fixtures/tips-people.mjs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
@@ -27,7 +27,7 @@ const tipsText = (p) => p.$$eval('.pt-tip p', (e) => e.map((x) => x.textContent.
 {
   const { ctx, p } = await open(personal, '2026-10-11');
   const tips = await tipsText(p);
-  ok(tips.length === 2 && (await p.textContent('.potli-tips')).includes('Potli says'), 'Potli says: 2 tips on the dashboard');
+  ok(tips.length === 2 && (await p.textContent('.potli-tips')).includes('FinnBlu tips'), 'FinnBlu tips: 2 tips on the dashboard');
   await p.click('[data-tips-more]');
   const all = await tipsText(p);
   const has = (s) => all.some((x) => x.includes(s));
@@ -68,7 +68,7 @@ const tipsText = (p) => p.$$eval('.pt-tip p', (e) => e.map((x) => x.textContent.
 {
   const { ctx, p } = await open(personal, '2026-10-11', 'bn');
   const t = await p.textContent('.potli-tips');
-  ok(t.includes('পোটলি বলছে') && t.includes('আগামীকাল'), 'Bangla: পোটলি বলছে … আগামীকাল');
+  ok(t.includes('FinnBlu tips') && t.includes('আগামীকাল'), 'Bangla: FinnBlu tips … আগামীকাল');
   await p.screenshot({ path: 'tips-bn.png' });
   await p.click('.potli-tips [data-help-open]');
   await p.fill('#help-q', 'লোন');

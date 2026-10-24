@@ -33,7 +33,7 @@ for (const [lang, theme, w] of [['bn', 'light', 360], ['en', 'dark', 320], ['bn'
     await p.click('[data-next]');
   }
   ok(!bad, `${tag}: fits the screen on every step`);
-  if (lang === 'bn') ok((await p.textContent('.ob-title')).includes('পোটলি তৈরি'), `${tag}: Bangla text`);
+  if (lang === 'bn') ok((await p.textContent('.ob-title')).includes('FinnBlu তৈরি'), `${tag}: Bangla text`);
   await p.click('[data-finish=""]');
   await p.waitForSelector('.guide');
   await p.screenshot({ path: `obx-${tag}-guide.png` });

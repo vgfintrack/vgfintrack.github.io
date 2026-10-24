@@ -1,4 +1,4 @@
-// An SMS shared to AmrPotli (Android's Share menu) or copied before opening it.
+// An SMS shared to FinnBlu (Android's Share menu) or copied before opening it.
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };

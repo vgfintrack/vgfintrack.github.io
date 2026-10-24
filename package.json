@@ -2,7 +2,7 @@
   "name": "amrpotli-tests",
   "private": true,
   "type": "module",
-  "description": "Tests for AmrPotli, kept apart from the app. Local Firebase emulators, fake Google sign-in, made-up data only.",
+  "description": "Tests for FinnBlu, kept apart from the app. Local Firebase emulators, fake Google sign-in, made-up data only.",
   "scripts": {
     "test": "node run.mjs",
     "test:app": "node run.mjs app",

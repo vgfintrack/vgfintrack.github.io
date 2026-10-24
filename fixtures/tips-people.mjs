@@ -1,4 +1,4 @@
-// Made-up people for the Potli tips test and the website screenshots.
+// Made-up people for the FinnBlu tips test and the website screenshots.
 // personal: a job holder on Sunday 11 Oct 2026; shop: a grocery on Thursday 15 Oct 2026.
 let n = 0;
 const tx = (date, type, category, account, amount, extra = {}) => ({ id: 'x' + ++n, date, type, category, account, toAccount: null, amount, note: '', updatedAt: n, createdAt: n, ...extra });

@@ -71,7 +71,7 @@ await p.goto(BASE);
 await p.waitForSelector('[data-start]');
 ok(!(await vis(p, '#login')) && !(await vis(p, '.tabbar')), 'opens on the greeting, not the login screen');
 await p.click('[data-start]');
-ok((await opts(p)).join('|') === 'For personal use|For business|I already use AmrPotli', 'three choices: ' + (await opts(p)).join('|'));
+ok((await opts(p)).join('|') === 'For personal use|For business|I already use FinnBlu', 'three choices: ' + (await opts(p)).join('|'));
 // personal → professions as before
 await p.click('[data-track=personal]');
 ok(await p.isVisible('[data-persona=job]') && !(await p.$('.biz-grid')), 'personal: professions');
@@ -118,7 +118,7 @@ await q.click('[data-finish=""]'); await q.waitForSelector('.kpis'); await waitS
 const kd = remoteDoc('karim');
 ok(kd.settings.mode === 'shop' && kd.settings.profession.business === 'pharmacy' && kd.settings.team?.role === 'owner', 'saved: pharmacy shop, team owner');
 
-// 3. "I already use AmrPotli": straight into an existing account
+// 3. "I already use FinnBlu": straight into an existing account
 const C = await device(browser, 'rina');
 await C.page.goto(BASE);
 await C.page.click('[data-start]'); await C.page.click('[data-signin]');

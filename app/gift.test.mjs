@@ -38,12 +38,12 @@ ok(await p.isHidden('#gift-bar'), 'not on the list: no message');
 // owner gives 50
 grants = { 'nusrat.test@gmail.com': { limit: 50 } };
 await reopen();
-ok((await p.textContent('#gift-bar')).includes('Good news! The AmrPotli team gave you 50 categories.'), 'given 50: ' + (await p.textContent('#gift-bar')));
+ok((await p.textContent('#gift-bar')).includes('Good news! The FinnBlu team gave you 50 categories.'), 'given 50: ' + (await p.textContent('#gift-bar')));
 await p.screenshot({ path: 'gift-50.png' });
 await p.click('#gift-bar button');
 ok(await p.isHidden('#gift-bar'), 'OK closes it');
 await p.click('.tabbar button[data-view=setup]');
-ok(/of 50 categories used · 🎁 from the AmrPotli team/.test(await p.textContent('.cat-count')), 'Setup: ' + (await p.textContent('.cat-count')));
+ok(/of 50 categories used · 🎁 from the FinnBlu team/.test(await p.textContent('.cat-count')), 'Setup: ' + (await p.textContent('.cat-count')));
 await reopen();
 ok(await p.isHidden('#gift-bar'), 'shown once, not on every open');
 // raised to unlimited with an end date
@@ -58,6 +58,6 @@ ok((await p.textContent('#gift-bar')).includes('Your extra categories have ended
 await p.evaluate(() => localStorage.setItem('mt:lang', 'bn'));
 grants = { 'nusrat.test@gmail.com': { limit: 40 } };
 await reopen();
-ok((await p.textContent('#gift-bar')).includes('সুখবর! আমার পোটলি টিম আপনাকে 40টি ক্যাটাগরি দিয়েছে।'), 'Bangla: ' + (await p.textContent('#gift-bar')));
+ok((await p.textContent('#gift-bar')).includes('সুখবর! FinnBlu টিম আপনাকে 40টি ক্যাটাগরি দিয়েছে।'), 'Bangla: ' + (await p.textContent('#gift-bar')));
 ok(errs.length === 0, 'no errors ' + errs.join('|'));
 await b.close();

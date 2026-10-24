@@ -1,4 +1,4 @@
-# AmrPotli tests (kept apart from the app)
+# FinnBlu tests (kept apart from the app)
 
 This branch (`testing`) holds only tests. It shares no history with `main`, is
 never merged into it, and GitHub Pages does not publish it. The app and the
