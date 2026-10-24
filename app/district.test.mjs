@@ -8,7 +8,7 @@ async function fresh(lang = 'en', persona = 'student') {
   await ctx.addInitScript((l) => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', l); sessionStorage.x = 1; } }, lang);
   const p = await ctx.newPage();
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.click('[data-start]'); await p.click('[data-track=personal]'); await p.click(`[data-persona=${persona}]`); await p.click('[data-next]');
   for (let i = 0; i < 4; i++) await p.click('[data-next]');
   await p.click('[data-goal="0"]'); await p.click('[data-next]');
@@ -55,7 +55,7 @@ async function addExpense(p) {
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
   await ctx.addInitScript(() => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', 'bn'); sessionStorage.x = 1; } });
   const p = await ctx.newPage();
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.click('[data-start]'); await p.click('[data-track=business]'); await p.click('.biz-grid [data-prof-id=grocery]'); await p.click('[data-next]');
   await p.click('[data-team=solo]'); await p.click('[data-next]');
   for (let i = 0; i < 4; i++) await p.click('[data-next]');

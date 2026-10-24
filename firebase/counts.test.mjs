@@ -37,7 +37,7 @@ const drive = {};
 async function device(user, { lang = 'en', tz = 'Asia/Dhaka' } = {}) {
   const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: tz });
   await ctx.addInitScript(([u, l]) => { window.__mockUser = u; if (!sessionStorage.x) { localStorage.setItem('mt:lang', l); sessionStorage.x = 1; } }, [user, lang]);
-  await ctx.route('**/AmrPotli/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';\nexport const firebaseProject = { projectId: 'demo-amrpotli', apiKey: 'demo' };" }));
+  await ctx.route('**/FinnBlu/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';\nexport const firebaseProject = { projectId: 'demo-amrpotli', apiKey: 'demo' };" }));
   await ctx.route('https://accounts.google.com/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: FAKE_GIS }));
   // Firestore REST -> the local emulator
   await ctx.route('https://firestore.googleapis.com/**', async (r) => {
@@ -66,7 +66,7 @@ async function device(user, { lang = 'en', tz = 'Asia/Dhaka' } = {}) {
   });
   const p = await ctx.newPage();
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message)); p.on('dialog', (d) => d.accept());
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.click('[data-start]'); await p.click('[data-signin]');
   await p.waitForSelector('#welcome-import', { state: 'attached' });
   await p.setInputFiles('#welcome-import', '../fixtures/demo-prof.json');
@@ -146,7 +146,7 @@ ok(!/rina|sabbir|random|old@|gmail/i.test(ids), 'nothing about who they are');
 
 // ---------------------------------------------------------------- website: notice and contact forms
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-await ctx.route('**/AmrPotli/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'x';\nexport const firebaseProject = { projectId: 'demo-amrpotli', apiKey: 'demo' };" }));
+await ctx.route('**/FinnBlu/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'x';\nexport const firebaseProject = { projectId: 'demo-amrpotli', apiKey: 'demo' };" }));
 await ctx.route('https://firestore.googleapis.com/**', async (r) => {
   const req = r.request();
   const res = await fetch(req.url().replace('https://firestore.googleapis.com', 'http://127.0.0.1:8085'), { method: req.method(), headers: { 'Content-Type': 'application/json' }, body: req.postData() || undefined });

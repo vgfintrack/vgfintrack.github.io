@@ -7,7 +7,7 @@ for (const mode of ['shop', 'personal']) {
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
   await p.addInitScript(() => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', 'en'); sessionStorage.x = 1; } });
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.waitForSelector('.ob[data-step=hello]');
   await p.click('[data-start]');
   // "For business" → the shop's money; "For personal use" → Business owner = own money.

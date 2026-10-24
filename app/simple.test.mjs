@@ -10,7 +10,7 @@ await p.addInitScript(() => {
   if (!sessionStorage.x) { localStorage.setItem('mt:lang', 'bn'); sessionStorage.x = 1; }
   window.SpeechRecognition = window.webkitSpeechRecognition = class { start() { setTimeout(() => this.onresult({ results: [[{ transcript: 'চাল সাতশো বিশ আর তেল একশো নব্বই' }]] }), 300); } stop() {} };
 });
-await p.goto('http://localhost:8090/AmrPotli/');
+await p.goto('http://localhost:8090/FinnBlu/');
 // setup as "Running a home": cash 2000, bKash 1500
 await p.waitForSelector('[data-start], [data-track], #welcome-import', { state: 'attached' }); if (await p.$('[data-start]')) await p.click('[data-start]'); await p.click('[data-track=personal]'); await p.click('[data-persona=home]'); await p.click('[data-next]');
 await p.click('[data-wallet=bkash]'); await p.click('[data-next]');
@@ -54,7 +54,7 @@ await p.click('#back-simple'); await p.waitForTimeout(200);
 ok(!!(await p.$('.hand')) && !(await p.$('.kpis')), 'button returns to the simple view');
 await p.click('#more-details'); await p.waitForTimeout(100);
 await p.goBack(); await p.waitForTimeout(300);
-ok(!!(await p.$('.hand')) && p.url().includes('/AmrPotli/'), "phone's back button returns to the simple view (stays in the app)");
+ok(!!(await p.$('.hand')) && p.url().includes('/FinnBlu/'), "phone's back button returns to the simple view (stays in the app)");
 await p.click('#more-details');
 await p.click('.tabbar button[data-view=transactions]'); await p.click('.tabbar button[data-view=dashboard]');
 ok(!!(await p.$('.hand')), 'back to the simple screen next time');

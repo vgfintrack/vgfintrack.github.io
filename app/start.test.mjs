@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const BASE = 'http://localhost:8090/AmrPotli/';
+const BASE = 'http://localhost:8090/FinnBlu/';
 const drive = {}; // uid -> { id -> content }
 let nextId = 1;
 const log = (...a) => console.log(...a);

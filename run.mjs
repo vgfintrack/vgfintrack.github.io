@@ -18,7 +18,7 @@ import net from 'node:net';
 const KIT = dirname(fileURLToPath(import.meta.url));
 const SITE = resolve(process.env.AMRPOTLI_SITE || join(KIT, '..', 'vgfintrack.github.io'));
 const OUT = join(KIT, 'out'); // screenshots and the site copy; not kept in git
-if (!existsSync(join(SITE, 'AmrPotli', 'index.html'))) {
+if (!existsSync(join(SITE, 'FinnBlu', 'index.html'))) {
   console.error(`No FinnBlu site at ${SITE}. Set AMRPOTLI_SITE to the main branch checkout.`);
   process.exit(1);
 }
@@ -45,7 +45,7 @@ function siteCopy() {
     mkdirSync(dirname(join(copy, f)), { recursive: true });
     copyFileSync(join(SITE, f), join(copy, f));
   }
-  writeFileSync(join(copy, 'AmrPotli', 'js', 'config.js'), "export const googleClientId = 'REPLACE_ME';\n");
+  writeFileSync(join(copy, 'FinnBlu', 'js', 'config.js'), "export const googleClientId = 'REPLACE_ME';\n");
   return copy;
 }
 

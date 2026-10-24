@@ -8,7 +8,7 @@ const UAS = {
   samsung: 'Mozilla/5.0 (Linux; Android 13; SM-A145F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0.0.0 Mobile Safari/537.36',
   desktop: undefined,
 };
-async function open(kind, { lang = 'en', url = 'http://localhost:8090/AmrPotli/?install', fakePrompt = false } = {}) {
+async function open(kind, { lang = 'en', url = 'http://localhost:8090/FinnBlu/?install', fakePrompt = false } = {}) {
   const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: UAS[kind] });
   const p = await ctx.newPage();
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
@@ -36,7 +36,7 @@ const text = (p) => p.$eval('#install-body', (e) => e.innerText.replace(/\n/g, '
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const p = await ctx.newPage();
   await p.goto('http://localhost:8090/');
-  const links = await p.$$eval('a[href="AmrPotli/?install"]', (e) => e.filter((x) => x.offsetParent).map((x) => x.innerText));
+  const links = await p.$$eval('a[href="FinnBlu/?install"]', (e) => e.filter((x) => x.offsetParent).map((x) => x.innerText));
   ok(links.some((l) => l.includes('Install the app')), 'website (phone): visible "📲 Install the app" button');
   await ctx.close();
 }
@@ -45,7 +45,7 @@ for (const kind of ['desktop', 'android', 'ios', 'facebook', 'samsung']) {
   const tx = await text(p);
   const want = { desktop: 'address bar', android: 'Install app', ios: 'Add to Home Screen', facebook: 'Open in Chrome', samsung: 'Add page to' }[kind];
   ok(tx.includes(want), `${kind}: ${tx.slice(0, 90)}…`);
-  if (kind === 'facebook') ok((await p.getAttribute('#install-body a', 'href')).startsWith('intent://localhost:8090/AmrPotli/?install#Intent;scheme=https;package=com.android.chrome'), 'facebook: opens the page in Chrome');
+  if (kind === 'facebook') ok((await p.getAttribute('#install-body a', 'href')).startsWith('intent://localhost:8090/FinnBlu/?install#Intent;scheme=https;package=com.android.chrome'), 'facebook: opens the page in Chrome');
   if (kind === 'android' || kind === 'ios') await p.screenshot({ path: `inst-${kind}.png` });
   ok(await p.isVisible('#btn-install') || true, '');
   ok(p.errs.length === 0, `${kind}: no errors ${p.errs.join('|')}`);
@@ -66,7 +66,7 @@ for (const kind of ['desktop', 'android', 'ios', 'facebook', 'samsung']) {
   const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, userAgent: UAS.android }); const p = await ctx.newPage();
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';" }));
   await p.addInitScript(() => localStorage.setItem('mt:lang', 'bn'));
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.waitForSelector('[data-install]');
   ok((await p.textContent('[data-install]')).includes('ইনস্টল'), 'greeting: Bangla install button');
   await p.screenshot({ path: 'inst-login.png' });

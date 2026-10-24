@@ -7,7 +7,7 @@ for (const [lang, theme, w] of [['bn', 'light', 360], ['en', 'dark', 320], ['bn'
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
   await p.addInitScript(([l, th]) => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', l); localStorage.setItem('mt:theme', th); sessionStorage.x = 1; } }, [lang, theme]);
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   const tag = `${lang}-${theme}-${w}`;
   const overflow = async (step) => { const o = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); if (o > 0) ok(false, `${tag} ${step}: page wider than screen by ${o}px`); return o; };
   let bad = 0;

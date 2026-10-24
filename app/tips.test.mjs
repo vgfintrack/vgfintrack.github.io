@@ -17,7 +17,7 @@ async function open(doc, day, lang = 'en') {
   const p = await ctx.newPage();
   await p.clock.setFixedTime(new Date(`${day}T10:00:00`));
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.waitForSelector('.potli-tips', { timeout: 10000 }).catch(() => {});
   return { ctx, p };
 }

@@ -12,7 +12,7 @@ async function run(said, { support = true, fail = null, lang = 'bn' } = {}) {
     if (!support) { delete window.webkitSpeechRecognition; delete window.SpeechRecognition; return; }
     window.SpeechRecognition = window.webkitSpeechRecognition = class { start() { window.__lang = this.lang; setTimeout(() => (fail ? this.onerror({ error: fail }) : this.onresult({ results: [[{ transcript: said }]] })), 300); } stop() {} };
   }, [said, support, fail, lang]);
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.waitForSelector('[data-start], [data-track], #welcome-import', { state: 'attached' }); if (await p.$('[data-start]')) await p.click('[data-start]'); await p.click('[data-track=personal]'); await p.click('[data-persona=home]'); await p.click('[data-next]');
   await p.click('[data-next]'); await p.click('[data-next]'); await p.click('[data-next]'); await p.click('[data-next]');
   await p.click('[data-goal="0"]'); await p.click('[data-next]'); await p.click('[data-finish=""]');

@@ -36,7 +36,7 @@ const p = await b.newPage();
 let badLinks = 0;
 for (const href of links) {
   const [url, hash] = href.split('#');
-  if (url.includes('/AmrPotli/') && !url.endsWith('.html')) continue; // the app itself
+  if (url.includes('/FinnBlu/') && !url.endsWith('.html')) continue; // the app itself
   const res = await p.goto(url, { waitUntil: 'domcontentloaded' }).catch(() => null);
   if (!res || res.status() >= 400) { badLinks++; console.log('❌ link', href, res?.status()); continue; }
   if (hash && !(await p.$('#' + hash))) { badLinks++; console.log('❌ anchor', href); }

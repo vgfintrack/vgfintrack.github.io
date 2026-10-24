@@ -7,7 +7,7 @@ const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 p.on('dialog', (d) => d.accept());
 await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
 await p.addInitScript(() => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', 'en'); sessionStorage.x = 1; } });
-await p.goto('http://localhost:8090/AmrPotli/');
+await p.goto('http://localhost:8090/FinnBlu/');
 // shop setup: cash box 5000
 await p.waitForSelector('[data-start], [data-track], #welcome-import', { state: 'attached' }); if (await p.$('[data-start]')) await p.click('[data-start]'); await p.click('[data-track=business]'); await p.click('.biz-grid [data-prof-id=grocery]'); await p.click('[data-next]'); await p.click('[data-team=solo]'); await p.click('[data-next]');
 await p.click('[data-next]'); await p.fill('[data-bal=cash]', '5000'); await p.click('[data-next]');

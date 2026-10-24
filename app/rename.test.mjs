@@ -1,18 +1,18 @@
 // AmrPotli became FinnBlu: the new name, logo and colours. The old name is not
-// shown anywhere, also to people who used the app before. The address stays /AmrPotli/.
+// shown anywhere, also to people who used the app before. The old /AmrPotli/ address forwards (moved.test).
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
-const BASE = 'http://localhost:8090/AmrPotli/';
+const BASE = 'http://localhost:8090/FinnBlu/';
 const SITE = process.env.AMRPOTLI_SITE;
 const b = await chromium.launch();
 
 // 1. the installed app's name, colours and icons
-const manifest = JSON.parse(fs.readFileSync(`${SITE}/AmrPotli/manifest.json`, 'utf8'));
+const manifest = JSON.parse(fs.readFileSync(`${SITE}/FinnBlu/manifest.json`, 'utf8'));
 ok(manifest.name === 'FinnBlu' && manifest.short_name === 'FinnBlu', 'home-screen name is FinnBlu');
 ok(manifest.theme_color === '#0E2B49' && manifest.id === './' && manifest.start_url === './', 'navy theme colour; same app id and address');
-ok(manifest.icons.every((i) => fs.existsSync(`${SITE}/AmrPotli/${i.src}`)), 'every manifest icon exists');
-const sw = fs.readFileSync(`${SITE}/AmrPotli/sw.js`, 'utf8');
+ok(manifest.icons.every((i) => fs.existsSync(`${SITE}/FinnBlu/${i.src}`)), 'every manifest icon exists');
+const sw = fs.readFileSync(`${SITE}/FinnBlu/sw.js`, 'utf8');
 ok(['icons/lockup.svg', 'icons/lockup-dark.svg', 'icons/symbol.svg', 'icons/symbol-dark.svg'].every((f) => sw.includes(`'${f}'`)), 'logos are saved for offline use');
 
 async function phone({ lang = 'en', dark = false } = {}) {

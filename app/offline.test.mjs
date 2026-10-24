@@ -5,7 +5,7 @@ const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-await p.goto('http://localhost:8091/AmrPotli/');
+await p.goto('http://localhost:8091/FinnBlu/');
 await p.evaluate(() => navigator.serviceWorker.ready);
 await p.reload(); // now controlled by the service worker
 ok(await p.evaluate(() => !!navigator.serviceWorker.controller), 'service worker active');
@@ -13,7 +13,7 @@ await p.evaluate((d) => localStorage.setItem('mt:demo', JSON.stringify({ doc: d,
 await p.reload();
 await p.waitForSelector('.kpis');
 // The cache name comes from the app's service worker, so a new version needs no test change.
-const cacheName = fs.readFileSync(`${process.env.AMRPOTLI_SITE}/AmrPotli/sw.js`, 'utf8').match(/const CACHE = '([^']+)'/)[1];
+const cacheName = fs.readFileSync(`${process.env.AMRPOTLI_SITE}/FinnBlu/sw.js`, 'utf8').match(/const CACHE = '([^']+)'/)[1];
 const cached = await p.evaluate(async (n) => (await (await caches.open(n)).keys()).map((r) => new URL(r.url).pathname), cacheName);
 ok(cached.length >= 17 && cached.some((x) => x.endsWith('/js/app.js')) && cached.some((x) => x.includes('chart.umd')), `app files saved for offline (${cached.length})`);
 // go offline and reopen
@@ -32,7 +32,7 @@ await p.waitForTimeout(200);
 ok((await p.$$eval('.kpi .v', (e) => e[1].textContent)) === '13,010', 'can add a ৳30 rickshaw fare offline');
 // back online: a new version of the site is picked up on the next open
 await ctx.setOffline(false);
-const idx = 'sitecopy/AmrPotli/index.html';
+const idx = 'sitecopy/FinnBlu/index.html';
 fs.writeFileSync(idx, fs.readFileSync(idx, 'utf8').replace('<title>', '<title>v2 '));
 await p.reload();
 await p.waitForSelector('.kpis');

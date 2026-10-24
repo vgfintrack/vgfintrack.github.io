@@ -12,7 +12,7 @@ const drive = {};
 const b = await chromium.launch();
 const ctx = await b.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 await ctx.addInitScript(() => { window.__mockUser = 'nusrat.test'; if (!sessionStorage.x) { localStorage.setItem('mt:lang', 'en'); sessionStorage.x = 1; } });
-await ctx.route('**/AmrPotli/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';\nexport const firebaseProject = { projectId: 'p', apiKey: 'k' };" }));
+await ctx.route('**/FinnBlu/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'test.apps.googleusercontent.com';\nexport const firebaseProject = { projectId: 'p', apiKey: 'k' };" }));
 await ctx.route('https://accounts.google.com/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: FAKE_GIS }));
 await ctx.route('https://firestore.googleapis.com/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(r.request().method() === 'GET' ? limitsDoc() : {}) }));
 await ctx.route('https://www.googleapis.com/**', async (r) => {
@@ -29,7 +29,7 @@ const p = await ctx.newPage();
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 const reopen = async () => { await p.reload(); await p.waitForSelector('.kpis'); await p.waitForTimeout(2500); };
 // not on the list: nothing shown
-await p.goto('http://localhost:8090/AmrPotli/');
+await p.goto('http://localhost:8090/FinnBlu/');
 await p.waitForSelector('[data-start]'); await p.click('[data-start]'); await p.click('[data-signin]');
 await p.waitForSelector('[data-start], [data-track], #welcome-import', { state: 'attached' });
 await p.waitForSelector('[data-start], [data-track], #welcome-import', { state: 'attached' }); if (await p.$('[data-start]')) await p.click('[data-start]'); await p.setInputFiles('#welcome-import', '../fixtures/demo.json');

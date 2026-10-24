@@ -2,12 +2,12 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
-const BASE = 'http://localhost:8090/AmrPotli/';
+const BASE = 'http://localhost:8090/FinnBlu/';
 const PAY = 'Payment of Tk 200.00 to Grameenphone Ltd-MYGP-RM44473 is successful. Balance Tk 5,520.00. TrxID DJN9FCWT3X at 23/10/2026 15:40';
 const GOT = 'You have received Tk 1,500.00 from 01711111111. Fee Tk 0.00. Balance Tk 3,500.00. TrxID 9KQ2LM7XZ1 at 23/10/2026 10:00';
 const b = await chromium.launch();
 
-const manifest = JSON.parse(fs.readFileSync(`${process.env.AMRPOTLI_SITE}/AmrPotli/manifest.json`, 'utf8'));
+const manifest = JSON.parse(fs.readFileSync(`${process.env.AMRPOTLI_SITE}/FinnBlu/manifest.json`, 'utf8'));
 ok(manifest.share_target?.action === './?share' && manifest.share_target.method === 'GET' && manifest.share_target.params.text === 'text', 'the installed app offers itself in the Share menu');
 
 async function phone({ clipboard = false } = {}) {

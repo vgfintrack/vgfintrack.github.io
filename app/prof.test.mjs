@@ -7,7 +7,7 @@ async function start(lang = 'en', track = 'personal') {
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
   await ctx.route('**/js/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "export const googleClientId = 'REPLACE_ME';" }));
   await p.addInitScript((l) => { if (!sessionStorage.x) { localStorage.setItem('mt:lang', l); sessionStorage.x = 1; } }, lang);
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.click('[data-start]'); await p.click(`[data-track=${track}]`);
   await p.waitForSelector('.ob[data-step=who]');
   return { ctx, p };

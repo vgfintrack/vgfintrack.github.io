@@ -3,7 +3,7 @@
 import { chromium } from 'playwright';
 import { fakeDrive, phone } from '../lib/fake-google.mjs';
 const ok = (c, m) => { console.log(c ? '✅' : '❌', m); if (!c) process.exitCode = 1; };
-const BASE = 'http://localhost:8090/AmrPotli/';
+const BASE = 'http://localhost:8090/FinnBlu/';
 const b = await chromium.launch();
 const drive = fakeDrive();
 const files = () => Object.entries(drive.files);

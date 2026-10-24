@@ -9,7 +9,7 @@ async function fresh(persona, lang = 'en', answer = 'Money from Family') {
   const p = await ctx.newPage();
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
   p.on('dialog', (d) => d.accept(d.type() === 'prompt' ? answer : undefined));
-  await p.goto('http://localhost:8090/AmrPotli/');
+  await p.goto('http://localhost:8090/FinnBlu/');
   await p.click('[data-start]'); await p.click('[data-track=personal]'); await p.click(`[data-persona=${persona}]`); await p.click('[data-next]');
   for (let i = 0; i < 4; i++) await p.click('[data-next]');
   await p.click('[data-goal="0"]'); await p.click('[data-next]'); await p.click('[data-finish=""]');
