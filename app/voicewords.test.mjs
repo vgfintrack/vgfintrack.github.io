@@ -56,6 +56,9 @@ ok(f.type === 'Loan' && f.loan === 'borrow' && f.amount === '5000', '“ধা�
 f = await say('ধার শোধ করলাম দুই হাজার');
 ok(f.type === 'Loan' && f.loan === 'repay', '“ধার শোধ করলাম”: I repaid');
 
+f = await say('২০০ টাকা লোন পরিশোধ করা হয়েছে');
+ok(f.type === 'Loan' && f.loan === 'repay' && f.amount === '200', '“লোন পরিশোধ করা হয়েছে”: Loan, I repaid ৳200 ' + JSON.stringify(f));
+
 f = await say('করিম ফেরত দিল এক হাজার');
 ok(f.type === 'Loan' && f.loan === 'collect' && f.amount === '1000', '“ফেরত দিল এক হাজার”: someone paid me back ৳1000');
 
