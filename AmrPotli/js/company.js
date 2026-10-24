@@ -1,4 +1,4 @@
-// What the app shares with the AmrPotli team, and what it reads from them.
+// What the app shares with the FinnBlu team, and what it reads from them.
 // Loaded after the app is on screen, so it never makes opening slower.
 //
 // Reads (no sign-in, nothing about the user is sent):

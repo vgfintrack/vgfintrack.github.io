@@ -126,7 +126,7 @@ window.addEventListener('appinstalled', () => {
   installPrompt = null;
   if ($('#install-dialog').open) drawInstall('installing');
   markGuide('install');
-  toast(t('AmrPotli is installed. Open it from your home screen.'));
+  toast(t('FinnBlu is installed. Open it from your home screen.'));
   if (state.data?.loaded) render();
 });
 
@@ -175,9 +175,9 @@ function drawInstall(override = null) {
   const here = location.origin + location.pathname;
   const body = {
     standalone: () => `<p class="install-ok">✓ ${t("You're using the installed app.")}</p>`,
-    already: () => `<p class="install-ok">✓ ${t('AmrPotli is already installed on this phone. Find it on your home screen or in your app list.')}</p>
+    already: () => `<p class="install-ok">✓ ${t('FinnBlu is already installed on this phone. Find it on your home screen or in your app list.')}</p>
       <p class="muted">${t('Using it in the browser is fine too: both show the same data.')}</p>`,
-    installing: () => `<p class="install-ok">✓ ${t('Installing… AmrPotli will appear on your home screen in a few seconds.')}</p>`,
+    installing: () => `<p class="install-ok">✓ ${t('Installing… FinnBlu will appear on your home screen in a few seconds.')}</p>`,
     prompt: () => `<div class="install-hero"><img src="icons/icon.svg" alt="" width="72" height="72">
         <ul class="install-points"><li>⚡ ${t('Opens in one tap from your home screen')}</li><li>📶 ${t('Works without internet')}</li><li>🛡️ ${t('No Play Store needed, less than 1 MB')}</li></ul></div>
       <button class="btn primary wide big" data-install-now>📲 ${t('Install')}</button>`,
@@ -203,7 +203,7 @@ function drawInstall(override = null) {
         ${step(3, t('Tap <b>Install</b>'))}</ol>`,
     desktop: () => `<ol class="install-steps">
         ${step(1, t('Click the install icon <b>⊕</b> at the right end of the address bar'))}
-        ${step(2, t('Or open the menu <b>⋮</b> and choose <b>Install AmrPotli</b>'))}</ol>`,
+        ${step(2, t('Or open the menu <b>⋮</b> and choose <b>Install FinnBlu</b>'))}</ol>`,
     firefox: () => `<p>${t('Firefox on a computer cannot install web apps. Open this page in Chrome or Edge to install, or keep using it here.')}</p>
       <button class="btn wide" data-copy-link>🔗 ${t('Copy link')}</button>`,
     waiting: () => `<div class="install-wait"><div class="spinner"></div><p class="muted">${t('Getting the app ready…')}</p></div>`,
@@ -244,7 +244,7 @@ function installTipDismissed() {
 function installCard() {
   const body = isInstalled()
     ? `<p style="margin:0">✓ ${t('Installed on this device. It opens from your home screen, even offline.')}</p>`
-    : `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Open AmrPotli from your home screen like any app. It works offline too.')}</p>
+    : `<p class="muted" style="margin:0 0 10px;font-size:13px">${t('Open FinnBlu from your home screen like any app. It works offline too.')}</p>
        <button class="btn primary" data-install>📲 ${t('Install the app')}</button>`;
   return `<div class="card" id="install-card"><h3>${t('Install the app')}</h3>${body}</div>`;
 }
@@ -254,7 +254,7 @@ function installTip() {
   if (isInstalled() || !installPrompt || installTipDismissed()) return '';
   return `<div class="card install-tip">
     <img src="icons/icon.svg" alt="" width="40" height="40">
-    <div><strong>${t('Install AmrPotli')}</strong>
+    <div><strong>${t('Install FinnBlu')}</strong>
       <div class="muted" style="font-size:13px">${t('One tap from your home screen, even without internet.')}</div></div>
     <div class="tip-actions"><button class="btn sm" data-install-later>${t('Not now')}</button><button class="btn primary sm" data-install>${t('Install')}</button></div>
   </div>`;
@@ -294,7 +294,7 @@ const accName = (id) => accById(id)?.name ?? t('(deleted account)');
 const personName = (id) => accName(id).replace(/^(lent to|loan from|borrowed from|loan to)\s+/i, '');
 
 
-// ---------------------------------------------------------------- the AmrPotli team (company.js)
+// ---------------------------------------------------------------- the FinnBlu team (company.js)
 // The notice under the top bar, extra categories for people the team chose,
 // and one anonymous count a day. Loaded a moment after the app is on screen.
 
@@ -368,7 +368,7 @@ function tellAboutGrant(g) {
   const until = g.until ? ` ${t('Until {date}.', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : '';
   const msg =
     g.limit > was || productsUp
-      ? `🎉 ${g.limit === Infinity ? t('Good news! The AmrPotli team gave you unlimited categories.') : t('Good news! The AmrPotli team gave you {n} categories.', { n: g.limit })}${productsLine}${until}`
+      ? `🎉 ${g.limit === Infinity ? t('Good news! The FinnBlu team gave you unlimited categories.') : t('Good news! The FinnBlu team gave you {n} categories.', { n: g.limit })}${productsLine}${until}`
       : g.limit === FREE_CATEGORIES
         ? t('Your extra categories have ended. You can have up to {n} again; the ones you already have stay.', { n: FREE_CATEGORIES })
         : t('You can now have up to {n} categories.', { n: g.limit }) + until;
@@ -453,7 +453,7 @@ function setupCompanyDialogs() {
         lang,
       });
       $('#fb-dialog').close();
-      toast(t('Thank you! The AmrPotli team will read it.'));
+      toast(t('Thank you! The FinnBlu team will read it.'));
     } catch {
       $('#fb-error').textContent = t('Could not send. Check your internet and try again.');
       $('#fb-error').hidden = false;
@@ -484,7 +484,7 @@ function setupCompanyDialogs() {
         app: G.APP_VERSION,
       });
       $('#optin-dialog').close();
-      toast(t('Sent. The AmrPotli team will be in touch.'));
+      toast(t('Sent. The FinnBlu team will be in touch.'));
     } catch {
       $('#optin-error').textContent = t('Could not send. Check your internet and try again.');
       $('#optin-error').hidden = false;
@@ -764,7 +764,7 @@ function bindTeam(root) {
   const leave = $('#team-leave', root);
   if (leave)
     leave.onclick = async () => {
-      if (!confirm(t('Leave {shop}? You go back to your own AmrPotli. The shop keeps your entries.', { shop: shopLink().name }))) return;
+      if (!confirm(t('Leave {shop}? You go back to your own FinnBlu. The shop keeps your entries.', { shop: shopLink().name }))) return;
       await state.store.team.leave().catch((e) => toast(e.message || String(e)));
     };
   const join = $('#team-join', root);
@@ -775,8 +775,8 @@ function openHelperDialog() {
   const first = !shopLink();
   $('#helper-shop-field').hidden = !first;
   $('#helper-intro').textContent = first
-    ? t("AmrPotli will make a shop book in your Google Drive and share it with your helper. Google asks you once to allow this, and emails the helper.")
-    : t('Google emails the helper. On their phone they open AmrPotli and choose the shop book.');
+    ? t("FinnBlu will make a shop book in your Google Drive and share it with your helper. Google asks you once to allow this, and emails the helper.")
+    : t('Google emails the helper. On their phone they open FinnBlu and choose the shop book.');
   $('#helper-shop').value = '';
   $('#helper-email').value = '';
   $('#helper-name').value = '';
@@ -802,7 +802,7 @@ function setupTeamDialog() {
       if (!shopLink()) await state.store.team.start($('#helper-shop').value.trim().slice(0, 40) || t('My shop'));
       const permissionId = await state.store.team.share(
         email,
-        t('You are added as a helper in {shop} on AmrPotli. On your phone open vgfintrack.github.io/AmrPotli → Tap to start → For business → A team → Employee or helper, and choose this shop book.', { shop: shopLink().name }),
+        t('You are added as a helper in {shop} on FinnBlu. On your phone open vgfintrack.github.io/AmrPotli → Tap to start → For business → A team → Employee or helper, and choose this shop book.', { shop: shopLink().name }),
       );
       const team = teamData() || {};
       await state.store.team.save({ helpersSeeMoney: false, ...team, members: [...(team.members || []), { email, name, permissionId, addedAt: C.today() }] });
@@ -839,7 +839,7 @@ function showTeamLost(role) {
   if (!link) return (bar.hidden = true);
   bar.innerHTML =
     role === 'helper'
-      ? `<span>${t('You can no longer open {shop}. The owner may have removed you.', { shop: esc(link.name) })}</span><button class="btn sm" data-team-back>${t('Back to my own AmrPotli')}</button>`
+      ? `<span>${t('You can no longer open {shop}. The owner may have removed you.', { shop: esc(link.name) })}</span><button class="btn sm" data-team-back>${t('Back to my own FinnBlu')}</button>`
       : `<span>${t('The shop book is missing from your Google Drive, so helpers cannot see the shop.')}</span><button class="btn sm" data-team-again>${t('Make it again')}</button>`;
   bar.hidden = false;
   const back = $('[data-team-back]', bar);
@@ -852,7 +852,7 @@ function showTeamLost(role) {
         await state.store.team.start(link.name);
         // The new book is shared with the same helpers again.
         const members = [];
-        for (const m of team.members || []) members.push({ ...m, permissionId: await state.store.team.share(m.email, t('The shop book of {shop} was made again. Open AmrPotli and choose it.', { shop: link.name })) });
+        for (const m of team.members || []) members.push({ ...m, permissionId: await state.store.team.share(m.email, t('The shop book of {shop} was made again. Open FinnBlu and choose it.', { shop: link.name })) });
         await state.store.team.save({ ...team, members });
         bar.hidden = true;
         toast(t('The shop book is back'));
@@ -964,7 +964,7 @@ function lockCard() {
   const cfg = lockCfg();
   if (!cfg)
     return `<div class="card" id="lock-card"><h3>🔒 ${t('App lock')}</h3>
-      <p class="muted" style="margin:0 0 10px;font-size:13px">${t('PIN or fingerprint when AmrPotli opens.')}</p>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${t('PIN or fingerprint when FinnBlu opens.')}</p>
       <button class="btn primary" data-lock-on>${t('Turn on')}</button></div>`;
   const after = cfg.after ?? 60;
   return `<div class="card" id="lock-card"><h3>🔒 ${t('App lock')} <small>${t('On')}</small></h3>
@@ -1475,7 +1475,7 @@ function renderSimple() {
         ${savings ? `<span>💎 ${t('saved')} ${money(w.balances[SAVINGS_ID]?.value || 0)}</span>` : ''}
       </div>
     </div>
-    ${clipCard()}
+    ${renamedCard()}${clipCard()}
     ${tipsCard(1)}
     <div class="big-actions">
       <button data-simple-act="Income"><span>💰</span>${t('Got money')}</button>
@@ -1921,7 +1921,7 @@ function renderDashboard() {
   $('#view-dashboard').innerHTML = `
     ${settings().simple && detailsOnce ? `<button class="btn wide back-simple" id="back-simple">🏠 ${t('Back to simple view')}</button>` : ''}
     ${G.streakPill(txns, C.today())}
-    ${clipCard()}
+    ${renamedCard()}${clipCard()}
     ${quickActions()}
     ${dueCard()}
     ${tipsCard()}
@@ -2600,7 +2600,7 @@ function fillFromSms(text) {
       category
         ? `✓ ${t('Category: {cat}', { cat: category })}`
         : r.counterparty
-          ? `👉 ${t('Pick a category. Next time AmrPotli will choose it for {name}.', { name: r.counterparty })}`
+          ? `👉 ${t('Pick a category. Next time FinnBlu will choose it for {name}.', { name: r.counterparty })}`
           : `👉 ${t('Pick a category.')}`,
     );
   let warn = false;
@@ -2612,7 +2612,7 @@ function fillFromSms(text) {
     lines.push(`⚠️ ${t('No matching account found. Choose the account, or add it in Setup.')}`);
     warn = true;
   }
-  // Compare the balance in the SMS with what AmrPotli will show after saving.
+  // Compare the balance in the SMS with what FinnBlu will show after saving.
   const accId = r.balanceAccount && accById(r.balanceAccount) ? r.balanceAccount : null;
   if (r.balance != null && accId) {
     const now = C.worth(accs, state.data.transactions).balances[accId]?.value ?? 0;
@@ -2621,7 +2621,7 @@ function fillFromSms(text) {
     const name = accName(accId);
     if (Math.abs(after - r.balance) < 0.5) lines.push(`✓ ${t('{name} balance will match the SMS ({amount}).', { name, amount: moneyExact(r.balance) })}`);
     else {
-      lines.push(`ℹ️ ${t('SMS says {name} balance is {sms}; AmrPotli will show {app}. Some entries may be missing.', { name, sms: moneyExact(r.balance), app: moneyExact(after) })}`);
+      lines.push(`ℹ️ ${t('SMS says {name} balance is {sms}; FinnBlu will show {app}. Some entries may be missing.', { name, sms: moneyExact(r.balance), app: moneyExact(after) })}`);
       warn = true;
     }
   }
@@ -3071,7 +3071,7 @@ async function saveTxn(another) {
   } catch (e) {
     return err(e.message);
   }
-  if (every) setTimeout(() => toast(t('Saved as a regular payment. AmrPotli will remind you when it is due.')), 2700);
+  if (every) setTimeout(() => toast(t('Saved as a regular payment. FinnBlu will remind you when it is due.')), 2700);
   const saved = t({ Expense: 'Saved expense of {amount}', Income: 'Saved income of {amount}', Transfer: 'Saved transfer of {amount}' }[txnType], {
     amount: money(amount),
   });
@@ -3509,7 +3509,7 @@ function categoryLimitRow(kind, placeholder) {
   const max = categoryLimit();
   const g = state.grant?.gift ? state.grant : null;
   const from = g
-    ? ` · 🎁 ${t('from the AmrPotli team')}${g.until ? `, ${t('until {date}', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : ''}`
+    ? ` · 🎁 ${t('from the FinnBlu team')}${g.until ? `, ${t('until {date}', { date: niceDate(g.until, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : ''}`
     : '';
   const counter =
     max === Infinity
@@ -3582,7 +3582,7 @@ function renderSetup() {
 
       <div class="card" ${own}>
         <h3>📍 ${t('Your district')}</h3>
-        <p class="muted" style="margin:0 0 10px;font-size:13px">${t('Optional. It helps us bring AmrPotli to more places. Only the district is counted, never your name or money.')}</p>
+        <p class="muted" style="margin:0 0 10px;font-size:13px">${t('Optional. It helps us bring FinnBlu to more places. Only the district is counted, never your name or money.')}</p>
         ${districtSelect('setup-district', settings().district || '')}
       </div>
 
@@ -3592,7 +3592,7 @@ function renderSetup() {
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-help-open>❓ ${t('How do I…?')}</button><button class="btn" data-feedback="setup">💬 ${t('Send feedback')}</button>
         <button class="btn" id="stay-in-touch">🤝 ${t('Stay in touch')}</button></div>
         <label class="switch-row" style="margin-top:14px"><input type="checkbox" id="counts-on" ${countsOn() ? 'checked' : ''}>
-          <span><b>${t('Help improve AmrPotli')}</b><br><span class="muted" style="font-size:13px">${t('The app sends anonymous counts: once a day that it was used, the language, your kind of work from the list and which features (like voice); once a month your country (from the phone’s time zone) and your district if you chose one. Never your name, email or money.')}</span></span></label>
+          <span><b>${t('Help improve FinnBlu')}</b><br><span class="muted" style="font-size:13px">${t('The app sends anonymous counts: once a day that it was used, the language, your kind of work from the list and which features (like voice); once a month your country (from the phone’s time zone) and your district if you chose one. Never your name, email or money.')}</span></span></label>
         <p class="muted" style="margin:10px 0 0;font-size:13px"><a href="privacy.html">${t('Privacy')}</a> · <a href="terms.html">${t('Terms of use')}</a></p>
       </div>
 
@@ -3859,7 +3859,7 @@ function setupDeleteDialog() {
       await state.store.deleteMyData();
       $('#delete-dialog').close();
       if (demo) return location.reload();
-      toast(t('Your AmrPotli account and data were deleted.'));
+      toast(t('Your FinnBlu account and data were deleted.'));
     } catch (err) {
       if (err?.type === 'popup_closed') return;
       $('#delete-error').textContent = t('Could not delete: {msg}. Nothing was removed from this device; try again.', { msg: err.message || String(err) });
@@ -3872,7 +3872,7 @@ function setupDeleteDialog() {
 
 function exportJson() {
   const { accounts, transactions, settings } = state.data;
-  download(`amrpotli-backup-${C.today()}.json`, JSON.stringify({ version: 1, accounts, transactions, settings }, null, 2), 'application/json');
+  download(`finnblu-backup-${C.today()}.json`, JSON.stringify({ version: 1, accounts, transactions, settings }, null, 2), 'application/json');
   backupMark({ last: Date.now(), later: 0 });
 }
 
@@ -3936,7 +3936,7 @@ function bindBackup(root) {
   };
 }
 
-// ---- SMS the user hands to the app: shared to AmrPotli (Android's Share
+// ---- SMS the user hands to the app: shared to FinnBlu (Android's Share
 // menu, see share_target in manifest.json) or copied before opening it.
 // The app never reads messages by itself; it only sees what is shared or
 // copied, and only after the user allowed pasting.
@@ -4012,6 +4012,20 @@ async function checkClipboard() {
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && setTimeout(checkClipboard, 400));
 addEventListener('focus', () => setTimeout(checkClipboard, 400));
 
+// Once, for people who used the app before it was renamed (24 Oct 2026).
+const RENAMED_KEY = 'mt:finnblu-seen';
+function renamedCard() {
+  try {
+    if (localStorage.getItem(RENAMED_KEY)) return '';
+  } catch {
+    return '';
+  }
+  if (!state.data.transactions.some((x) => x.date < '2026-10-24')) return '';
+  return `<div class="card renamed-card"><img src="icons/symbol.svg" alt="" width="34" height="34">
+    <div><strong>${t('AmrPotli is now FinnBlu')}</strong><div class="muted" style="font-size:13px">${t('Same app, same data, a new name and look.')}</div></div>
+    <div class="tip-actions"><button class="btn primary sm" data-renamed-ok>${t('OK')}</button></div></div>`;
+}
+
 function clipCard() {
   if (!clipOffer) return '';
   const { r } = clipOffer;
@@ -4021,6 +4035,14 @@ function clipCard() {
     <div class="tip-actions"><button class="btn primary sm" data-clip-add>${t('Add')}</button><button class="btn sm" data-clip-no>${t('No thanks')}</button></div></div>`;
 }
 function bindClip(root) {
+  const ok = $('[data-renamed-ok]', root);
+  if (ok)
+    ok.onclick = () => {
+      try {
+        localStorage.setItem(RENAMED_KEY, '1');
+      } catch {}
+      render();
+    };
   const add = $('[data-clip-add]', root);
   if (!add) return;
   add.onclick = () => {
@@ -4038,7 +4060,7 @@ function bindClip(root) {
   };
 }
 
-// ---- Potli tips (tips.js): insights from the user's own entries, worked
+// ---- FinnBlu tips (tips.js): insights from the user's own entries, worked
 // out on this phone. Loaded after the dashboard is first drawn.
 
 let tipsMod = null;
@@ -4079,8 +4101,8 @@ function tipsCard(max = 2) {
   if (!list.length) return '';
   const shown = tipsMore ? list : list.slice(0, max);
   return `<div class="card potli-tips">
-    <div class="pt-head"><img src="icons/icon.svg" alt="" width="34" height="34">
-      <div><strong>${t('Potli says')}</strong><small>${t('From your own entries, worked out on this phone.')}</small></div></div>
+    <div class="pt-head"><img src="icons/symbol.svg" alt="" width="34" height="34">
+      <div><strong>${t('FinnBlu tips')}</strong><small>${t('From your own entries, worked out on this phone.')}</small></div></div>
     ${shown
       .map(
         (x) => `<div class="pt-tip"><span class="pt-ic" aria-hidden="true">${x.icon}</span>
@@ -4109,7 +4131,7 @@ function bindTips(root) {
         try {
           localStorage.setItem(TIPS_KEY, JSON.stringify(h));
         } catch {}
-        toast(t('Got it. Potli will show fewer tips like this.'));
+        toast(t('Got it. FinnBlu will show fewer tips like this.'));
         render();
       }),
   );
@@ -4184,7 +4206,7 @@ function districtCard() {
   return `<div class="card district-tip">
     <span class="big-ic" aria-hidden="true">📍</span>
     <div><strong>${t(isShopMode() ? 'Which district is the shop in?' : 'Which district do you live in?')}</strong>
-      <div class="muted" style="font-size:13px">${t('Optional. It helps us bring AmrPotli to more places. Only the district is counted, never your name or money.')}</div>
+      <div class="muted" style="font-size:13px">${t('Optional. It helps us bring FinnBlu to more places. Only the district is counted, never your name or money.')}</div>
       ${districtSelect('district-pick')}</div>
     <div class="tip-actions">
       <button class="btn primary sm" id="district-save">${t('Save')}</button>
@@ -4245,7 +4267,7 @@ async function importFile(file) {
   if (!file) return;
   try {
     const d = JSON.parse(await file.text());
-    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error(t('This is not an AmrPotli backup file.'));
+    if (!Array.isArray(d.accounts) || !Array.isArray(d.transactions)) throw new Error(t('This is not a FinnBlu backup file.'));
     const hasData = state.data.transactions.length || state.data.accounts.length;
     const mode = hasData ? await askImportMode(d) : 'replace';
     if (mode === 'cancel') return;

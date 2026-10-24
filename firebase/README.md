@@ -1,4 +1,4 @@
-# AmrPotli team dashboard: Firebase
+# FinnBlu team dashboard: Firebase
 
 The team dashboard (`/team/`) and the few things the app shares (anonymous daily
 counts, opt-ins, feedback, the notice, the extra-categories list) live in one
@@ -23,7 +23,7 @@ Use the project the app already uses: **vgfintrack-11a9c**, signed in as
    support email vgfintrack@gmail.com → *Save*.
 5. **Allowed website**: *Authentication → Settings → Authorized domains → Add domain* →
    `vgfintrack.github.io` (later also the new domain).
-6. **Web app**: *Project settings (gear) → Your apps → Web (</>)* → nickname `AmrPotli` →
+6. **Web app**: *Project settings (gear) → Your apps → Web (</>)* → nickname `FinnBlu` →
    *Register*. Copy the `firebaseConfig` it shows (apiKey, authDomain, projectId, storageBucket,
    messagingSenderId, appId) and send it to whoever updates the code. These values are not secret.
 7. In the code:

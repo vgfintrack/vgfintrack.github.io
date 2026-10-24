@@ -1,6 +1,8 @@
-# AmrPotli · আমার পোটলি
+# FinnBlu
 
-*"My money pouch"*: a personal ledger named after the cloth potli Bengali families kept their savings in.
+*Steady records that grow*: a private money tracker for life and small business in Bangladesh.
+
+(Formerly AmrPotli. The app still lives at `/AmrPotli/` so installed phones and saved data keep working.)
 
 A personal finance web app: log income, expenses and transfers, see monthly and weekly
 dashboards, budgets, savings goal, investments and net worth. Amounts are in BDT and weeks
@@ -33,7 +35,7 @@ Until `AmrPotli/js/config.js` has a real client ID, the app runs in **demo mode*
 ## One-time setup (Google Cloud project `vgfintrack-11a9c`)
 
 1. **Enable the Drive API:** <https://console.cloud.google.com/apis/library/drive.googleapis.com?project=vgfintrack-11a9c> → **Enable**.
-2. **Google Auth Platform → Branding:** app name `AmrPotli`, support email, home page
+2. **Google Auth Platform → Branding:** app name `FinnBlu`, support email, home page
    `https://vgfintrack.github.io/AmrPotli/`, privacy policy `https://vgfintrack.github.io/AmrPotli/privacy.html`,
    authorised domain `vgfintrack.github.io`.
 3. **Audience:** user type **External** → **Publish app** (so anyone can sign in, not just test users).

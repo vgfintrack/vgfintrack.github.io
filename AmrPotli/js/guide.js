@@ -5,7 +5,7 @@
 import { t, lang } from './i18n.js';
 
 // Bump on each release, so feedback shows which version people were using.
-export const APP_VERSION = '2026.10.24c';
+export const APP_VERSION = '2026.10.24d';
 
 // Feedback goes to a Google Form, never with any money data. The form's last
 // question ("App info") is filled in with version, language, device type and
@@ -27,12 +27,12 @@ const feedbackLink = () =>
 // Each step is done when the data shows it, so the list stays right on every
 // device. Report and install leave no data behind, so they are flags in settings.
 export const GUIDE = [
-  { id: 'setup', label: 'Set up your Potli', sub: 'Accounts, balances and categories', done: () => true },
+  { id: 'setup', label: 'Set up FinnBlu', sub: 'Accounts, balances and categories', done: () => true },
   { id: 'expense', label: 'Add your first expense', sub: 'Tea, rickshaw, lunch: anything you spent today', done: (d) => d.transactions.some((x) => x.type === 'Expense') },
   { id: 'income', label: 'Record money you received', sub: 'Salary, tuition, allowance or a payment', done: (d) => d.transactions.some((x) => x.type === 'Income') },
   { id: 'sms', label: 'Try Paste SMS', sub: 'Copy a bKash, Nagad or bank SMS and paste it', done: (d) => d.transactions.some((x) => x.ref) },
   { id: 'budget', label: 'Set a monthly budget', sub: 'A spending limit, for example for Food', done: (d) => (d.settings?.expenseCategories || []).some((c) => Number(c.budget) > 0) },
-  { id: 'install', label: 'Install AmrPotli on your phone', sub: 'Opens like an app, even offline', done: (d, f) => f.installed || !!d.settings?.onboarding?.done?.install },
+  { id: 'install', label: 'Install FinnBlu on your phone', sub: 'Opens like an app, even offline', done: (d, f) => f.installed || !!d.settings?.onboarding?.done?.install },
   { id: 'report', label: 'Open your first statement', sub: 'A printable statement of your month', done: (d) => !!d.settings?.onboarding?.done?.report },
 ];
 
@@ -64,7 +64,7 @@ export function guideCard(d, flags) {
     return `<div class="card guide guide-done">
       <div class="guide-trophy" aria-hidden="true">🏆</div>
       <div><strong>${t("You've finished the getting-started guide!")}</strong>
-        <div class="muted" style="font-size:13px">${t('You now know the main parts of AmrPotli. Keep adding entries every day.')}</div></div>
+        <div class="muted" style="font-size:13px">${t('You now know the main parts of FinnBlu. Keep adding entries every day.')}</div></div>
       <button class="btn sm" data-guide-hide>${t('Hide')}</button>
       ${feedbackLink()}
     </div>`;

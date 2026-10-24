@@ -1,5 +1,5 @@
 // The amount box is a small calculator: "60+80+150" or "12×35" adds up as you
-// type on AmrPotli's own number pad, so the phone keyboard never covers the form.
+// type on FinnBlu's own number pad, so the phone keyboard never covers the form.
 // Sums are read by a tiny parser (numbers and + − × ÷ only), never eval().
 
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';

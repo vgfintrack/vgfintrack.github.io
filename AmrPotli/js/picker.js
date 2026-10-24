@@ -1,5 +1,5 @@
 // Google's file picker, for a helper to choose the shop book the owner shared.
-// Loaded only then. Picking a file is what lets AmrPotli open it (drive.file).
+// Loaded only then. Picking a file is what lets FinnBlu open it (drive.file).
 
 import * as config from './config.js';
 import { t, lang } from './i18n.js';
@@ -18,12 +18,13 @@ function script(src) {
 
 // Resolves to the chosen file's id, or null if the picker was closed.
 export async function pickShopBook(token) {
-  if (!config.pickerKey) throw new Error(t('Team shops are not set up on this copy of AmrPotli.'));
+  if (!config.pickerKey) throw new Error(t('Team shops are not set up on this copy of FinnBlu.'));
   await script('https://apis.google.com/js/api.js');
   await new Promise((resolve) => gapi.load('picker', resolve));
   const P = google.picker;
   return new Promise((resolve) => {
-    const shared = new P.DocsView(P.ViewId.DOCS).setMimeTypes('application/json').setOwnedByMe(false).setQuery('AmrPotli shop book');
+    // "FinnBlu shop book", or "AmrPotli shop book" from before the new name.
+    const shared = new P.DocsView(P.ViewId.DOCS).setMimeTypes('application/json').setOwnedByMe(false).setQuery('shop book');
     const picker = new P.PickerBuilder()
       .addView(shared)
       .setOAuthToken(token)

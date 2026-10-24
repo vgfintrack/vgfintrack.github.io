@@ -1,14 +1,14 @@
 {
   "id": "./",
-  "name": "AmrPotli · আমার পোটলি",
-  "short_name": "AmrPotli",
+  "name": "FinnBlu",
+  "short_name": "FinnBlu",
   "description": "Private money tracker for life in Bangladesh: bank, cash, bKash, loans, budgets and statements.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f4f6f5",
-  "theme_color": "#0f766e",
+  "background_color": "#F4F6FA",
+  "theme_color": "#0E2B49",
   "categories": [
     "finance",
     "productivity"

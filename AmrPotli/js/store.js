@@ -404,7 +404,7 @@ async function createDriveStore() {
       throw new Error(t('Please tick the box that lets the app keep its data in your Google Drive. That is where your data is stored.'));
     }
     if (file && !google.accounts.oauth2.hasGrantedAllScopes(resp, FILE_SCOPE)) {
-      throw new Error(t('Please tick the box that lets AmrPotli open the shop book it shares. It reaches only files the app made or you choose.'));
+      throw new Error(t('Please tick the box that lets FinnBlu open the shop book it shares. It reaches only files the app made or you choose.'));
     }
     token = { value: resp.access_token, expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000, file };
   }
@@ -671,9 +671,9 @@ async function createDriveStore() {
     await fileAccess();
     const boundary = 'mt' + newId();
     const meta = JSON.stringify({
-      name: `AmrPotli shop book - ${name}.json`,
+      name: `FinnBlu shop book - ${name}.json`,
       mimeType: 'application/json',
-      description: 'The shop book of AmrPotli, shared with the helpers you add in the app. Please do not edit or delete it.',
+      description: 'The shop book of FinnBlu, shared with the helpers you add in the app. Please do not edit or delete it.',
       appProperties: { amrpotli: 'shop' },
     });
     const res = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
@@ -694,10 +694,10 @@ async function createDriveStore() {
     const meta = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,owners(displayName,emailAddress),capabilities(canEdit)`)).json();
     const book = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json().catch(() => null);
     if (!book || typeof book.accounts !== 'object' || typeof book.transactions !== 'object' || Array.isArray(book.accounts))
-      throw new Error(t('This file is not an AmrPotli shop book.'));
-    if (!meta.capabilities?.canEdit) throw new Error(t('The owner shared this shop book without letting you add to it. Ask them to add you again in AmrPotli.'));
+      throw new Error(t('This file is not a FinnBlu shop book.'));
+    if (!meta.capabilities?.canEdit) throw new Error(t('The owner shared this shop book without letting you add to it. Ask them to add you again in FinnBlu.'));
     const o = meta.owners?.[0] || {};
-    const note = { fileId: id, role: 'helper', name: meta.name.replace(/^AmrPotli shop book - |\.json$/g, ''), owner: { email: o.emailAddress || '', name: o.displayName || '' } };
+    const note = { fileId: id, role: 'helper', name: meta.name.replace(/^(FinnBlu|AmrPotli) shop book - |\.json$/g, ''), owner: { email: o.emailAddress || '', name: o.displayName || '' } };
     await writeNote(note);
     await quiet();
     teamChecked = true;
@@ -724,7 +724,7 @@ async function createDriveStore() {
       if (!hasData(engine.doc)) engine.replace(mergeDocs(engine.doc, guest), true);
       // The account already has data: the setup made on this phone is not
       // needed, but entries are added if the user agrees.
-      else if (entries && confirm(t('This Google account already has AmrPotli data. Add the {n} entries made on this phone to it?', { n: entries })))
+      else if (entries && confirm(t('This Google account already has FinnBlu data. Add the {n} entries made on this phone to it?', { n: entries })))
         engine.mergeAll({ accounts: live(guest.accounts), transactions: live(guest.transactions), settings: guest.settings });
     }
     for (const k of LOCAL_KEYS) {
@@ -887,7 +887,7 @@ async function createDriveStore() {
       }
       forget();
     },
-    // Deletes every AmrPotli file in this Google account's Drive and this
+    // Deletes every FinnBlu file in this Google account's Drive and this
     // device's copy, then removes the app's access to the account.
     // Called from a button tap (it may need to sign in again first).
     async deleteMyData() {

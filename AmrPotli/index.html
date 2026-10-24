@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AmrPotli · আমার পোটলি</title>
-  <meta name="theme-color" content="#0f766e" />
+  <title>FinnBlu</title>
+  <meta name="theme-color" content="#0E2B49" />
   <script>
     // Apply a saved Day/Night choice before the page paints, so there is no flash.
     try {
@@ -13,11 +13,11 @@
     } catch {}
   </script>
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;family=Hind+Siliguri:wght@400;500;600;700&amp;display=swap" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="vendor/chart.umd.min.js"></script>
 </head>
@@ -28,9 +28,8 @@
         <button type="button" data-lang="en">English</button>
         <button type="button" data-lang="bn">বাংলা</button>
       </div>
-      <img class="logo-img" src="icons/icon.svg" alt="" width="72" height="72">
-      <h1>AmrPotli</h1>
-      <p class="bn">আমার পোটলি · আমার হিসাব, আমার হাতে</p>
+      <h1 class="login-logo"><img class="lockup" src="icons/lockup.svg" alt="FinnBlu" width="216" height="56"></h1>
+      <p class="bn">আমার হিসাব, আমার হাতে</p>
       <p class="muted" data-i18n="Your income, spending, savings and investments in one place.">Your income, spending, savings and investments in one place.</p>
       <button id="btn-signin" class="btn primary wide" data-i18n="Sign in with Google">Sign in with Google</button>
       <button id="btn-install" class="btn wide" type="button" data-i18n="📲 Install the app">📲 Install the app</button>
@@ -44,7 +43,7 @@
 
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand"><img class="logo-img sm" src="icons/icon.svg" alt="" width="28" height="28"> AmrPotli</div>
+      <a class="brand" href="./" aria-label="FinnBlu"><img class="lockup" src="icons/lockup.svg" alt="FinnBlu" width="123" height="32"></a>
       <div class="top-right">
         <button id="add-top" class="btn primary sm add-top" hidden data-i18n="+ Add transaction">+ Add transaction</button>
         <button id="sync" class="sync" hidden></button>
@@ -194,7 +193,7 @@
   <dialog id="install-dialog" class="sheet">
     <div class="sheet-body">
       <div class="sheet-head">
-        <h2 data-i18n="📲 Install AmrPotli">📲 Install AmrPotli</h2>
+        <h2 data-i18n="📲 Install FinnBlu">📲 Install FinnBlu</h2>
         <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
       </div>
       <div id="install-body"></div>
@@ -428,7 +427,7 @@
       </div>
       <ul class="delete-list">
         <li data-i18n="🗑️ All accounts, transactions, budgets and settings, from your Google Drive and this device">🗑️ All accounts, transactions, budgets and settings, from your Google Drive and this device</li>
-        <li data-i18n="🔓 AmrPotli's access to your Google account">🔓 AmrPotli's access to your Google account</li>
+        <li data-i18n="🔓 FinnBlu's access to your Google account">🔓 FinnBlu's access to your Google account</li>
         <li data-i18n="⚠️ This cannot be undone">⚠️ This cannot be undone</li>
       </ul>
       <button type="button" class="btn" id="delete-backup" data-i18n="⬇️ Download a backup first">⬇️ Download a backup first</button>
@@ -549,7 +548,7 @@
         <h2 data-i18n="🤝 Stay in touch">🤝 Stay in touch</h2>
         <button type="button" class="icon-btn" data-close aria-label="Close" data-i18n-label="Close">✕</button>
       </div>
-      <p class="hint" style="margin:0" data-i18n="Share your contact with the AmrPotli team if you'd like help, news, or to test new features. Nothing from your accounts is shared.">Share your contact with the AmrPotli team if you'd like help, news, or to test new features. Nothing from your accounts is shared.</p>
+      <p class="hint" style="margin:0" data-i18n="Share your contact with the FinnBlu team if you'd like help, news, or to test new features. Nothing from your accounts is shared.">Share your contact with the FinnBlu team if you'd like help, news, or to test new features. Nothing from your accounts is shared.</p>
       <div class="row2">
         <div class="field"><label for="optin-name" data-i18n="Name">Name</label><input id="optin-name" type="text" maxlength="80" required /></div>
         <div class="field"><label for="optin-phone" data-i18n-html="Phone &lt;span class=&quot;muted&quot;&gt;(optional)&lt;/span&gt;">Phone <span class="muted">(optional)</span></label><input id="optin-phone" type="tel" inputmode="tel" maxlength="20" /></div>
@@ -559,7 +558,7 @@
         <div class="field">
           <label for="optin-why" data-i18n="I'd like">I'd like</label>
           <select id="optin-why">
-            <option value="updates" data-i18n="News about AmrPotli">News about AmrPotli</option>
+            <option value="updates" data-i18n="News about FinnBlu">News about FinnBlu</option>
             <option value="tester" data-i18n="To test new features">To test new features</option>
             <option value="support" data-i18n="Help using the app">Help using the app</option>
             <option value="business" data-i18n="To talk about my business">To talk about my business</option>
@@ -567,7 +566,7 @@
         </div>
         <div class="field"><label for="optin-code" data-i18n-html="Promo code &lt;span class=&quot;muted&quot;&gt;(if you have one)&lt;/span&gt;">Promo code <span class="muted">(if you have one)</span></label><input id="optin-code" type="text" maxlength="30" autocapitalize="characters" /></div>
       </div>
-      <p class="hint" data-i18n="The AmrPotli team will see these details and may contact you. You can ask us to remove them any time.">The AmrPotli team will see these details and may contact you. You can ask us to remove them any time.</p>
+      <p class="hint" data-i18n="The FinnBlu team will see these details and may contact you. You can ask us to remove them any time.">The FinnBlu team will see these details and may contact you. You can ask us to remove them any time.</p>
       <p id="optin-error" class="error" hidden></p>
       <div class="sheet-actions"><button type="submit" class="btn primary" id="optin-send" data-i18n="Send">Send</button></div>
     </form>

@@ -1,4 +1,4 @@
-// AmrPotli team dashboard. Firebase (Auth + Firestore) holds the company's own
+// FinnBlu team dashboard. Firebase (Auth + Firestore) holds the company's own
 // data; firebase/firestore.rules decides who may read or change each part.
 // Users' money records are never here: they live in each user's Google Drive.
 
@@ -159,13 +159,13 @@ if (auth)
         const expired = m?.role === 'guest' && toDate(m.until) && toDate(m.until) < new Date();
         if (!m || expired) {
           stopListening();
-          return showGate(expired ? `Your guest access ended on ${dayLabel(toDate(m.until).toISOString().slice(0, 10))}.` : `${S.user.email} is not on the AmrPotli team. Ask the owner to add you.`);
+          return showGate(expired ? `Your guest access ended on ${dayLabel(toDate(m.until).toISOString().slice(0, 10))}.` : `${S.user.email} is not on the FinnBlu team. Ask the owner to add you.`);
         }
         if (S.role !== m.role || JSON.stringify(S.sections) !== JSON.stringify(m.sections || [])) start(m.role, m.sections || []);
       },
       () => {
         stopListening();
-        showGate(`${S.user.email} is not on the AmrPotli team. Ask the owner to add you.`);
+        showGate(`${S.user.email} is not on the FinnBlu team. Ask the owner to add you.`);
       },
     );
   });
@@ -568,7 +568,7 @@ function users() {
     <div class="kpis">
       <div class="kpi"><small>Phones this week</small><b>${nf.format(activesN(`w-${isoWeek(new Date())}`))}</b><span>weekly users, each phone once</span></div>
       <div class="kpi"><small>Phones this month</small><b>${nf.format(activesN(`m-${thisMonth()}`))}</b><span>monthly users · last month ${nf.format(activesN(`m-${monthsBack(2)[0]}`))}</span></div>
-      <div class="kpi"><small>All phones</small><b>${nf.format(list('stats').reduce((s, r) => s + (r.new || 0), 0))}</b><span>ever opened AmrPotli (counted)</span></div>
+      <div class="kpi"><small>All phones</small><b>${nf.format(list('stats').reduce((s, r) => s + (r.new || 0), 0))}</b><span>ever opened FinnBlu (counted)</span></div>
       <div class="kpi"><small>Phone-days active</small><b>${nf.format(act)}</b><span>${avg >= 1 ? `about ${nf.format(avg)} a day` : act ? 'less than 1 a day' : 'none yet'}</span></div>
       <div class="kpi"><small>New phones</small><b>${nf.format(sum('new'))}</b><span>opened for the first time</span></div>
       <div class="kpi"><small>Signed in with Google</small><b>${act ? Math.round((sum('drive') / act) * 100) : 0}%</b><span>of active phone-days</span></div>
@@ -700,9 +700,9 @@ function limits() {
   const items = [...list('grants')].sort((a, b) => a.id.localeCompare(b.id));
   const pub = list('public').find((p) => p.id === 'limits');
   const teamWithout = [OWNER, ...list('team').map((m) => m.id)].filter((e, i, a) => a.indexOf(e) === i && !items.some((g) => g.id === e));
-  return `${head('Extra limits', `The free plan has ${FREE_LIMIT} categories and ${FREE_PRODUCTS} products. People on this list get more in their own AmrPotli.`,
+  return `${head('Extra limits', `The free plan has ${FREE_LIMIT} categories and ${FREE_PRODUCTS} products. People on this list get more in their own FinnBlu.`,
     canWrite('limits') ? `${teamWithout.length ? `<button class="btn" data-act="grant-team">${icon('users')} Add the team (${teamWithout.length})</button>` : ''}<button class="btn primary" data-act="grant-new">${icon('plus')} Give more</button>` : '')}
-    <p class="note">${icon('shield-check')} The app downloads only scrambled emails and checks the user's own email on the phone, so it never sends anyone's email anywhere. A change reaches the person the next time they open AmrPotli with internet.</p>
+    <p class="note">${icon('shield-check')} The app downloads only scrambled emails and checks the user's own email on the phone, so it never sends anyone's email anywhere. A change reaches the person the next time they open FinnBlu with internet.</p>
     <div class="card">${items.length ? `<div class="table-wrap"><table><thead><tr><th>Email</th><th class="num">Categories</th><th class="num">Products</th><th>Until</th><th>Why</th><th>Given by</th><th></th></tr></thead><tbody>${items
       .map((g) => {
         const over = g.until && g.until < today();
@@ -730,7 +730,7 @@ async function publishLimits(next) {
 function grantForm(g = null) {
   form({
     title: g ? 'Change extra limit' : 'Give more categories',
-    note: 'Use the Google account email the person signs in to AmrPotli with.',
+    note: 'Use the Google account email the person signs in to FinnBlu with.',
     fields: [
       { name: 'email', label: 'Email', type: 'email', value: g?.id, required: true, max: 120 },
       { name: 'limit', label: 'Categories', type: 'select', options: [['0', 'Unlimited'], ['30', '30'], ['40', '40'], ['50', '50'], ['75', '75'], ['100', '100']], value: String(g?.limit ?? 0), half: true },
@@ -947,7 +947,7 @@ function memberForm(m = null) {
       { name: 'role', label: 'Role', type: 'select', options: roles, value: m?.role || 'employee', half: true },
       { name: 'until', label: 'Guest until', type: 'date', value: until, half: true },
       { name: 'sections', label: 'Sections (employees and guests)', type: 'checks', options: GIVEABLE.map((s) => [s.id, s.label]), value: m?.sections || [] },
-      ...(canWrite('limits') && !m ? [{ name: 'grant', label: 'Extra categories in their AmrPotli', type: 'select', options: [['0', 'Unlimited'], ['', 'No, keep the free 24']], value: '0' }] : []),
+      ...(canWrite('limits') && !m ? [{ name: 'grant', label: 'Extra categories in their FinnBlu', type: 'select', options: [['0', 'Unlimited'], ['', 'No, keep the free 24']], value: '0' }] : []),
     ],
     remove: m ? () => deleteDoc(doc(db, 'team', m.id)).then(() => log('team remove', m.id)) : null,
     removeLabel: 'Remove from team',

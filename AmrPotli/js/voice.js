@@ -1,6 +1,6 @@
 // Voice entry: "ডিম দেড়শো, মাছ সাড়ে চারশো" becomes ৳600 with "ডিম 150 + মাছ 450"
 // in the note. Uses the phone's own speech service (Chrome sends the audio to
-// Google for the words; AmrPotli gets only the text). Loaded only when 🎤 is tapped.
+// Google for the words; FinnBlu gets only the text). Loaded only when 🎤 is tapped.
 
 const nfc = (s) => String(s || '').normalize('NFC');
 

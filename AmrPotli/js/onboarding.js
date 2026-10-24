@@ -1,5 +1,5 @@
 // First-run setup for people starting fresh, one question per screen, with a
-// progress bar and the Potli asking the questions (like Duolingo or Chorcha).
+// progress bar and FinnBlu asking the questions (like Duolingo or Chorcha).
 // Loaded only when someone has no data yet, so it costs nothing for everyone else.
 // Answers are kept on this device while the wizard is open, so a reload or
 // closed tab picks up where the user left off.
@@ -12,7 +12,7 @@ import { PERSONAL, PERSONAL_EXTRA, BUSINESS, BUSINESS_EXTRA, PROFESSIONS, POPULA
 addBangla({
   'Hi {name}! 👋': 'হ্যালো {name}! 👋',
   'Hi! 👋': 'হ্যালো! 👋',
-  "I'm your Potli. Let's set up your money in about 1 minute: where you keep it, and what you spend on.": 'আমি আপনার পোটলি। চলুন 1 মিনিটে আপনার টাকার হিসাব সাজিয়ে ফেলি: টাকা কোথায় রাখেন, আর কীসে খরচ করেন।',
+  "I'm FinnBlu. Let's set up your money in about 1 minute: where you keep it, and what you spend on.": 'আমি FinnBlu। চলুন 1 মিনিটে আপনার টাকার হিসাব সাজিয়ে ফেলি: টাকা কোথায় রাখেন, আর কীসে খরচ করেন।',
   'Only you can see your data. It is saved in your own Google Drive.': 'আপনার তথ্য শুধু আপনিই দেখতে পারবেন। এটি আপনার নিজের Google Drive-এ সেভ থাকে।',
   'You can change every answer later in Setup.': 'প্রতিটি উত্তর পরে Setup-এ বদলাতে পারবেন।',
   "Let's start": 'শুরু করি',
@@ -52,7 +52,7 @@ addBangla({
   'How much do you want to save each month?': 'প্রতি মাসে কত টাকা জমাতে চান?',
   'Saving = income minus spending. A small goal is a great start.': 'সঞ্চয় = আয় বাদ খরচ। ছোট লক্ষ্য দিয়ে শুরু করাই ভালো।',
   'Other amount': 'অন্য পরিমাণ',
-  'Your Potli is ready! 🎉': 'আপনার পোটলি তৈরি! 🎉',
+  'FinnBlu is ready! 🎉': 'FinnBlu তৈরি! 🎉',
   'Total money': 'মোট টাকা',
   'Categories': 'ক্যাটাগরি',
   'Savings goal': 'সঞ্চয়ের লক্ষ্য',
@@ -92,11 +92,11 @@ addBangla({
   'A healthy business writes down every sale and cost the same day. Start with one now.': 'ভালো ব্যবসা প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
   'A healthy shop writes down every sale and cost the same day. Start with one now.': 'ভালো দোকান প্রতিটি বিক্রি আর খরচ সেদিনই লিখে রাখে। এখনই একটি দিয়ে শুরু করুন।',
   'Tap to start': 'শুরু করতে ট্যাপ করুন',
-  'How will you use AmrPotli?': 'আমার পোটলি কীভাবে ব্যবহার করবেন?',
+  'How will you use FinnBlu?': 'FinnBlu কীভাবে ব্যবহার করবেন?',
   'For personal use': 'ব্যক্তিগত ব্যবহারের জন্য',
   'Income, spending, savings and family costs': 'আয়, খরচ, সঞ্চয় আর পরিবারের খরচ',
   'For business': 'ব্যবসার জন্য',
-  'I already use AmrPotli': 'আমি আগে থেকেই আমার পোটলি ব্যবহার করি',
+  'I already use FinnBlu': 'আমি আগে থেকেই FinnBlu ব্যবহার করি',
   'Sign in with Google to get your data': 'আপনার তথ্য ফিরে পেতে Google দিয়ে সাইন ইন করুন',
   'What is your business?': 'আপনার ব্যবসা কী?',
   'Pick yours, or type it. I will set up the right categories and products.': 'আপনারটি বেছে নিন, বা লিখুন। মানানসই ক্যাটাগরি আর পণ্য সাজিয়ে দেব।',
@@ -115,13 +115,13 @@ addBangla({
   'I set up the shop and add helpers': 'আমি দোকান সেটআপ করি আর সহকারী যোগ করি',
   'Employee or helper': 'কর্মচারী বা সহকারী',
   "I work in someone else's shop": 'আমি অন্যের দোকানে কাজ করি',
-  'Ask the shop owner to add your Gmail in their AmrPotli (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.':
-    'দোকানের মালিককে বলুন তাঁর আমার পোটলিতে আপনার Gmail যোগ করতে (Setup → টিম → সহকারী যোগ করুন)। তারপর নিচে চাপুন, সেই Gmail দিয়ে সাইন ইন করে দোকানের খাতাটি বেছে নিন।',
+  'Ask the shop owner to add your Gmail in their FinnBlu (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.':
+    'দোকানের মালিককে বলুন তাঁর FinnBlu-তে আপনার Gmail যোগ করতে (Setup → টিম → সহকারী যোগ করুন)। তারপর নিচে চাপুন, সেই Gmail দিয়ে সাইন ইন করে দোকানের খাতাটি বেছে নিন।',
   'Open the shop book': 'দোকানের খাতা খুলুন',
   'Add your helpers in Setup → Team.': 'Setup → টিম থেকে আপনার সহকারীদের যোগ করুন।',
   'Install the app': 'অ্যাপটি ইনস্টল করুন',
-  'Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.':
-    'এটি আপনার নিজের Drive-এ সেভ করতে আর আমার পোটলি ব্যবহার শুরু করতে Google দিয়ে সাইন ইন করুন। শুধু আপনিই এটি দেখতে পারবেন।',
+  'Sign in with Google to save it in your own Drive and start using FinnBlu. Only you can see it.':
+    'এটি আপনার নিজের Drive-এ সেভ করতে আর FinnBlu ব্যবহার শুরু করতে Google দিয়ে সাইন ইন করুন। শুধু আপনিই এটি দেখতে পারবেন।',
   'Sign in with Google and start': 'Google দিয়ে সাইন ইন করে শুরু করুন',
   'Start over': 'আবার শুরু করুন',
   'Start over? The setup on this phone will be removed.': 'আবার শুরু করবেন? এই ফোনের সেটআপ মুছে যাবে।',
@@ -234,7 +234,7 @@ function saveDraft() {
   } catch {}
 }
 
-// True while the "Your Potli is ready" screen is up, after the data exists.
+// True while the "FinnBlu is ready" screen is up, after the data exists.
 export const isCelebrating = () => celebrating;
 
 const valid = {
@@ -267,7 +267,7 @@ export function renderWizard(root, ctx) {
 
   const coach = (msg, sub = '') => `
     <div class="ob-coach">
-      <img src="icons/icon.svg" alt="" width="56" height="56">
+      <img src="icons/symbol.svg" alt="" width="56" height="56">
       <div class="ob-bubble"><strong>${msg}</strong>${sub ? `<span>${sub}</span>` : ''}</div>
     </div>`;
 
@@ -277,17 +277,17 @@ export function renderWizard(root, ctx) {
         <button type="button" data-ob-lang="en" class="${lang === 'en' ? 'active' : ''}">English</button>
         <button type="button" data-ob-lang="bn" class="${lang === 'bn' ? 'active' : ''}">বাংলা</button>
       </div>
-      <div class="ob-hero"><img src="icons/icon.svg" alt="" width="96" height="96"></div>
+      <div class="ob-hero"><img src="icons/symbol.svg" alt="" width="96" height="96"></div>
       <h1 class="ob-title">${first ? t('Hi {name}! 👋', { name: esc(first) }) : t('Hi! 👋')}</h1>
-      <p class="ob-lead">${t("I'm your Potli. Let's set up your money in about 1 minute: where you keep it, and what you spend on.")}</p>
+      <p class="ob-lead">${t("I'm FinnBlu. Let's set up your money in about 1 minute: where you keep it, and what you spend on.")}</p>
       ${
         started
-          ? `<p class="ob-label">${t('How will you use AmrPotli?')}</p>
+          ? `<p class="ob-label">${t('How will you use FinnBlu?')}</p>
             <div class="ob-options" role="group">
               ${[
                 ['personal', '🧍', 'For personal use', 'Income, spending, savings and family costs', 'data-track="personal"'],
                 ['business', '🏪', 'For business', 'Shop, farm, pharmacy, any trade', 'data-track="business"'],
-                ...(ctx.local ? [['signin', '🔑', 'I already use AmrPotli', 'Sign in with Google to get your data', 'data-signin']] : []),
+                ...(ctx.local ? [['signin', '🔑', 'I already use FinnBlu', 'Sign in with Google to get your data', 'data-signin']] : []),
               ]
                 .map(
                   ([id, ic, l, sub, attrs]) => `<button type="button" class="ob-option ${draft.track === id ? 'on' : ''}" ${attrs}>
@@ -315,7 +315,7 @@ export function renderWizard(root, ctx) {
                 ${option('role', 'helper', '🧑‍🔧', 'Employee or helper', "I work in someone else's shop")}
                 ${
                   draft.role === 'helper'
-                    ? `<p class="ob-note">${t('Ask the shop owner to add your Gmail in their AmrPotli (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.')}</p>
+                    ? `<p class="ob-note">${t('Ask the shop owner to add your Gmail in their FinnBlu (Setup → Team → Add a helper). Then tap below, sign in with that Gmail and choose the shop book.')}</p>
                        <button type="button" class="btn primary wide" data-join>📒 ${t('Open the shop book')}</button>`
                     : ''
                 }
@@ -424,15 +424,15 @@ export function renderWizard(root, ctx) {
       const s = summary(ctx.data);
       return `
       <div class="ob-confetti" aria-hidden="true">${confetti()}</div>
-      <div class="ob-hero pop"><img src="icons/icon.svg" alt="" width="96" height="96"></div>
-      <h1 class="ob-title">${t('Your Potli is ready! 🎉')}</h1>
+      <div class="ob-hero pop"><img src="icons/symbol.svg" alt="" width="96" height="96"></div>
+      <h1 class="ob-title">${t('FinnBlu is ready! 🎉')}</h1>
       <div class="ob-summary">
         <div><span>${t('Accounts')}</span><strong>${s.accounts}</strong></div>
         <div><span>${t('Total money')}</span><strong class="num">৳ ${nf.format(s.total)}</strong></div>
         <div><span>${t('Categories')}</span><strong>${s.cats}</strong></div>
         <div><span>${shop() ? t('Profit goal') : t('Savings goal')}</span><strong class="num">${s.goal ? `৳ ${nf.format(s.goal)}` : '—'}</strong></div>
       </div>
-      ${ctx.local ? `<p class="ob-lead">${t('Sign in with Google to save it in your own Drive and start using AmrPotli. Only you can see it.')}</p>` : `<p class="ob-lead">${
+      ${ctx.local ? `<p class="ob-lead">${t('Sign in with Google to save it in your own Drive and start using FinnBlu. Only you can see it.')}</p>` : `<p class="ob-lead">${
         shop() ? t('A healthy business writes down every sale and cost the same day. Start with one now.') : t("Now the most important habit: write down what you spend, every day. Let's add your first one.")
       }</p>
       ${ctx.data?.settings?.team ? `<p class="muted ob-small">👥 ${t('Add your helpers in Setup → Team.')}</p>` : ''}
@@ -511,7 +511,7 @@ function summary(data) {
 
 // 24 pieces of CSS confetti; they fall once and stop (none with reduced motion).
 function confetti() {
-  const colors = ['#0f766e', '#f59e0b', '#e2136e', '#2563eb', '#16a34a', '#fbbf24'];
+  const colors = ['#2476CF', '#f59e0b', '#e2136e', '#2563eb', '#16a34a', '#fbbf24'];
   return Array.from({ length: 24 }, (_, i) => {
     const x = (i * 37) % 100;
     const d = (i % 6) * 0.12;
@@ -566,7 +566,7 @@ function bind(root, ctx, step) {
         go(root, ctx, 'who');
       }),
   );
-  // "I already use AmrPotli" on the greeting; "Sign in and start" after the setup.
+  // "I already use FinnBlu" on the greeting; "Sign in and start" after the setup.
   $$('[data-signin]', root).forEach((b) => (b.onclick = () => ctx.signIn({ returning: step === 'hello' })));
   const join = $('[data-join]', root);
   if (join) join.onclick = () => ctx.joinShop();

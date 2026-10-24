@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the AmrPotli website pages from tools/pages/.
+"""Builds the FinnBlu website pages from tools/pages/.
 
 Each source page is just the page body, starting with a settings comment:
 
@@ -100,17 +100,22 @@ def head(meta, root):
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{esc(meta['title_en'])}</title>
   <meta name="description" content="{esc(meta['description'])}" />
-  <meta name="theme-color" content="#0f766e" />
+  <meta name="theme-color" content="#0E2B49" />
   <link rel="canonical" href="{url}" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="{url}" />
   <meta property="og:title" content="{esc(meta['title_en'])}" />
   <meta property="og:description" content="{esc(meta['description'])}" />
-  <meta property="og:image" content="{SITE}AmrPotli/icons/icon-512.png" />
-  <link rel="icon" href="{root}AmrPotli/icons/icon.svg" type="image/svg+xml" />
+  <meta property="og:image" content="{SITE}assets/brand/finnblu-og-1200x630.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="{root}favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="{root}favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="{root}apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;family=Hind+Siliguri:wght@400;500;600;700&amp;display=swap" />
   <script>
 {redirect}    // Language: saved choice (shared with the app), else the browser language.
     // Day / night: saved choice (shared with the app), else the phone's setting.
@@ -136,7 +141,7 @@ def nav(meta, root):
     return f'''
 <nav class="site-nav" aria-label="Main">
   <div class="wrap">
-    <a class="logo" href="{root}./"><img src="{root}AmrPotli/icons/icon.svg" alt="" width="32" height="32"><span class="word">AmrPotli</span></a>
+    <a class="logo" href="{root}./" aria-label="FinnBlu home"><img class="lockup" src="{root}assets/brand/finnblu-lockup-primary.svg" alt="FinnBlu" width="135" height="35"></a>
     <div class="nav-links">{links}</div>
     <div class="nav-right">
       <div class="seg" role="group" aria-label="Language">
@@ -163,15 +168,15 @@ def foot(root):
   <div class="wrap">
     <div class="foot-cols">
       <div class="foot-brand">
-        <a class="logo" href="{root}./"><img src="{root}AmrPotli/icons/icon.svg" alt="" width="32" height="32">AmrPotli</a>
+        <a class="logo" href="{root}./" aria-label="FinnBlu home"><img class="lockup" src="{root}assets/brand/finnblu-lockup-primary.svg" alt="FinnBlu" width="135" height="35"></a>
         <p>{bi('A private money tracker for life and small business in Bangladesh.', 'বাংলাদেশের জীবন আর ছোট ব্যবসার জন্য প্রাইভেট টাকার হিসাব।')}</p>
       </div>
-      {col(bi('App', 'অ্যাপ'), [(f'{root}AmrPotli/', bi('Open AmrPotli', 'AmrPotli খুলুন')), (f'{root}AmrPotli/?install', bi(icon('smartphone') + ' Install', icon('smartphone') + ' ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
+      {col(bi('App', 'অ্যাপ'), [(f'{root}AmrPotli/', bi('Open FinnBlu', 'FinnBlu খুলুন')), (f'{root}AmrPotli/?install', bi(icon('smartphone') + ' Install', icon('smartphone') + ' ইনস্টল')), (f'{root}features.html', bi('All features', 'সব ফিচার'))])}
       {col(bi('Guides', 'গাইড'), [(f'{root}guides/start.html', bi('Get started', 'শুরু করুন')), (f'{root}guides/', bi('Guide for you', 'আপনার গাইড')), (f'{root}guides/how-to.html', bi('How to…', 'কীভাবে করবেন')), (f'{root}faq.html', bi('Questions', 'প্রশ্নোত্তর'))])}
-      {col(bi('AmrPotli', 'AmrPotli'), [(f'{root}about.html', bi('About us', 'আমাদের কথা')), (feedback, bi('Send feedback', 'মতামত পাঠান')), (f'{root}AmrPotli/privacy.html', bi('Privacy', 'প্রাইভেসি')), (f'{root}AmrPotli/terms.html', bi('Terms of use', 'ব্যবহারের শর্তাবলি'))])}
+      {col(bi('FinnBlu', 'FinnBlu'), [(f'{root}about.html', bi('About us', 'আমাদের কথা')), (feedback, bi('Send feedback', 'মতামত পাঠান')), (f'{root}AmrPotli/privacy.html', bi('Privacy', 'প্রাইভেসি')), (f'{root}AmrPotli/terms.html', bi('Terms of use', 'ব্যবহারের শর্তাবলি'))])}
     </div>
     <div class="foot-base">
-      <span>© 2026 vgfintrack · AmrPotli</span>
+      <span>© 2026 vgfintrack · FinnBlu</span>
       <a href="mailto:vgfintrack@gmail.com">vgfintrack@gmail.com</a>
     </div>
   </div>

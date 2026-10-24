@@ -83,8 +83,8 @@ export async function enrollBiometric(uid, label) {
   const cred = await navigator.credentials.create({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: { name: 'AmrPotli' },
-      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: label || 'AmrPotli', displayName: label || 'AmrPotli' },
+      rp: { name: 'FinnBlu' },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: label || 'FinnBlu', displayName: label || 'FinnBlu' },
       pubKeyCredParams: [
         { type: 'public-key', alg: -7 },
         { type: 'public-key', alg: -257 },
@@ -161,7 +161,7 @@ export function showKeypad({ uid, mode = 'unlock', canCancel = false, onForgot =
     const waiting = Math.ceil((waitUntil() - Date.now()) / 1000);
     root.innerHTML = `
       <div class="lock-box">
-        <img src="icons/icon.svg" alt="" width="64" height="64">
+        <img src="icons/symbol.svg" alt="" width="64" height="64">
         <h2>${title()}</h2>
         <div class="lock-dots ${bad ? 'shake' : ''}" aria-label="${entry.length} / 4">${[0, 1, 2, 3].map((i) => `<i class="${i < entry.length ? 'on' : ''}"></i>`).join('')}</div>
         <p class="lock-msg" role="status">${waiting > 0 ? t('Too many tries. Wait {n} seconds.', { n: waiting }) : msg}</p>

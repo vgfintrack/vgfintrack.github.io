@@ -1,4 +1,4 @@
-// Potli tips: short insights about the user's money, worked out on this phone
+// FinnBlu tips: short insights about the user's money, worked out on this phone
 // from their own entries. Nothing is sent anywhere, and no AI service is
 // used: each tip is a rule written here, in plain words.
 // Loaded after the dashboard is on screen.

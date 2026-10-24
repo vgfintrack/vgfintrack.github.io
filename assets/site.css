@@ -1,20 +1,21 @@
-/* AmrPotli website: shared look for every page (the app has its own CSS). */
+/* FinnBlu website: shared look for every page (the app has its own CSS). */
 :root {
-  --bg: #f4f6f5; --surface: #fff; --surface-2: #eef2f1; --text: #13201d; --muted: #5d6b67; --line: #dde4e2;
-  --brand: #0f766e; --brand-text: #0f766e; --accent: #f59e0b; --bad: #dc2626; --ok: #15803d; --warn: #b45309;
+  --bg: #F4F6FA; --surface: #fff; --surface-2: #EBF1F8; --text: #0E2B49; --muted: #56677D; --line: #DCE4EE;
+  --brand: #2476CF; --brand-text: #2476CF; --accent: #f59e0b; --bad: #dc2626; --ok: #15803d; --warn: #b45309;
   --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 6px 24px rgb(0 0 0 / .05);
+  --font-head: Poppins, "Hind Siliguri", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif;
   color-scheme: light;
 }
 /* Night: follows the phone, unless Day or Night was chosen (shared with the app as mt:theme). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1412; --surface: #151f1c; --surface-2: #1d2a26; --text: #e6eeeb; --muted: #93a39e; --line: #2a3833;
-    --brand-text: #5eead4; --bad: #f87171; --ok: #4ade80; --warn: #fbbf24; --shadow: none; color-scheme: dark;
+    --bg: #070D19; --surface: #0F1828; --surface-2: #172338; --text: #E6EEF7; --muted: #93A3B8; --line: #24324A;
+    --brand-text: #1DB7F3; --bad: #f87171; --ok: #4ade80; --warn: #fbbf24; --shadow: none; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d1412; --surface: #151f1c; --surface-2: #1d2a26; --text: #e6eeeb; --muted: #93a39e; --line: #2a3833;
-  --brand-text: #5eead4; --bad: #f87171; --ok: #4ade80; --warn: #fbbf24; --shadow: none; color-scheme: dark;
+  --bg: #070D19; --surface: #0F1828; --surface-2: #172338; --text: #E6EEF7; --muted: #93A3B8; --line: #24324A;
+  --brand-text: #1DB7F3; --bad: #f87171; --ok: #4ade80; --warn: #fbbf24; --shadow: none; color-scheme: dark;
 }
 .theme-btn { cursor: pointer; display: inline-grid; place-items: center; flex: none; }
 .theme-btn:hover { border-color: var(--brand); }
@@ -22,7 +23,7 @@
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 76px; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", sans-serif;
+  font: 16px/1.6 Inter, "Hind Siliguri", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", "Nirmala UI", sans-serif;
 }
 html[lang="bn"] body { font-size: 16.5px; }
 html[lang="en"] [lang="bn"], html[lang="bn"] [lang="en"]:not(html) { display: none !important; }
@@ -35,7 +36,7 @@ img { max-width: 100%; }
 .site-nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .site-nav .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; margin-right: auto; }
-.logo img { width: 32px; height: 32px; border-radius: 9px; }
+.logo img.lockup { width: auto; height: 35px; display: block; }
 .nav-links { display: flex; gap: 2px; }
 .nav-links a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 12px; border-radius: 10px; }
 .nav-links a:hover { color: var(--text); background: var(--surface-2); }
@@ -48,7 +49,7 @@ img { max-width: 100%; }
   .site-nav.open .nav-links { display: flex; }
   .nav-links a { padding: 12px 10px; font-size: 16px; }
 }
-@media (max-width: 520px) { .nav-right .btn.sm.primary { display: none; } .logo span.word { display: none; } }
+@media (max-width: 520px) { .nav-right .btn.sm.primary { display: none; } .logo img.lockup { height: 31px; } }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; }
 .seg button { border: 0; background: none; padding: 5px 11px; border-radius: 8px; font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; }
 .seg button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
@@ -102,7 +103,7 @@ section.alt .card { background: var(--bg); box-shadow: none; }
 
 /* ---------- phone screenshots */
 .shot { margin: 0; width: min(260px, 100%); flex: none; }
-.shot .frame { background: #13201d; border-radius: 30px; padding: 7px; box-shadow: 0 14px 40px rgb(0 0 0 / .18); }
+.shot .frame { background: #0E2B49; border-radius: 30px; padding: 7px; box-shadow: 0 14px 40px rgb(0 0 0 / .18); }
 .shot img { display: block; width: 100%; height: auto; border-radius: 24px; background: var(--surface-2); aspect-ratio: 390 / 780; object-fit: cover; object-position: top; }
 .shot figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
 .shots { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 12px; }
@@ -270,3 +271,12 @@ tr:last-child td { border-bottom: 0; }
 .form-msg { margin: 0; font-weight: 600; }
 .form-msg.good { color: var(--ok); }
 .form-msg.bad { color: var(--bad); }
+
+/* FinnBlu type: Poppins for headings and buttons (Bangla falls back to Hind Siliguri). */
+h1, h2, h3, h4, .btn, .brand b { font-family: var(--font-head); }
+h1, h2 { letter-spacing: -0.01em; }
+/* FinnBlu logo: reversed on dark (follows Day/Night). */
+:root[data-theme="dark"] img[src$="finnblu-lockup-primary.svg"] { content: url(brand/finnblu-lockup-reversed.svg); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) img[src$="finnblu-lockup-primary.svg"] { content: url(brand/finnblu-lockup-reversed.svg); }
+}

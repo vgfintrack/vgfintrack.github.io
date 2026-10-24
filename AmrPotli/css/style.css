@@ -1,42 +1,45 @@
-/* AmrPotli brand palette, the same in Day and Night:
-     Potli Teal #0f766e  (buttons, +, progress, logo tile)
-     Potli Gold #f59e0b  (accent from the pouch icon)
-   Night only lightens --brand-text, for small teal text on dark backgrounds. */
+/* FinnBlu brand palette, the same in Day and Night:
+     FinnBlu Blue #2476CF  (buttons, +, links, progress)
+     FinnBlu Navy #0E2B49  (text on light backgrounds)
+     Gold #f59e0b          (small highlights)
+   Night uses Midnight #070D19 and lightens --brand-text to Sky #1DB7F3.
+   See assets/brand/ for the logo files. */
 :root {
-  --brand: #0f766e;
+  --brand: #2476CF;
   --brand-ink: #ffffff;
-  --brand-text: #0f766e;
+  --brand-text: #2476CF;
   --accent: #f59e0b;
-  --bg: #f4f6f5;
+  --bg: #F4F6FA;
   --surface: #ffffff;
-  --surface-2: #eef2f1;
-  --text: #13201d;
-  --muted: #5d6b67;
-  --line: #dde4e2;
+  --surface-2: #EBF1F8;
+  --text: #0E2B49;
+  --muted: #56677D;
+  --line: #DCE4EE;
   --income: #15803d;
   --expense: #c2410c;
-  --transfer: #2563eb;
+  --transfer: #7C3AED;
   --ok: #16a34a;
   --warn: #d97706;
   --bad: #dc2626;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 4px 16px rgb(0 0 0 / 0.04);
   --radius: 14px;
+  --font-head: Poppins, "Hind Siliguri", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif;
   color-scheme: light;
 }
 /* Night theme: follows the device unless the user picked Day or Night
    (data-theme on <html>, set from Setup or the top-bar toggle). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1412;
-    --surface: #151f1c;
-    --surface-2: #1d2a26;
-    --text: #e6eeeb;
-    --muted: #93a39e;
-    --line: #2a3833;
-    --brand-text: #5eead4;
+    --bg: #070D19;
+    --surface: #0F1828;
+    --surface-2: #172338;
+    --text: #E6EEF7;
+    --muted: #93A3B8;
+    --line: #24324A;
+    --brand-text: #1DB7F3;
     --income: #4ade80;
     --expense: #fb923c;
-    --transfer: #60a5fa;
+    --transfer: #A78BFA;
     --ok: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
@@ -45,16 +48,16 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d1412;
-  --surface: #151f1c;
-  --surface-2: #1d2a26;
-  --text: #e6eeeb;
-  --muted: #93a39e;
-  --line: #2a3833;
-  --brand-text: #5eead4;
+  --bg: #070D19;
+  --surface: #0F1828;
+  --surface-2: #172338;
+  --text: #E6EEF7;
+  --muted: #93A3B8;
+  --line: #24324A;
+  --brand-text: #1DB7F3;
   --income: #4ade80;
   --expense: #fb923c;
-  --transfer: #60a5fa;
+  --transfer: #A78BFA;
   --ok: #4ade80;
   --warn: #fbbf24;
   --bad: #f87171;
@@ -68,7 +71,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", sans-serif;
+  font: 15px/1.45 Inter, "Hind Siliguri", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", "Nirmala UI", sans-serif;
 }
 [hidden] { display: none !important; }
 button, input, select { font: inherit; color: inherit; }
@@ -293,7 +296,7 @@ dialog form { display: grid; gap: 14px; padding: 18px; }
 .fab {
   position: fixed; right: 18px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 7;
   width: 58px; height: 58px; border-radius: 18px; border: 0; background: var(--brand); color: var(--brand-ink);
-  font-size: 32px; line-height: 1; cursor: pointer; box-shadow: 0 8px 24px rgb(15 118 110 / 0.35);
+  font-size: 32px; line-height: 1; cursor: pointer; box-shadow: 0 8px 24px rgb(36 118 207 / 0.35);
 }
 /* Phones get the floating + under the thumb; wider screens get a normal
    "Add transaction" button in the top bar instead. */
@@ -330,10 +333,10 @@ html[lang="bn"] .choice.recommended.selected strong::after { content: none; }
 .error.warn { color: var(--warn); }
 
 /* backup reminder */
-.backup-tip, .district-tip, .clip-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.backup-tip .big-ic, .district-tip .big-ic, .clip-card .big-ic { font-size: 28px; flex: none; }
-.backup-tip > div:nth-child(2), .district-tip > div:nth-child(2), .clip-card > div:nth-child(2) { flex: 1 1 180px; }
-.backup-tip .tip-actions, .district-tip .tip-actions, .clip-card .tip-actions { display: flex; gap: 8px; }
+.backup-tip, .district-tip, .clip-card, .renamed-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.backup-tip .big-ic, .district-tip .big-ic, .clip-card .big-ic, .renamed-card .big-ic { font-size: 28px; flex: none; }
+.backup-tip > div:nth-child(2), .district-tip > div:nth-child(2), .clip-card > div:nth-child(2), .renamed-card > div:nth-child(2) { flex: 1 1 180px; }
+.backup-tip .tip-actions, .district-tip .tip-actions, .clip-card .tip-actions, .renamed-card .tip-actions { display: flex; gap: 8px; }
 
 /* install tip on the Dashboard */
 .install-tip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
@@ -635,7 +638,7 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .photo-dialog img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .photo-close { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; background: rgba(0, 0, 0, 0.55); color: #fff; }
 
-/* the AmrPotli team's notice, under the top bar */
+/* the FinnBlu team's notice, under the top bar */
 .notice-bar { display: flex; align-items: center; gap: 10px; justify-content: space-between; background: color-mix(in srgb, var(--brand) 12%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
 .notice-bar[hidden] { display: none; }
 .notice-bar a { font-weight: 600; }
@@ -658,7 +661,7 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .other-person[hidden] { display: none; }
 .other-person p { margin: 0 0 8px; color: var(--muted); }
 .other-person div { display: flex; gap: 8px; flex-wrap: wrap; }
-/* Potli tips */
+/* FinnBlu tips */
 .potli-tips { display: grid; gap: 10px; border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
 .pt-head { display: flex; gap: 10px; align-items: center; }
 .pt-head img { flex: none; }
@@ -675,3 +678,20 @@ html.locked #app, html.locked #login { visibility: hidden; }
 .help-item p { margin: 8px 0 0; font-size: 14px; }
 /* optional district */
 .district-select { width: 100%; margin-top: 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 15px; }
+
+/* FinnBlu type: Poppins for headings and buttons (Bangla falls back to Hind Siliguri). */
+h1, h2, h3, h4, .btn, .brand b { font-family: var(--font-head); }
+h1, h2 { letter-spacing: -0.01em; }
+
+/* FinnBlu logo: primary on light, reversed on dark (follows Day/Night). */
+.lockup { display: block; height: 32px; width: auto; }
+.login-logo { margin: 4px 0 6px; display: flex; justify-content: center; }
+.login-logo .lockup { height: 56px; }
+a.brand { color: inherit; text-decoration: none; }
+:root[data-theme="dark"] img[src$="lockup.svg"] { content: url(../icons/lockup-dark.svg); }
+:root[data-theme="dark"] img[src$="symbol.svg"] { content: url(../icons/symbol-dark.svg); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) img[src$="lockup.svg"] { content: url(../icons/lockup-dark.svg); }
+  :root:not([data-theme="light"]) img[src$="symbol.svg"] { content: url(../icons/symbol-dark.svg); }
+}
+.ob-hero img, .ob-coach img, .lock-box img, .pt-head img { border-radius: 0; }

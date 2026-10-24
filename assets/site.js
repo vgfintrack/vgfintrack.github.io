@@ -1,4 +1,4 @@
-// AmrPotli website: English / বাংলা switch (shared with the app) and the phone menu.
+// FinnBlu website: English / বাংলা switch (shared with the app) and the phone menu.
 (() => {
   const html = document.documentElement;
   const buttons = document.querySelectorAll('[data-l]');
@@ -43,7 +43,7 @@
     nav.querySelectorAll('.nav-links a').forEach((a) => a.addEventListener('click', () => nav.classList.remove('open')));
   }
 
-  // ---- the AmrPotli team: website notice and the contact forms (company.js is shared with the app)
+  // ---- the FinnBlu team: website notice and the contact forms (company.js is shared with the app)
   const root = new URL('..', document.currentScript?.src || location.href);
   const company = () => import(new URL('AmrPotli/js/company.js', root).href);
   const bn = () => html.lang === 'bn';
@@ -94,7 +94,7 @@
         if (kind === 'feedback') await C.sendFeedback({ kind: d.kind, text: d.text.trim(), contact: d.contact.trim(), from: 'website', lang: html.lang });
         else await C.sendOptin({ ...d, name: d.name.trim(), email: d.email.trim(), lang: html.lang, app: 'website' });
         f.reset();
-        say('Sent. Thank you! The AmrPotli team will read it.', 'পাঠানো হয়েছে। ধন্যবাদ! আমার পোটলি টিম এটি পড়বে।');
+        say('Sent. Thank you! The FinnBlu team will read it.', 'পাঠানো হয়েছে। ধন্যবাদ! FinnBlu টিম এটি পড়বে।');
       } catch {
         say('Could not send. Check your internet, or email vgfintrack@gmail.com.', 'পাঠানো যায়নি। ইন্টারনেট দেখুন, বা vgfintrack@gmail.com-এ ইমেইল করুন।', true);
       } finally {

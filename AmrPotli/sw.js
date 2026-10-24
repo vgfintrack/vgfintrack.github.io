@@ -1,10 +1,11 @@
-// Service worker: keeps a copy of the app's own files so AmrPotli opens
+// Service worker: keeps a copy of the app's own files so FinnBlu opens
 // without internet. Online, every request goes to the network first, so a
 // new version is picked up on the next open; offline (or on a very slow
 // connection) the saved copy is used. Google sign-in and Google Drive calls
 // are never touched: they always go straight to Google.
 
-const CACHE = 'amrpotli-app-v31';
+const CACHE = 'amrpotli-app-v32';
+const FONTS = 'amrpotli-fonts-1'; // kept across versions
 const NETWORK_TIMEOUT_MS = 4000;
 
 // Everything the app needs to start. Other same-folder files are saved the
@@ -41,6 +42,12 @@ const SHELL = [
   'js/store.js',
   'vendor/chart.umd.min.js',
   'icons/icon.svg',
+  'icons/symbol.svg',
+  'icons/symbol-dark.svg',
+  'icons/lockup.svg',
+  'icons/lockup-dark.svg',
+  'icons/favicon.svg',
+  'icons/apple-touch-icon.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',
@@ -59,7 +66,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('amrpotli-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('amrpotli-') && k !== CACHE && k !== FONTS).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -67,10 +74,27 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
-  // Only this app's own files; Google APIs, fonts and everything else pass through.
+  // The brand fonts are kept so the app looks the same offline.
+  if (req.method === 'GET' && (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com')) {
+    event.respondWith(fontFirst(req));
+    return;
+  }
+  // Otherwise only this app's own files; Google APIs and everything else pass through.
   if (req.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(new URL('./', self.location).pathname)) return;
   event.respondWith(networkFirst(req));
 });
+
+async function fontFirst(req) {
+  const cache = await caches.open(FONTS);
+  const cached = await cache.match(req);
+  const fresh = fetch(req)
+    .then((res) => {
+      if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
+      return res;
+    })
+    .catch(() => cached);
+  return cached || fresh;
+}
 
 async function networkFirst(req) {
   const cache = await caches.open(CACHE);
