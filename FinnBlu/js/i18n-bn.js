@@ -815,4 +815,6 @@ export const BN = {
   // ---- shared or copied SMS
   'Add the SMS you copied?': 'কপি করা SMS-টি যোগ করবেন?',
   'No thanks': 'না, থাক',
+  'Filled in. Pick the right category, then tap Save.': 'পূরণ হয়েছে। ঠিক ক্যাটাগরি বেছে নিয়ে সেভ চাপুন।',
+  'Filled in. Check who it is with, then tap Save.': 'পূরণ হয়েছে। কার সাথে লেনদেন, দেখে নিয়ে সেভ চাপুন।',
 };

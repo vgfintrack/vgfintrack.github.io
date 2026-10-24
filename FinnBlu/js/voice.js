@@ -17,6 +17,9 @@ const THOUSAND = /^(হাজার|thousand)$/;
 const LAKH = /^(লাখ|লক্ষ|lakh|lac)$/;
 const FILLER = new Set(['টাকা', 'টাকার', 'টাকায়', 'tk', 'taka', 'takar', 'আর', 'এবং', 'and', 'plus', 'দিয়ে', 'হলো', 'হল', 'খরচ', 'লাগলো', 'লাগল', 'কিনলাম', 'দিলাম', 'আয়', 'ইনকাম', 'income'].map(nfc));
 
+const ONE = nfc('এক');
+const TAKA = new RegExp(nfc('^(?:টাকা|টাকার|টাকায়|tk|taka|takar)$'), 'i');
+
 const BN = '০১২৩৪৫৬৭৮৯';
 const toLatin = (s) => s.replace(/[০-৯]/g, (d) => BN.indexOf(d));
 
@@ -45,7 +48,9 @@ function findNumbers(words) {
     total = 0; cur = 0; start = -1; half = false; any = false;
   };
   words.forEach((w, i) => {
-    const t = numberWord(w);
+    let t = numberWord(w);
+    // "অন্য এক বন্ধু" (another friend): এক is a word, not ৳1, unless an amount follows.
+    if (t && w === ONE && i + 1 < words.length && !numberWord(words[i + 1]) && !TAKA.test(words[i + 1])) t = null;
     if (!t) return flush(i);
     if (start < 0) start = i;
     if (t.half) return (half = true);
@@ -79,23 +84,78 @@ const HINTS = [
   [['বাসা ভাড়া', 'ঘর ভাড়া', 'বাড়ি ভাড়া', 'house rent'], null, ['House Rent', 'Rent', 'Shop Rent']],
   [null, 'চাল ডাল তেল মাছ মাংস মুরগি গরুর গরু খাসি ডিম সবজি শাক আলু পেঁয়াজ পিয়াজ রসুন আদা মরিচ মসলা লবণ চিনি দুধ বাজার ফল কলা আটা ময়দা rice fish egg eggs vegetable vegetables bazar grocery groceries chicken meat onion potato milk', ['Bazar & Groceries', 'Groceries', 'Bazar', 'Food']],
   [null, 'খাবার নাস্তা চা লাঞ্চ হোটেল বিরিয়ানি ভাত food lunch breakfast tea snack snacks dinner', ['Food', 'Snacks & Tea', 'Hall Dining Fee']],
-  [null, 'রিকশা রিক্সা বাস সিএনজি উবার পাঠাও গাড়ি rickshaw bus cng uber pathao transport fare', ['Transport', 'Transport & Delivery']],
+  [null, 'রিকশা রিক্সা বাস সিএনজি উবার পাঠাও গাড়ি যাতায়াত ট্রেন লঞ্চ rickshaw bus cng uber pathao transport fare train launch', ['Transport', 'Transport & Delivery']],
   [null, 'গ্যাস বিদ্যুৎ কারেন্ট বিল পানি gas electricity electric bill water', ['Utility Bills', 'Electricity', 'Bills']],
-  [null, 'ভাড়া rent', ['House Rent', 'Rent', 'Shop Rent']],
+  [null, 'ভাড়া rent', ['House Rent', 'Rent', 'Shop Rent', 'Transport', 'Transport & Delivery']],
   [null, 'ওষুধ ঔষধ ডাক্তার হাসপাতাল medicine doctor hospital', ['Medical']],
   [null, 'স্কুল কলেজ টিউশন বই খাতা কোচিং school tuition book books coaching', ["Children's Education", 'Study & Books', 'Education']],
   [null, 'মোবাইল রিচার্জ ইন্টারনেট ফ্লেক্সি recharge mobile internet', ['Mobile & Internet']],
   [null, 'কাপড় জামা শাড়ি জুতা clothes dress shoes', ['Clothing', 'Shopping']],
   [null, 'উপহার গিফট দাওয়াত বিয়ে gift dawat wedding', ['Gifts & Dawat']],
   [null, 'বেতন salary', ['Salary']],
-  [null, 'ছেলে মেয়ে স্বামী বাবা আব্বু আম্মু ভাই বোন পাঠাইছে পাঠিয়েছে পাঠালো son daughter husband', ['Household Money', 'Family Allowance', 'Gift Received']],
+  [null, 'ছেলে মেয়ে স্বামী বাবা আব্বু আম্মু ভাই বোন পাঠাইছে পাঠিয়েছে পাঠালো son daughter husband mother father ammu abbu', ['Household Money', 'Family Allowance', 'Money from Family', 'Gift Received', 'Family Support', 'Money to Family', 'Family']],
 ].map(([phrases, words, names]) => [phrases?.map(nfc), words ? new Set(nfc(words).toLowerCase().split(' ')) : null, names]);
-const ENDING = /(গুলো|গুলি|টা|টি|ের|ে|র|য়|ও|s)$/;
+const FARE = new RegExp(nfc('ভাড়া|\\bfare\\b'), 'i');
+const TRAVEL = new Set(nfc('যেতে যাওয়া যাওয়ার আসতে আসা যাতায়াত রিকশা রিক্সা বাস সিএনজি উবার পাঠাও ট্রেন লঞ্চ go going travel').split(' '));
+const ENDING = /(গুলো|গুলি|কে|টা|টি|ের|ে|র|য়|ও|s)$/;
 const hasWord = (set, w) => set.has(w) || set.has(w.replace(ENDING, ''));
 // Income: "পেলাম", "বেতন", "ইনকাম ৪০০"… unless the words say the money went out
 // ("বেতন দিলাম" is paying a salary).
 const INCOME = new RegExp(nfc('পেলাম|পেয়েছি|পাইছি|পাইলাম|আসছে|এসেছে|পাঠিয়েছে|পাঠাইছে|received|got|salary|বেতন'), 'i');
 const INCOME_WORD = new RegExp(nfc('^(?:আয়|ইনকাম|income|earned|earning|bonus|বোনাস)$'), 'i');
+// Loans. Order matters: "ফেরত দিলাম" (I paid back) before "ফেরত দিল" (they paid me back).
+const LOANS = [
+  ['repay', 'শোধ করলাম|শোধ করেছি|শোধ দিলাম|শোধ দিয়েছি|ফেরত দিলাম|ফেরত দিয়েছি|কিস্তি দিলাম|কিস্তি দিয়েছি|repaid|paid back'],
+  ['collect', 'ফেরত পেলাম|ফেরত পেয়েছি|ফেরত দিল|ফেরত দিয়েছে|ফেরত দিছে|শোধ করল|শোধ করেছে|শোধ দিল|শোধ দিয়েছে|paid me back|got back'],
+  ['lend', '(?:ধার|লোন|কর্জ|হাওলাত) ?(?:দিলাম|দিয়েছি|দিছি)|\\blent\\b|\\blend\\b'],
+  ['borrow', '(?:ধার|লোন|কর্জ|হাওলাত) ?(?:নিলাম|নিয়েছি|নিছি|পেলাম|পেয়েছি|আনলাম|এনেছি)|borrowed|\\bborrow\\b'],
+].map(([k, re]) => [k, new RegExp(nfc(re), 'i')]);
+// Where the money was: "আমার বিকাশে এসেছে", "ব্যাংক থেকে দিলাম".
+const MONEY = [
+  ['bkash', 'বিকাশ|বিকাস|bkash|bikash'],
+  ['rocket', 'রকেট|rocket'],
+  ['nagad', 'nagad'],
+  ['upay', 'upay'],
+  ['bank', 'ব্যাংক|ব্যাঙ্ক|bank'],
+  ['cash', 'ক্যাশ|cash|হাতে'],
+].map(([k, re]) => [k, new RegExp(nfc(`^(?:${re})`), 'i')]);
+const MINE = new RegExp(nfc('^(?:আমার|my)$'), 'i');
+const FROM = new RegExp(nfc('^(?:থেকে|from)$'), 'i');
+const ACCOUNT_WORD = new RegExp(nfc('^(?:অ্যাকাউন্ট|একাউন্ট|অ্যাকাউন্টে|account|a/c)$'), 'i');
+const FROM_WORD = new RegExp(nfc('^(?:থেকে|তো|from)$'), 'i'); // "তো": how থেকে is often heard
+function moneyHits(words) {
+  const hits = [];
+  words.forEach((w, i) => {
+    const m = MONEY.find(([, re]) => re.test(w));
+    if (!m) return;
+    let j = i + 1;
+    while (j < words.length && ACCOUNT_WORD.test(words[j])) j++; // "ব্যাংক অ্যাকাউন্ট থেকে"
+    hits.push({ kind: m[0], mine: i > 0 && MINE.test(words[i - 1]), from: j < words.length && FROM_WORD.test(words[j]), into: INTO.test(w) });
+  });
+  return hits;
+}
+const INTO = new RegExp(nfc('[েএ]$')); // "বিকাশে": into bKash
+const TRANSFER_WORD = new RegExp(nfc('ট্রান্সফার|ট্রান্সফার|transfer|মুভ'), 'i');
+// Between the user's own accounts: "ব্যাংক থেকে বিকাশে পাঠালাম", "ব্যাংক অ্যাকাউন্ট থেকে
+// বিকাশে ট্রান্সফার করেছি", "ব্যাংক থেকে বিকাশ করেছি". Not when someone else is in it.
+function ownTransfer(words, text) {
+  const hits = moneyHits(words);
+  if (!hits.length || others(words)) return null;
+  const kinds = [...new Set(hits.map((h) => h.kind))];
+  if (kinds.length < 2 && !TRANSFER_WORD.test(text)) return null;
+  const from = hits.find((h) => h.from) || (kinds.length < 2 && hits[0].into ? null : hits[0]);
+  const to = hits.find((h) => h.kind !== from?.kind);
+  return { from: from?.kind || null, to: to?.kind || null };
+}
+const OTHERS = new Set(nfc('বন্ধু ভাই বোন আব্বু আম্মু বাবা মা কাছ friend someone').split(' '));
+const THEKE = nfc('থেকে');
+// Someone else's money is in it: a relative or friend, or "রহিমকে" (to Rahim).
+const others = (words) => words.some((w) => hasWord(OTHERS, w.toLowerCase()) || (w.endsWith(nfc('কে')) && w !== THEKE));
+function moneyHint(words, incoming) {
+  const hits = moneyHits(words);
+  if (!hits.length) return null;
+  return (hits.find((h) => h.mine) || (incoming ? hits.find((h) => !h.from) : hits.find((h) => h.from)) || hits[0]).kind;
+}
 const SPENT = new RegExp(nfc('দিলাম|দিয়েছি|দিছি|পাঠালাম|পাঠাইলাম|পাঠিয়েছি|কিনলাম|কিনেছি|কিনছি|খরচ|expense|spent|paid|bought'), 'i');
 
 export function parseSpeech(raw, { expense = [], income = [] } = {}) {
@@ -111,15 +171,19 @@ export function parseSpeech(raw, { expense = [], income = [] } = {}) {
     // amount-first speech for several items: shift labels left
     for (let i = 0; i < items.length; i++) items[i].label = label(nums[i].end, nums[i + 1]?.start ?? words.length);
   }
-  const type = !SPENT.test(text) && (INCOME.test(text) || words.some((w) => INCOME_WORD.test(w))) ? 'Income' : 'Expense';
-  const list = type === 'Income' ? income : expense;
+  const loan = LOANS.find(([, re]) => re.test(text))?.[0] || null;
+  const transfer = loan ? null : ownTransfer(words, text);
+  const type = loan ? 'Loan' : transfer ? 'Transfer' : !SPENT.test(text) && (INCOME.test(text) || words.some((w) => INCOME_WORD.test(w))) ? 'Income' : 'Expense';
+  const list = type === 'Income' ? income : type === 'Expense' ? expense : [];
   let category = null;
   const lower = words.map((w) => w.toLowerCase());
-  for (const [phrases, set, names] of HINTS) {
+  // "টিউশনে যেতে ভাড়া": a fare for getting somewhere, not rent or tuition.
+  if (FARE.test(text) && lower.some((w) => hasWord(TRAVEL, w))) category = ['Transport', 'Transport & Delivery'].map((n) => list.find((c) => c.toLowerCase() === n.toLowerCase())).find(Boolean) || null;
+  for (const [phrases, set, names] of category ? [] : HINTS) {
     const hit = phrases ? phrases.some((ph) => text.toLowerCase().includes(ph)) : lower.some((w) => hasWord(set, w));
     if (!hit) continue;
     category = names.map((n) => list.find((c) => c.toLowerCase() === n.toLowerCase())).find(Boolean) || null;
-    if (category) break;
+    if (category || phrases) break; // "বাসা ভাড়া" is rent even without a Rent category
   }
   const amount = Math.round(items.reduce((s, i) => s + i.value, 0) * 100) / 100;
   return {
@@ -128,6 +192,10 @@ export function parseSpeech(raw, { expense = [], income = [] } = {}) {
     expr: items.length > 1 ? items.map((i) => i.value).join('+') : String(amount),
     note: items.length > 1 ? items.map((i) => `${i.label} ${i.value}`.trim()).join(' + ') : items[0].label,
     category,
+    loan,
+    transfer,
+    money: moneyHint(words, type === 'Income' || loan === 'borrow' || loan === 'collect'),
+    words,
     heard: raw,
   };
 }

@@ -5,7 +5,7 @@
 import { t, lang } from './i18n.js';
 
 // Bump on each release, so feedback shows which version people were using.
-export const APP_VERSION = '2026.10.24f';
+export const APP_VERSION = '2026.10.24h';
 
 // Feedback goes to a Google Form, never with any money data. The form's last
 // question ("App info") is filled in with version, language, device type and

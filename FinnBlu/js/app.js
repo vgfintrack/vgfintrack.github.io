@@ -514,7 +514,7 @@ async function boot() {
       return;
     }
     $('#login').hidden = true;
-    if (hasLock() && lockDue()) lockNow();
+    if (hasLock() && (lockDue() || freshStart())) lockNow();
     else unlocked = true;
     $('#app').hidden = false;
     renderAvatar();
@@ -915,12 +915,28 @@ const hasLock = () => !!state.user && !!lockCfg();
 const lockModule = () => import('./lock.js');
 
 // The last moment the app was open and unlocked. It survives a refresh, so a
-// reload within the "Lock after" time does not ask again; closing the app for
+// reload within the "Lock after" time does not ask again; leaving the app for
 // longer does. Never written while the keypad is up.
+// Opening the app fresh (after it was closed or swiped away) always asks: the
+// "Lock after" time is only for switching to another app and back, or a refresh.
 let unlocked = false;
+const SESSION_KEY = 'mt:lock-session';
+function freshStart() {
+  try {
+    return !sessionStorage.getItem(SESSION_KEY);
+  } catch {
+    return true;
+  }
+}
+function markSession() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, '1');
+  } catch {}
+}
 const seenKey = () => `mt:lock-seen:${state.user?.uid}`;
 function markSeen() {
   if (!unlocked || !state.user) return;
+  markSession();
   try {
     localStorage.setItem(seenKey(), String(Date.now()));
   } catch {}
@@ -2543,13 +2559,28 @@ async function speakEntry() {
     const s = settings();
     const r = V.parseSpeech(heard, { expense: s.expenseCategories.map((c) => c.name), income: s.incomeCategories });
     if (!r) return showSmsInfo(`🎤 “${esc(heard)}”<br>${esc(t("Couldn't find an amount. Try again, and say the taka amount."))}`, true);
-    setTxnType(r.type);
+    if (r.loan) setTxnType('Loan', null, { loan: r.loan });
+    else setTxnType(r.type);
     $('#txn-amount').value = r.expr;
     $('#txn-amount').dataset.itemized = prettyExpr(r.expr);
-    if (r.category) $('#txn-category').value = r.category;
+    let next = 'Filled in. Check and tap Save.';
+    if (r.loan && !voicePerson(r.words)) next = 'Filled in. Check who it is with, then tap Save.';
+    if (r.transfer) {
+      if (r.transfer.from) voiceAccount('#txn-account', r.transfer.from);
+      if (r.transfer.to) voiceAccount('#txn-to', r.transfer.to);
+    } else if (r.money) voiceAccount('#txn-account', r.money);
+    if (r.type === 'Income' || r.type === 'Expense') {
+      if (r.category) $('#txn-category').value = r.category;
+      else {
+        // Nothing said what it was for: "Other", not whatever was first in the list.
+        const other = [...$('#txn-category').options].find((o) => /^other\b/i.test(o.value));
+        if (other) $('#txn-category').value = other.value;
+        next = 'Filled in. Pick the right category, then tap Save.';
+      }
+    }
     $('#txn-note').value = r.note;
     updateTxnHint();
-    showSmsInfo(`🎤 “${esc(heard)}”<br>✓ ${esc(t('Filled in. Check and tap Save.'))}`);
+    showSmsInfo(`🎤 “${esc(heard)}”<br>✓ ${esc(t(next))}`);
     used('voice');
   } catch (e) {
     const msg = {
@@ -2563,6 +2594,37 @@ async function speakEntry() {
     btn.classList.remove('listening');
     btn.textContent = t('🎤 Speak');
   }
+}
+
+// The account a spoken word means: "বিকাশ" → the bKash wallet, "ব্যাংক" → a bank account.
+const VOICE_ACC = {
+  bkash: /bkash|বিকাশ/i,
+  rocket: /rocket|রকেট/i,
+  nagad: /nagad|নগদ অ্যাকাউন্ট/i,
+  upay: /upay/i,
+  cash: /cash|hand|ক্যাশ|হাতে|নগদ/i,
+  bank: /bank|ব্যাংক|sonali|janata|agrani|rupali|pubali|uttara|dbbl|dutch|brac|city|islami|ebl|ucb|prime|mtb|standard|hsbc|scb/i,
+};
+function voiceAccount(sel, kind) {
+  const ids = new Set([...$(sel).options].map((o) => o.value));
+  const mine = accounts().filter((a) => ids.has(a.id));
+  const hit =
+    mine.find((a) => VOICE_ACC[kind]?.test(a.name)) ||
+    (kind === 'bank' ? mine.find((a) => a.type === 'Liquid' && !Object.values(VOICE_ACC).some((re) => re !== VOICE_ACC.bank && re.test(a.name))) : null);
+  if (hit) $(sel).value = hit.id;
+  return !!hit;
+}
+// A loan's person, if their name was said ("রহিমকে ধার দিলাম").
+function voicePerson(words) {
+  const said = words.map((w) => w.toLowerCase());
+  const o = [...$('#txn-person').options].find((o) => {
+    const first = o.value !== '__new' && o.text.toLowerCase().split(/\s+/)[0];
+    return first && first.length > 1 && said.some((w) => w.startsWith(first));
+  });
+  if (!o) return false;
+  $('#txn-person').value = o.value;
+  fillLoanFields();
+  return true;
 }
 
 function showSmsInfo(html, warn = false) {
