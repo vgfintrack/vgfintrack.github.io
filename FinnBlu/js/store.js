@@ -28,7 +28,7 @@ const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const SCOPES = `openid email profile ${DRIVE_SCOPE}`;
 const FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'; // shop books only
 const FILE_NAME = 'amrpotli.json';
-const TEAM_NOTE = 'amrpotli-team.json'; // { fileId, role: 'owner' | 'helper', name, owner }
+const TEAM_NOTE = 'amrpotli-team.json'; // { fileId, role: 'owner' | 'helper' | 'member', kind?: 'trip', name, owner, back? }
 const teamKey = (uid) => `mt:team:${uid}`;
 const LAST_USER_KEY = 'mt:last-user';
 // Google access token for the signed-in user. It lasts about an hour and only
@@ -603,7 +603,7 @@ async function createDriveStore() {
   }
 
   // ---- shop books
-  const validTeam = (x) => (x && typeof x.fileId === 'string' && ['owner', 'helper'].includes(x.role) ? x : null);
+  const validTeam = (x) => (x && typeof x.fileId === 'string' && ['owner', 'helper', 'member'].includes(x.role) ? x : null);
 
   async function noteFile() {
     const q = encodeURIComponent(`name='${TEAM_NOTE}'`);
@@ -620,7 +620,8 @@ async function createDriveStore() {
     teamChecked = true;
     if ((found?.fileId || null) !== (team?.fileId || null)) {
       // An owner's own data became the shop book, so changes not yet saved go with it.
-      switchTeam(found, found?.role === 'owner');
+      // A trip is a book of its own: nothing is carried into it.
+      switchTeam(found, found?.role === 'owner' && found.kind !== 'trip');
       if (found && !token.file) throw Object.assign(new Error(t('Tap to connect to the shop book')), { needsAuth: true });
     } else if (found) {
       team = found;
@@ -702,6 +703,78 @@ async function createDriveStore() {
     await quiet();
     teamChecked = true;
     switchTeam(note);
+    await sync();
+  }
+
+  // ---- group trips: a book of its own, shared with friends, opened instead of
+  // the user's own data until they go back. `back` is the book to return to
+  // (a shop book), or null for their own data.
+  const TRIP_NAME = /^FinnBlu trip - |\.json$/g;
+  const backFrom = () => (team?.kind === 'trip' ? team.back || null : team);
+
+  async function openBook(note) {
+    await writeNote(note);
+    await quiet();
+    teamChecked = true;
+    switchTeam(note);
+    await sync();
+  }
+
+  async function startTrip(name, info, me) {
+    await fileAccess();
+    const now = Date.now();
+    const doc = emptyDoc();
+    doc.settings = { kind: 'trip', trip: { name, ...info } };
+    doc.settingsUpdatedAt = now;
+    doc.team = { members: [{ id: newId(), name: me || user.displayName || user.email, email: user.email, addedAt: now }], keeper: null };
+    doc.teamUpdatedAt = now;
+    const boundary = 'mt' + newId();
+    const meta = JSON.stringify({
+      name: `FinnBlu trip - ${name}.json`,
+      mimeType: 'application/json',
+      description: 'A group trip in FinnBlu, shared with the friends you add in the app. Please do not edit or delete it.',
+      appProperties: { amrpotli: 'trip' },
+    });
+    const res = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(doc)}\r\n--${boundary}--`,
+    });
+    const id = (await res.json()).id;
+    await openBook({ fileId: id, role: 'owner', kind: 'trip', name, owner: { email: user.email, name: user.displayName }, back: backFrom() });
+  }
+
+  // A trip the user made, or one a friend shared (chosen in Google's file picker,
+  // or from the list of trips this app has opened before).
+  async function openTrip(id) {
+    await fileAccess();
+    const meta = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,ownedByMe,owners(displayName,emailAddress),capabilities(canEdit)`)).json();
+    const book = await (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json().catch(() => null);
+    if (!book || book.settings?.kind !== 'trip') throw new Error(t('This file is not a FinnBlu trip.'));
+    if (!meta.capabilities?.canEdit) throw new Error(t('This trip was shared without letting you add to it. Ask your friend to add you again in FinnBlu.'));
+    const o = meta.owners?.[0] || {};
+    const mine = meta.ownedByMe ?? o.emailAddress === user.email;
+    await openBook({ fileId: id, role: mine ? 'owner' : 'member', kind: 'trip', name: meta.name.replace(TRIP_NAME, ''), owner: { email: o.emailAddress || '', name: o.displayName || '' }, back: backFrom() });
+  }
+
+  // Trips this app can open: made here, or opened from a friend's share before.
+  async function listTrips() {
+    await fileAccess();
+    const q = encodeURIComponent("appProperties has { key='amrpotli' and value='trip' } and trashed=false");
+    const list = await (await api(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,ownedByMe,modifiedTime)&orderBy=modifiedTime desc&pageSize=20`)).json();
+    return (list.files || []).map((f) => ({ id: f.id, name: f.name.replace(TRIP_NAME, ''), mine: !!f.ownedByMe, modified: f.modifiedTime }));
+  }
+
+  // Back from a trip to the user's own data (or the shop book they came from).
+  // The trip file is not touched; a friend's copy of it leaves this phone.
+  async function leaveTrip() {
+    const back = team?.back || null;
+    await writeNote(back).catch(() => {});
+    await quiet();
+    const key = `mt:data:${user.uid}:shop:${team.fileId}`;
+    const member = team.role !== 'owner';
+    switchTeam(back);
+    if (member) save(key, null);
     await sync();
   }
 
@@ -845,7 +918,11 @@ async function createDriveStore() {
         return token.value;
       },
       join: (id) => joinShop(id),
-      leave: () => leaveShop(),
+      leave: () => (team?.kind === 'trip' ? leaveTrip() : leaveShop()),
+      // Group trips (taps).
+      startTrip: (name, info, me) => startTrip(name, info, me),
+      openTrip: (id) => openTrip(id),
+      listTrips: () => listTrips(),
       // Lets one person (an email) add to the shop book. Google emails them.
       async share(email, message) {
         await fileAccess();

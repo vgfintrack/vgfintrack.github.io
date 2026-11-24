@@ -17,20 +17,20 @@ function script(src) {
 }
 
 // Resolves to the chosen file's id, or null if the picker was closed.
-export async function pickShopBook(token) {
+export async function pickShopBook(token, kind = 'shop') {
   if (!config.pickerKey) throw new Error(t('Team shops are not set up on this copy of FinnBlu.'));
   await script('https://apis.google.com/js/api.js');
   await new Promise((resolve) => gapi.load('picker', resolve));
   const P = google.picker;
   return new Promise((resolve) => {
-    // "FinnBlu shop book", or "AmrPotli shop book" from before the new name.
-    const shared = new P.DocsView(P.ViewId.DOCS).setMimeTypes('application/json').setOwnedByMe(false).setQuery('shop book');
+    // "FinnBlu shop book" (or "AmrPotli shop book" from before the new name), or "FinnBlu trip".
+    const shared = new P.DocsView(P.ViewId.DOCS).setMimeTypes('application/json').setOwnedByMe(false).setQuery(kind === 'trip' ? 'FinnBlu trip' : 'shop book');
     const picker = new P.PickerBuilder()
       .addView(shared)
       .setOAuthToken(token)
       .setDeveloperKey(config.pickerKey)
       .setAppId(config.googleProjectNumber)
-      .setTitle(t('Choose the shop book'))
+      .setTitle(kind === 'trip' ? t('Choose the trip') : t('Choose the shop book'))
       .setLocale(lang === 'bn' ? 'bn' : 'en')
       .setCallback((d) => {
         if (d.action === P.Action.PICKED) resolve(d.docs?.[0]?.id || null);

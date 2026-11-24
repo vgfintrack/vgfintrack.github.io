@@ -8,6 +8,7 @@ import { attachKeypad, evalExpr, prettyExpr } from './keypad.js';
 import { createStore, DEFAULT_SETTINGS, FREE_CATEGORIES, categoryLimit, setCategoryLimit, FREE_PRODUCTS, productLimit, setProductLimit, newId } from './store.js';
 import { t, tn, en, lang, setLang, dateLocale, translateStatic } from './i18n.js';
 import { DISTRICTS, DIVISIONS } from './districts.js';
+import * as TRIP from './trip.js';
 
 // ---------------------------------------------------------------- helpers
 
@@ -313,6 +314,7 @@ function companySoon() {
 }
 
 async function syncCompany() {
+  if (isTrip()) return; // a trip is not this person's own money
   const C = await company();
   if (!C.connected()) return;
   const data = await C.loadPublic();
@@ -675,6 +677,13 @@ function switchView(v) {
 }
 
 function render() {
+  document.body.classList.toggle('trip-mode', isTrip());
+  if (isTrip()) {
+    document.body.classList.remove('onboarding');
+    showAddButton(false);
+    state.view = 'dashboard';
+    return renderTrip();
+  }
   const empty = !state.data.settings && state.data.accounts.length === 0 && state.data.transactions.length === 0;
   // Without signing in, only the setup is open; the app itself needs Google sign-in.
   const onboarding = empty || wizard?.isCelebrating() || state.store.mode === 'local';
@@ -837,6 +846,12 @@ function showTeamLost(role) {
   const bar = $('#team-bar');
   const link = shopLink();
   if (!link) return (bar.hidden = true);
+  if (link.kind === 'trip') {
+    bar.innerHTML = `<span>${role === 'owner' ? t('The trip file is missing from your Google Drive.') : t('You can no longer open the trip {trip}. Your friend may have removed you.', { trip: esc(link.name) })}</span><button class="btn sm" data-team-back>${t('Back to my own FinnBlu')}</button>`;
+    bar.hidden = false;
+    $('[data-team-back]', bar).onclick = () => state.store.team.leave().then(() => (bar.hidden = true)).catch((e) => toast(e.message || String(e)));
+    return;
+  }
   bar.innerHTML =
     role === 'helper'
       ? `<span>${t('You can no longer open {shop}. The owner may have removed you.', { shop: esc(link.name) })}</span><button class="btn sm" data-team-back>${t('Back to my own FinnBlu')}</button>`
@@ -860,6 +875,488 @@ function showTeamLost(role) {
         if (e.type !== 'popup_closed') toast(e.message || String(e));
       }
     };
+}
+
+// ---------------------------------------------------------------- group trips
+// A trip is a book of its own (store.js, startTrip), shared with friends by
+// Gmail. While it is open, FinnBlu shows only the trip; "My own FinnBlu" goes
+// back. Who owes whom is worked out in trip.js.
+
+const isTrip = () => shopLink()?.kind === 'trip';
+const tripInfo = () => state.data?.settings?.trip || {};
+const tripMembers = () => teamData()?.members || [];
+const memberName = (id) => (id === TRIP.FUND ? t('the fund') : tripMembers().find((m) => m.id === id)?.name || '?');
+const tripMoney = (n) => `৳${money(n)}`;
+let tripList = null; // trips this app can open, for the Setup card
+let tripListAsked = false;
+
+function renderTrip() {
+  $$('.view').forEach((s) => (s.hidden = s.id !== 'view-dashboard'));
+  const v = $('#view-dashboard');
+  const link = shopLink();
+  if (!state.data.settings) {
+    v.innerHTML = `<div class="card"><p class="muted">${t('Opening the trip…')}</p></div>`;
+    return;
+  }
+  const info = tripInfo();
+  const members = tripMembers();
+  const owner = link.role === 'owner';
+  const entries = state.data.transactions.filter((x) => x.type === 'Expense' || x.type === 'Income').sort(txnSort);
+  const T = TRIP.tripTotals(members, entries);
+  const keeper = teamData()?.keeper || members[0]?.id;
+  const pays = TRIP.settleUp(T.people, T.fundLeft, keeper);
+  const g = TRIP.guideCost(info, T.byCategory);
+  const cats = Object.entries(T.byCategory).sort((a, b) => b[1] - a[1]);
+  const kpi = (k, val, cls = '') => `<div class="kpi"><div class="k">${k}</div><div class="v num ${cls}">${val}</div></div>`;
+  v.innerHTML = `
+    <div class="card trip-head">
+      <div class="trip-title"><h3>🧳 ${esc(info.name || link.name)}</h3>
+        <button class="btn sm" data-trip-back>← ${t('My own FinnBlu')}</button></div>
+      <p class="muted" style="margin:0 0 12px">${[
+        t('{n} friends', { n: members.length }),
+        info.days ? t('{n} days', { n: info.days }) : '',
+        !owner && link.owner?.name ? t('Trip by {name}', { name: esc(link.owner.name) }) : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')}</p>
+      <div class="trip-actions">
+        <button class="btn primary" data-trip-add="Expense">+ ${t('Expense')}</button>
+        <button class="btn" data-trip-add="Income">+ ${t('Money into fund')}</button></div>
+    </div>
+    <div class="kpis">
+      ${kpi(t('Total spent'), tripMoney(T.spent), 'expense')}
+      ${kpi(t('Per person'), tripMoney(T.perPerson))}
+      ${kpi(t('Fund collected'), tripMoney(T.fundIn), 'income')}
+      ${kpi(t('Left in fund'), tripMoney(T.fundLeft))}
+    </div>
+    ${
+      g.fee || g.paid || g.own
+        ? `<div class="card"><h3>🧭 ${t('Guide')}</h3>
+      ${g.fee ? `<div class="li"><span>${t('Fee: {fee} a day × {days} days', { fee: tripMoney(info.guidePerDay), days: info.days })}</span><b class="num">${tripMoney(g.fee)}</b></div>` : ''}
+      <div class="li"><span>${t('Fee paid so far')}</span><b class="num">${tripMoney(g.paid)}</b></div>
+      ${g.fee ? `<div class="li"><span>${t('Fee still to pay')}</span><b class="num ${g.left > 0 ? 'expense' : ''}">${tripMoney(g.left)}</b></div>` : ''}
+      <div class="li"><span>${t("Guide's own food, room and transport")}</span><b class="num">${tripMoney(g.own)}</b></div>
+      <div class="li"><span><b>${t('Guide in total, per friend')}</b></span><b class="num">${tripMoney(g.total / (members.length || 1))}</b></div></div>`
+        : ''
+    }
+    <div class="card" id="trip-owe"><h3>${t('Who owes whom')}</h3>
+      <div class="list">${T.people
+        .map(
+          (p) => `<div class="li trip-person"><span class="name">${esc(p.name)}${p.email === myEmail() ? ` <small class="muted">(${t('you')})</small>` : ''}<br>
+            <small class="muted">${t('Put in {a} · share {b}', { a: tripMoney(p.in + p.paid), b: tripMoney(p.share) })}</small></span>
+            <b class="num ${p.balance > 0.5 ? 'income' : p.balance < -0.5 ? 'expense' : ''}">${p.balance > 0.5 ? `+${tripMoney(p.balance)}` : p.balance < -0.5 ? `−${tripMoney(-p.balance)}` : t('Settled')}</b></div>`,
+        )
+        .join('')}</div>
+      ${T.fundLeft > 0.5 ? `<p class="muted" style="font-size:13px">💰 ${t('{amount} is left in the fund, kept by {name}.', { amount: tripMoney(T.fundLeft), name: esc(memberName(keeper)) })}</p>` : ''}
+      <h4 style="margin:12px 0 6px">${t('To settle up')}</h4>
+      <div class="list" id="trip-pays">${
+        pays.map((x) => `<div class="li"><span>${esc(x.fromName)} → ${esc(x.toName)}</span><b class="num">${tripMoney(x.amount)}</b></div>`).join('') ||
+        `<p class="muted" style="margin:0">${t('Everyone is settled.')}</p>`
+      }</div>
+      <button class="btn" data-trip-share style="margin-top:10px">📤 ${t('Share on WhatsApp')}</button>
+    </div>
+    <div class="card"><h3>${t('Entries')} <small class="num">${entries.length}</small></h3>
+      <div class="list" id="trip-entries">${entries.map(tripRow).join('') || `<p class="muted">${t('Nothing added yet. Tap + Expense or + Money into fund.')}</p>`}</div></div>
+    ${
+      cats.length
+        ? `<div class="card"><h3>${t('By category')}</h3>${cats
+            .map(([c, a]) => `<div class="li"><span>${TRIP.tripIcon(c)} ${esc(t(c))}</span><b class="num">${tripMoney(a)}</b></div>`)
+            .join('')}</div>`
+        : ''
+    }
+    <div class="card" id="trip-friends"><h3>👥 ${t('Friends')}</h3>
+      <div class="list">${members
+        .map(
+          (m) => `<div class="li"><span class="name">${esc(m.name)}${m.email === myEmail() ? ` <small class="muted">(${t('you')})</small>` : ''}<br>
+            <small class="muted">${m.email ? esc(m.email) : t('Name only: adds nothing from a phone')}</small></span>
+            ${owner && m.email !== myEmail() ? `<button class="btn sm" data-trip-remove="${esc(m.id)}">${t('Remove')}</button>` : ''}</div>`,
+        )
+        .join('')}</div>
+      ${
+        owner
+          ? `<button class="btn primary" data-trip-friend style="margin-top:10px">+ ${t('Add a friend')}</button>
+        <div class="field" style="margin-top:12px"><label for="trip-keeper">${t('Who keeps the fund money?')}</label>
+          <select id="trip-keeper">${members.map((m) => `<option value="${esc(m.id)}" ${m.id === keeper ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>`
+          : `<p class="muted" style="font-size:13px;margin:8px 0 0">${t('{name} adds friends to this trip.', { name: esc(link.owner?.name || '') })}</p>`
+      }
+    </div>
+    ${
+      owner
+        ? `<div class="card"><h3>${t('Trip details')}</h3>
+      <div class="row2"><div class="field"><label for="trip-days">${t('Days')}</label><input id="trip-days" type="number" inputmode="numeric" min="1" value="${Number(info.days) || ''}"></div>
+        <div class="field"><label for="trip-guide">${t('Guide fee per day (৳)')}</label><input id="trip-guide" type="number" inputmode="decimal" min="0" value="${Number(info.guidePerDay) || ''}" placeholder="0"></div></div>
+      <p class="muted" style="font-size:13px;margin:0">🔒 ${t('The trip is a file in your Google Drive, shared only with the friends you add by Gmail.')}</p></div>`
+        : ''
+    }`;
+  bindTrip(v);
+}
+
+function tripRow(x) {
+  const fund = x.type === 'Income';
+  const split = x.split?.length ? x.split : null;
+  const sub = fund
+    ? t('From {name}', { name: esc(memberName(x.paidBy)) })
+    : [
+        x.paidBy === TRIP.FUND ? t('From the fund') : t('Paid by {name}', { name: esc(memberName(x.paidBy)) }),
+        !split ? t('everyone shares') : split.length === 1 ? t('only {name}', { name: esc(memberName(split[0])) }) : t('{n} share', { n: split.length }),
+      ].join(' · ');
+  const by = x.by && x.by !== myEmail() ? ` · ${t('added by {name}', { name: esc(whoName(x.by)) })}` : '';
+  return `<button class="li txn trip-entry" data-trip-edit="${esc(x.id)}">
+    <span class="mid"><div class="t">${fund ? '💰' : TRIP.tripIcon(x.category)} ${esc(fund ? t('Money into fund') : t(x.category || 'Other'))}${x.note ? ` · ${esc(x.note)}` : ''}</div>
+    <div class="sub">${sub} · ${esc(C.parseDate(x.date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }))}${by}</div></span>
+    <span class="amt num ${fund ? 'income' : 'expense'}">${tripMoney(x.amount)}</span></button>`;
+}
+
+function tripShareText() {
+  const info = tripInfo();
+  const members = tripMembers();
+  const T = TRIP.tripTotals(members, state.data.transactions);
+  const keeper = teamData()?.keeper || members[0]?.id;
+  const pays = TRIP.settleUp(T.people, T.fundLeft, keeper);
+  const g = TRIP.guideCost(info, T.byCategory);
+  return [
+    `🧳 ${info.name}: FinnBlu`,
+    t('Total spent {a} · {b} per person', { a: tripMoney(T.spent), b: tripMoney(T.perPerson) }),
+    t('Fund: {a} collected, {b} left', { a: tripMoney(T.fundIn), b: tripMoney(T.fundLeft) }) + (T.fundLeft > 0.5 ? ` (${memberName(keeper)})` : ''),
+    g.fee || g.own ? t('Guide: {a} in total', { a: tripMoney(g.total) }) : '',
+    '',
+    ...T.people.map((p) => `${p.name}: ${p.balance > 0.5 ? `+${tripMoney(p.balance)}` : p.balance < -0.5 ? `−${tripMoney(-p.balance)}` : t('Settled')}`),
+    '',
+    pays.length ? t('To settle up') + ':' : t('Everyone is settled.'),
+    ...pays.map((x) => `${x.fromName} → ${x.toName}: ${tripMoney(x.amount)}`),
+  ]
+    .filter((l, i, a) => l !== '' || (a[i - 1] !== '' && i > 0))
+    .join('\n');
+}
+
+function bindTrip(v) {
+  $('[data-trip-back]', v).onclick = async () => {
+    try {
+      await state.store.team.leave();
+      switchView('dashboard');
+    } catch (e) {
+      toast(e.message || String(e));
+    }
+  };
+  $$('[data-trip-add]', v).forEach((b) => (b.onclick = () => openTripEntry(null, b.dataset.tripAdd)));
+  $$('[data-trip-edit]', v).forEach((b) => (b.onclick = () => openTripEntry(state.data.transactions.find((x) => x.id === b.dataset.tripEdit))));
+  $('[data-trip-share]', v).onclick = async () => {
+    const text = tripShareText();
+    if (navigator.share) return navigator.share({ text }).catch(() => {});
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
+  const friend = $('[data-trip-friend]', v);
+  if (friend) friend.onclick = () => openTripFriend();
+  $$('[data-trip-remove]', v).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const id = b.dataset.tripRemove;
+        const team = teamData();
+        const m = team.members.find((x) => x.id === id);
+        const used = state.data.transactions.some((x) => x.paidBy === id || x.split?.includes(id));
+        if (used) return toast(t('{name} is in some entries, so they stay in the trip.', { name: m.name }));
+        if (!confirm(t('Remove {name} from the trip?', { name: m.name }))) return;
+        try {
+          if (m.permissionId) await state.store.team.unshare(m.permissionId);
+          await state.store.team.save({ ...team, members: team.members.filter((x) => x.id !== id) });
+        } catch (e) {
+          if (e.type !== 'popup_closed') toast(e.message || String(e));
+        }
+      }),
+  );
+  const keeper = $('#trip-keeper', v);
+  if (keeper) keeper.onchange = () => state.store.team.save({ ...teamData(), keeper: keeper.value });
+  const saveInfo = () =>
+    state.store.saveSettings({
+      ...state.data.settings,
+      trip: { ...tripInfo(), days: Math.max(0, Math.round(Number($('#trip-days', v).value) || 0)), guidePerDay: Math.max(0, Number($('#trip-guide', v).value) || 0) },
+    });
+  if ($('#trip-days', v)) $('#trip-days', v).onchange = saveInfo;
+  if ($('#trip-guide', v)) $('#trip-guide', v).onchange = saveInfo;
+}
+
+// One small sheet for both kinds of entry.
+// Made when first needed, and again after the language changes.
+function freshDialog(id) {
+  const old = $('#' + id);
+  if (old && old.dataset.lang === lang) return old;
+  old?.remove();
+  const d = document.createElement('dialog');
+  d.id = id;
+  d.className = 'sheet';
+  d.dataset.lang = lang;
+  d.dataset.fresh = '1';
+  return d;
+}
+
+function tripDialog() {
+  let d = freshDialog('trip-dialog');
+  if (!d.dataset.fresh) return d;
+  delete d.dataset.fresh;
+  d.innerHTML = `<form id="trip-form" method="dialog" novalidate>
+    <div class="sheet-head"><h2 id="trip-form-title"></h2><button type="button" class="icon-btn" data-close aria-label="${t('Close')}">✕</button></div>
+    <div class="segmented" id="trip-kind">
+      <button type="button" data-kind="Expense">${t('Expense')}</button>
+      <button type="button" data-kind="Income">${t('Money into fund')}</button></div>
+    <label class="amount-field"><span>৳</span><input id="trip-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="${t('Amount')}"></label>
+    <div class="field" id="trip-cat-field"><label>${t('Category')}</label><div id="trip-cats" class="cat-grid" role="radiogroup"></div></div>
+    <div class="field"><label for="trip-paid" id="trip-paid-label"></label><select id="trip-paid"></select></div>
+    <div class="field" id="trip-split-field"><label>${t('Who shares it?')}</label><div id="trip-split" class="chips trip-split"></div></div>
+    <div class="row2">
+      <div class="field"><label for="trip-date">${t('Date')}</label><input id="trip-date" type="date"></div>
+      <div class="field"><label for="trip-note">${t('Note')}</label><input id="trip-note" type="text" maxlength="80" placeholder="${t('Optional')}"></div></div>
+    <p id="trip-error" class="error" hidden></p>
+    <div class="sheet-actions">
+      <button type="button" id="trip-delete" class="btn danger" hidden>${t('Delete')}</button>
+      <button type="submit" class="btn primary">${t('Save')}</button></div>
+  </form>`;
+  document.body.appendChild(d);
+  $('[data-close]', d).onclick = () => d.close();
+  return d;
+}
+
+function openTripEntry(x, kind = 'Expense') {
+  const d = tripDialog();
+  const members = tripMembers();
+  const me = members.find((m) => m.email === myEmail());
+  let type = x?.type || kind;
+  let category = x?.category || TRIP.TRIP_CATEGORIES[0][0];
+  const split = new Set(x?.split?.length ? x.split : members.map((m) => m.id));
+  const draw = () => {
+    const exp = type === 'Expense';
+    $('#trip-form-title').textContent = x ? t('Change entry') : exp ? t('Add an expense') : t('Money into the fund');
+    $$('#trip-kind button').forEach((b) => b.classList.toggle('active', b.dataset.kind === type));
+    $('#trip-cat-field').hidden = !exp;
+    $('#trip-split-field').hidden = !exp;
+    $('#trip-paid-label').textContent = exp ? t('Who paid?') : t('Who put money in?');
+    const paid = $('#trip-paid');
+    const was = paid.value;
+    paid.innerHTML = [...(exp ? [[TRIP.FUND, t('From the fund')]] : []), ...members.map((m) => [m.id, m.name])]
+      .map(([v, n]) => `<option value="${esc(v)}">${esc(n)}</option>`)
+      .join('');
+    paid.value = [...paid.options].some((o) => o.value === was) ? was : x?.paidBy || (exp ? TRIP.FUND : me?.id || members[0]?.id);
+    $('#trip-cats').innerHTML = TRIP.TRIP_CATEGORIES.map(
+      ([c, ic]) => `<button type="button" role="radio" data-cat="${esc(c)}" class="${c === category ? 'on' : ''}" aria-checked="${c === category}"><span aria-hidden="true">${ic}</span><small>${esc(t(c))}</small></button>`,
+    ).join('');
+    $$('#trip-cats [data-cat]').forEach((b) => (b.onclick = () => ((category = b.dataset.cat), draw())));
+    $('#trip-split').innerHTML = members
+      .map((m) => `<button type="button" class="chip ${split.has(m.id) ? 'on' : ''}" data-split="${esc(m.id)}" aria-pressed="${split.has(m.id)}">${split.has(m.id) ? '✓ ' : ''}${esc(m.name)}</button>`)
+      .join('');
+    $$('#trip-split [data-split]').forEach(
+      (b) =>
+        (b.onclick = () => {
+          const id = b.dataset.split;
+          if (split.has(id)) split.delete(id);
+          else split.add(id);
+          draw();
+        }),
+    );
+  };
+  $$('#trip-kind button').forEach((b) => (b.onclick = () => ((type = b.dataset.kind), draw())));
+  $('#trip-amount').value = x ? String(x.amount) : '';
+  $('#trip-date').value = x?.date || C.today();
+  $('#trip-note').value = x?.note || '';
+  $('#trip-paid').innerHTML = '';
+  $('#trip-error').hidden = true;
+  $('#trip-delete').hidden = !x;
+  $('#trip-delete').onclick = async () => {
+    if (!confirm(t('Delete this entry?'))) return;
+    await state.store.deleteTxn(x.id);
+    d.close();
+  };
+  $('#trip-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const amount = Number(String($('#trip-amount').value).replace(/,/g, '').replace(/[০-৯]/g, (c) => '০১২৩৪৫৬৭৮৯'.indexOf(c)));
+    const err = (m) => ((($('#trip-error').textContent = m), ($('#trip-error').hidden = false)));
+    if (!(amount > 0)) return err(t('Write the amount.'));
+    const exp = type === 'Expense';
+    if (exp && !split.size) return err(t('Choose who shares it.'));
+    const all = split.size === members.length;
+    await state.store.saveTxn({
+      ...(x ? { id: x.id, createdAt: x.createdAt, by: x.by } : {}),
+      type,
+      amount,
+      date: $('#trip-date').value || C.today(),
+      note: $('#trip-note').value.trim(),
+      paidBy: $('#trip-paid').value,
+      ...(exp ? { category, split: all ? [] : [...split] } : { category: 'Fund' }),
+    });
+    d.close();
+    toast(x ? t('Saved') : exp ? t('Expense added') : t('Money added to the fund'));
+  };
+  draw();
+  d.showModal();
+  if (!x) setTimeout(() => $('#trip-amount').focus(), 50);
+}
+
+function openTripFriend() {
+  const d = freshDialog('trip-friend-dialog');
+  if (d.dataset.fresh) {
+    delete d.dataset.fresh;
+    d.innerHTML = `<form id="trip-friend-form" method="dialog" novalidate>
+      <div class="sheet-head"><h2>${t('Add a friend')}</h2><button type="button" class="icon-btn" data-close aria-label="${t('Close')}">✕</button></div>
+      <div class="field"><label for="trip-friend-name">${t('Name')}</label><input id="trip-friend-name" maxlength="30" autocomplete="off"></div>
+      <div class="field"><label for="trip-friend-email">${t('Gmail (to add from their own phone)')}</label>
+        <input id="trip-friend-email" type="email" inputmode="email" autocomplete="off" placeholder="name@gmail.com"></div>
+      <p class="muted" style="font-size:13px">${t('With a Gmail, Google emails your friend, and they open the trip in FinnBlu on their phone. Without one, only the name is added and you add their spending.')}</p>
+      <p id="trip-friend-error" class="error" hidden></p>
+      <div class="sheet-actions"><button type="submit" class="btn primary" id="trip-friend-go">${t('Add')}</button></div></form>`;
+    document.body.appendChild(d);
+    $('[data-close]', d).onclick = () => d.close();
+  }
+  $('#trip-friend-name').value = '';
+  $('#trip-friend-email').value = '';
+  $('#trip-friend-error').hidden = true;
+  $('#trip-friend-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = (m) => ((($('#trip-friend-error').textContent = m), ($('#trip-friend-error').hidden = false)));
+    const name = $('#trip-friend-name').value.trim().slice(0, 30);
+    const email = $('#trip-friend-email').value.trim().toLowerCase();
+    const team = teamData() || {};
+    if (!name) return err(t('Write a name.'));
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err(t('Check the Gmail address.'));
+    if (email && team.members?.some((m) => m.email === email)) return err(t('{email} is already in the trip.', { email }));
+    const go = $('#trip-friend-go');
+    go.disabled = true;
+    try {
+      const permissionId = email
+        ? await state.store.team.share(
+            email,
+            t('You are added to the trip {trip} on FinnBlu. Open vgfintrack.github.io/FinnBlu on your phone, sign in with this Gmail, then go to Setup → Group trips → Open a trip shared with me.', { trip: tripInfo().name }),
+          )
+        : undefined;
+      await state.store.team.save({ ...team, members: [...(team.members || []), { id: newId(), name, ...(email ? { email, permissionId } : {}), addedAt: Date.now() }] });
+      d.close();
+      toast(email ? t('{name} is added. Google has emailed them.', { name }) : t('{name} is added.', { name }));
+    } catch (e2) {
+      if (e2.type !== 'popup_closed') err(e2.message || String(e2));
+    } finally {
+      go.disabled = false;
+    }
+  };
+  d.showModal();
+  setTimeout(() => $('#trip-friend-name').focus(), 50);
+}
+
+// Setup card: start a trip, or open one.
+function tripCard() {
+  if (!state.store?.team?.startTrip || isHelper()) return '';
+  const list = tripList || [];
+  return `<div class="card" id="trip-card"><h3>🧳 ${t('Group trips')}</h3>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">${t('Travelling with friends? Everyone adds what they spend from their own phone; FinnBlu keeps the shared fund and shows who owes whom.')}</p>
+    ${tripList === null ? `<button class="linkish" data-trip-find style="margin:0 0 8px">${t('Find my trips')}</button>` : ''}
+    ${list.length ? `<div class="list">${list.map((x) => `<button class="li txn" data-trip-open="${esc(x.id)}"><span class="mid"><div class="t">🧳 ${esc(x.name)}</div><div class="sub">${x.mine ? t('Your trip') : t('Shared with you')}</div></span><span class="amt">${t('Open')} →</span></button>`).join('')}</div>` : ''}
+    <div class="tip-actions" style="margin-top:10px;flex-wrap:wrap">
+      <button class="btn primary" data-trip-start>+ ${t('Start a trip')}</button>
+      <button class="btn" data-trip-join>${t('Open a trip shared with me')}</button></div></div>`;
+}
+
+function bindTripCard(root) {
+  const start = $('[data-trip-start]', root);
+  if (!start) return;
+  start.onclick = () => openTripStart();
+  const find = $('[data-trip-find]', root);
+  if (find)
+    find.onclick = () =>
+      state.store.team
+        .listTrips()
+        .then((l) => {
+          tripList = l;
+          if (!l.length) toast(t('No trips yet. Start one, or open one a friend shared.'));
+          renderSetup();
+        })
+        .catch((e) => e.type !== 'popup_closed' && toast(e.message || String(e)));
+  $('[data-trip-join]', root).onclick = () => joinTrip();
+  $$('[data-trip-open]', root).forEach(
+    (b) =>
+      (b.onclick = async () => {
+        try {
+          await state.store.team.openTrip(b.dataset.tripOpen);
+          switchView('dashboard');
+        } catch (e) {
+          if (e.type !== 'popup_closed') toast(e.message || String(e));
+        }
+      }),
+  );
+  // Trips already on Drive, listed once the Drive file permission is there.
+  if (!tripListAsked && state.store.mode === 'drive' && localStorage.getItem(`mt:trips:${state.user?.uid}`)) {
+    tripListAsked = true;
+    state.store.team
+      .listTrips()
+      .then((l) => {
+        tripList = l;
+        if (state.view === 'setup' && !isTrip()) renderSetup();
+      })
+      .catch(() => {});
+  }
+}
+
+function openTripStart() {
+  const d = freshDialog('trip-start-dialog');
+  if (d.dataset.fresh) {
+    delete d.dataset.fresh;
+    d.innerHTML = `<form id="trip-start-form" method="dialog" novalidate>
+      <div class="sheet-head"><h2>🧳 ${t('Start a trip')}</h2><button type="button" class="icon-btn" data-close aria-label="${t('Close')}">✕</button></div>
+      <div class="field"><label for="trip-start-name">${t('Where to?')}</label><input id="trip-start-name" maxlength="40" placeholder="${t('e.g. Bandarban')}" autocomplete="off"></div>
+      <div class="row2"><div class="field"><label for="trip-start-days">${t('Days')}</label><input id="trip-start-days" type="number" inputmode="numeric" min="1" value="3"></div>
+        <div class="field"><label for="trip-start-guide">${t('Guide fee per day (৳)')}</label><input id="trip-start-guide" type="number" inputmode="decimal" min="0" placeholder="${t('No guide')}"></div></div>
+      <div class="field"><label for="trip-start-me">${t('Your name in the trip')}</label><input id="trip-start-me" maxlength="30" autocomplete="off"></div>
+      <p class="muted" style="font-size:13px">${t('FinnBlu makes the trip as a file in your Google Drive. Google asks you once to allow this. Then add your friends.')}</p>
+      <p id="trip-start-error" class="error" hidden></p>
+      <div class="sheet-actions"><button type="submit" class="btn primary" id="trip-start-go">${t('Start the trip')}</button></div></form>`;
+    document.body.appendChild(d);
+    $('[data-close]', d).onclick = () => d.close();
+  }
+  $('#trip-start-me').value = (state.user?.displayName || '').split(' ')[0];
+  $('#trip-start-error').hidden = true;
+  $('#trip-start-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('#trip-start-name').value.trim().slice(0, 40);
+    if (!name) return ((($('#trip-start-error').textContent = t('Write where you are going.')), ($('#trip-start-error').hidden = false)));
+    const go = $('#trip-start-go');
+    go.disabled = true;
+    try {
+      await state.store.team.startTrip(
+        name,
+        { days: Math.max(0, Math.round(Number($('#trip-start-days').value) || 0)), guidePerDay: Math.max(0, Number($('#trip-start-guide').value) || 0) },
+        $('#trip-start-me').value.trim().slice(0, 30) || undefined,
+      );
+      try {
+        localStorage.setItem(`mt:trips:${state.user.uid}`, '1');
+      } catch {}
+      tripList = null;
+      tripListAsked = false;
+      d.close();
+      switchView('dashboard');
+      toast(t('Trip started. Now add your friends.'));
+    } catch (e2) {
+      if (e2.type !== 'popup_closed') ((($('#trip-start-error').textContent = e2.message || String(e2)), ($('#trip-start-error').hidden = false)));
+    } finally {
+      go.disabled = false;
+    }
+  };
+  d.showModal();
+  setTimeout(() => $('#trip-start-name').focus(), 50);
+}
+
+// A friend opens a trip shared with them: Google's file picker, then the trip.
+async function joinTrip() {
+  try {
+    const token = await state.store.team.pickerToken();
+    const { pickShopBook } = await import('./picker.js');
+    const id = await pickShopBook(token, 'trip');
+    if (!id) return;
+    await state.store.team.openTrip(id);
+    try {
+      localStorage.setItem(`mt:trips:${state.user.uid}`, '1');
+    } catch {}
+    tripList = null;
+    tripListAsked = false;
+    switchView('dashboard');
+    toast(t('You joined the trip {trip}.', { trip: tripInfo().name || shopLink().name }));
+  } catch (e) {
+    if (e.type !== 'popup_closed') toast(e.message || String(e));
+  }
 }
 
 // ---------------------------------------------------------------- welcome
@@ -3600,6 +4097,7 @@ function renderSetup() {
   $('#view-setup').innerHTML = `
     <div class="grid2">
       ${teamCard()}
+      ${tripCard()}
       <div class="card" ${own}>
         <h3>${t('Accounts')} <button class="btn sm" id="add-acc">${t('+ Add account')}</button></h3>
         <div class="list">
@@ -3811,6 +4309,7 @@ function renderSetup() {
   $('#import', v).onchange = (e) => importFile(e.target.files[0]);
   if ($('#signout', v)) $('#signout', v).onclick = () => state.store.signOut();
   bindTeam(v);
+  bindTripCard(v);
   bindDistrict(v);
   $$('[data-help-open]', v).forEach((b) => (b.onclick = () => openHelp()));
   $('#delete-account', v).onclick = openDelete;

@@ -4,7 +4,7 @@
 // connection) the saved copy is used. Google sign-in and Google Drive calls
 // are never touched: they always go straight to Google.
 
-const CACHE = 'finnblu-app-v7';
+const CACHE = 'finnblu-app-v8';
 const FONTS = 'finnblu-fonts-1'; // kept across versions
 const NETWORK_TIMEOUT_MS = 4000;
 
@@ -25,6 +25,7 @@ const SHELL = [
   'js/districts.js',
   'js/tzcountry.js',
   'js/tips.js',
+  'js/trip.js',
   'js/help.js',
   'js/professions.js',
   'js/config.js',
