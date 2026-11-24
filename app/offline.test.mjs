@@ -5,6 +5,7 @@ const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.clock.setFixedTime(new Date('2026-10-21T10:00:00')); // the demo data is October 2026
 await p.goto('http://localhost:8091/FinnBlu/');
 await p.evaluate(() => navigator.serviceWorker.ready);
 await p.reload(); // now controlled by the service worker
